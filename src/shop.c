@@ -25,6 +25,7 @@
 #include "modify.h"
 #include "spells.h"  /* for skill_name() */
 #include "screen.h"
+#include "instance.h"
 
 /* Global variables definitions used externally */
 /* Constant list for printing out who we sell to */
@@ -83,6 +84,7 @@ static char *times_message(struct obj_data *obj, char *name, int num);
 static int buy_price(struct obj_data *obj, int shop_nr, struct char_data *keeper, struct char_data *buyer);
 static int sell_price(struct obj_data *obj, int shop_nr, struct char_data *keeper, struct char_data *seller);
 static int ok_shop_room(int shop_nr, room_vnum room);
+static int find_shop_for_keeper(struct char_data *keeper);
 static int add_to_shop_list(struct shop_buy_data *list, int type, int *len, int *val);
 static int end_read_list(struct shop_buy_data *list, int len, int error);
 static void read_line(FILE *shop_f, const char *string, void *data);
@@ -940,16 +942,32 @@ static int ok_shop_room(int shop_nr, room_vnum room)
   return (FALSE);
 }
 
+static int find_shop_for_keeper(struct char_data *keeper)
+{
+  int shop_nr, top = instance_shop_top();
+
+  if (GET_INSTANCE_ID(keeper) > 0) {
+    for (shop_nr = top_shop + 1; shop_nr <= top; shop_nr++)
+      if (shop_index[shop_nr].instance_id == GET_INSTANCE_ID(keeper) &&
+          SHOP_KEEPER(shop_nr) == keeper->nr)
+        return shop_nr;
+    return NOTHING;
+  }
+
+  for (shop_nr = 0; shop_nr <= top_shop; shop_nr++)
+    if (!shop_index[shop_nr].instance_id && SHOP_KEEPER(shop_nr) == keeper->nr)
+      return shop_nr;
+
+  return NOTHING;
+}
+
 SPECIAL(shop_keeper)
 {
   struct char_data *keeper = (struct char_data *)me;
   int shop_nr;
 
-  for (shop_nr = 0; shop_nr <= top_shop; shop_nr++)
-    if (SHOP_KEEPER(shop_nr) == keeper->nr)
-      break;
-
-  if (shop_nr > top_shop)
+  shop_nr = find_shop_for_keeper(keeper);
+  if (shop_nr == NOTHING)
     return (FALSE);
 
   if (SHOP_FUNC(shop_nr))	/* Check secondary function */
@@ -961,6 +979,9 @@ SPECIAL(shop_keeper)
       SHOP_SORT(shop_nr) = 0;	/* Safety in case "drop all" */
     return (FALSE);
   }
+  if (GET_INSTANCE_ID(ch) != GET_INSTANCE_ID(keeper))
+    return (0);
+
   if (!ok_shop_room(shop_nr, GET_ROOM_VNUM(IN_ROOM(ch))))
     return (0);
 
@@ -997,7 +1018,7 @@ SPECIAL(shop_keeper)
 
 int ok_damage_shopkeeper(struct char_data *ch, struct char_data *victim)
 {
-  int sindex;
+  int sindex = find_shop_for_keeper(victim);
 
   if (!IS_MOB(victim) || mob_index[GET_MOB_RNUM(victim)].func != shop_keeper)
     return (TRUE);
@@ -1006,16 +1027,15 @@ int ok_damage_shopkeeper(struct char_data *ch, struct char_data *victim)
   if (AFF_FLAGGED(victim, AFF_CHARM))
     return (TRUE);
 
-  for (sindex = 0; sindex <= top_shop; sindex++)
-    if (GET_MOB_RNUM(victim) == SHOP_KEEPER(sindex) && !SHOP_KILL_CHARS(sindex)) {
-      char buf[MAX_INPUT_LENGTH];
+  if (sindex != NOTHING && !SHOP_KILL_CHARS(sindex)) {
+    char buf[MAX_INPUT_LENGTH];
 
-      snprintf(buf, sizeof(buf), "%s %s", GET_NAME(ch), MSG_CANT_KILL_KEEPER);
-      do_tell(victim, buf, cmd_tell, 0);
+    snprintf(buf, sizeof(buf), "%s %s", GET_NAME(ch), MSG_CANT_KILL_KEEPER);
+    do_tell(victim, buf, cmd_tell, 0);
 
-      do_action(victim, GET_NAME(ch), cmd_slap, 0);
-      return (FALSE);
-    }
+    do_action(victim, GET_NAME(ch), cmd_slap, 0);
+    return (FALSE);
+  }
 
   return (TRUE);
 }

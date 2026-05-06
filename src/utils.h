@@ -450,8 +450,10 @@ do                                                              \
 /** TRUE if the room has light, FALSE if not. */
 #define IS_LIGHT(room)  (!IS_DARK(room))
 
+int valid_room_rnum(room_rnum rnum);
+
 /** 1 if this is a valid room number, 0 if not. */
-#define VALID_ROOM_RNUM(rnum)	((rnum) != NOWHERE && (rnum) <= top_of_world)
+#define VALID_ROOM_RNUM(rnum)	valid_room_rnum((rnum))
 /** The room number if this is a valid room, NOWHERE if it is not */
 #define GET_ROOM_VNUM(rnum) \
 	((room_vnum)(VALID_ROOM_RNUM(rnum) ? world[(rnum)].number : NOWHERE))
@@ -464,6 +466,8 @@ do                                                              \
 #define IN_ROOM(ch)	((ch)->in_room)
 /** What room was PC/NPC previously in? */
 #define GET_WAS_IN(ch)	((ch)->was_in_room)
+/** Runtime dungeon instance id for PC/NPC, or 0. */
+#define GET_INSTANCE_ID(ch) ((ch)->instance_id)
 /** How old is PC/NPC, at last recorded time? */
 #define GET_AGE(ch)     (age(ch)->year)
 

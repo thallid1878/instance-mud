@@ -98,8 +98,10 @@
 #define ZONE_NOBUILD      4  /**< Building is not allowed in the zone */
 #define ZONE_NOASTRAL     5  /**< No teleportation magic will work to or from this zone */
 #define ZONE_WORLDMAP     6 /**< Whole zone uses the WORLDMAP by default */
+#define ZONE_DUNGEON      7 /**< Zone is a dungeon template; use runtime instances */
+#define ZONE_INSTANCE     8 /**< Runtime-only dungeon instance zone */
 /** The total number of Zone Flags */
-#define NUM_ZONE_FLAGS    7
+#define NUM_ZONE_FLAGS    9
 
 /* Exit info: used in room_data.dir_option.exit_info */
 #define EX_ISDOOR    (1 << 0) /**< Exit is a door */
@@ -708,6 +710,7 @@ struct obj_data
 {
   obj_rnum item_number; /**< The unique id of this object instance. */
   room_rnum in_room;    /**< What room is the object lying in, or -1? */
+  int instance_id;       /**< Runtime dungeon instance id, or 0. */
 
   struct obj_flag_data obj_flags;  /**< Object information            */
   struct obj_affected_type affected[MAX_OBJ_AFFECT]; /**< affects */
@@ -798,6 +801,7 @@ struct room_data
 {
   room_vnum number;  /**< Rooms number (vnum) */
   zone_rnum zone;    /**< Room zone (for resetting) */
+  int instance_id;    /**< Runtime dungeon instance id, or 0. */
   int sector_type;   /**< sector type (move/hide) */
   int room_flags[RF_ARRAY_MAX]; /**< INDOORS, DARK, etc */
   char *name;        /**< Room name */
@@ -1020,6 +1024,8 @@ struct char_data
   mob_rnum nr;  /**< NPC real instance number */
   room_rnum in_room;     /**< Current location (real room number) */
   room_rnum was_in_room; /**< Previous location for linkdead people  */
+  int instance_id;        /**< Runtime dungeon instance id, or 0. */
+  room_rnum instance_return_room; /**< Room to return to when leaving instance. */
   int wait;              /**< wait for how many loops before taking action. */
 
   struct char_player_data player;       /**< General PC/NPC data */

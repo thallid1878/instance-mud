@@ -188,6 +188,8 @@ struct zone_data {
    int	reset_mode;         /* conditions for reset (see below)   */
    zone_vnum number;	    /* virtual number of this zone	  */
    struct reset_com *cmd;   /* command table for reset	          */
+   int instance_id;          /* Runtime dungeon instance id, or 0. */
+   zone_rnum template_zone;  /* Source zone for runtime instances. */
 
    /* Reset mode:
     *   0: Don't reset, and don't update age.

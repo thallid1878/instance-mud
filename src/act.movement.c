@@ -23,6 +23,7 @@
 #include "act.h"
 #include "fight.h"
 #include "oasis.h" /* for buildwalk */
+#include "instance.h"
 
 
 /* local only functions */
@@ -221,6 +222,10 @@ int do_simple_move(struct char_data *ch, int dir, int need_specials_check)
   /* Check zone flag restrictions */
   if (ZONE_FLAGGED(GET_ROOM_ZONE(going_to), ZONE_CLOSED)) {
     send_to_char(ch, "A mysterious barrier forces you back! That area is off-limits.\r\n");
+    return (0);
+  }
+  if (instance_room_is_template(going_to)) {
+    send_to_char(ch, "A shimmering barrier holds the dungeon template out of phase.\r\n");
     return (0);
   }
   if (ZONE_FLAGGED(GET_ROOM_ZONE(going_to), ZONE_NOIMMORT) && (GET_LEVEL(ch) >= LVL_IMMORT) && (GET_LEVEL(ch) < LVL_GRGOD)) {

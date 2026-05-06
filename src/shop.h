@@ -51,6 +51,8 @@ struct shop_data {
    int	 bankAccount;		/* Store all gold over 15000 (disabled)	*/
    int	 lastsort;		/* How many items are sorted in inven?	*/
    SPECIAL (*func);		/* Secondary spec_proc for shopkeeper	*/
+   int instance_id;             /* Runtime dungeon instance id, or 0. */
+   shop_rnum template_shop;     /* Source shop for runtime instances. */
 };
 
 #define MAX_TRADE	5	/* List maximums for compatibility	*/

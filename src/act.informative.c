@@ -514,7 +514,10 @@ void look_at_room(struct char_data *ch, int ignore_brief)
     char buf[MAX_STRING_LENGTH];
 
     sprintbitarray(ROOM_FLAGS(IN_ROOM(ch)), room_bits, RF_ARRAY_MAX, buf);
-    send_to_char(ch, "[%5d] ", GET_ROOM_VNUM(IN_ROOM(ch)));
+    if (GET_INSTANCE_ID(ch) > 0)
+      send_to_char(ch, "[%5d r%d i%d] ", GET_ROOM_VNUM(IN_ROOM(ch)), IN_ROOM(ch), GET_INSTANCE_ID(ch));
+    else
+      send_to_char(ch, "[%5d] ", GET_ROOM_VNUM(IN_ROOM(ch)));
     send_to_char(ch, "%s[ %s][ %s ]", world[IN_ROOM(ch)].name, buf, sector_types[world[IN_ROOM(ch)].sector_type]);
 
     if (SCRIPT(rm)) {

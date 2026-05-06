@@ -39,6 +39,7 @@
 #include "msgedit.h"
 #include "screen.h"
 #include "storage.h"
+#include "instance.h"
 #include <sys/stat.h>
 
 /*  declarations of most of the 'global' variables */
@@ -2523,6 +2524,8 @@ void zone_update(void)
   struct reset_q_element *update_u, *temp;
   static int timer = 0;
 
+  instance_update();
+
   /* jelson 10/22/92 */
   if (((++timer * PULSE_ZONE) / PASSES_PER_SEC) >= 60) {
     /* one minute has passed NOT accurate unless PULSE_ZONE is a multiple of
@@ -2532,6 +2535,9 @@ void zone_update(void)
 
     /* since one minute has passed, increment zone ages */
     for (i = 0; i <= top_of_zone_table; i++) {
+      if (instance_zone_is_template(i) || instance_zone_is_runtime(i))
+        continue;
+
       if (zone_table[i].age < zone_table[i].lifespan &&
 	  zone_table[i].reset_mode)
 	(zone_table[i].age)++;
@@ -2609,6 +2615,11 @@ void reset_zone(zone_rnum zone)
   room_rnum rrnum;
   struct char_data *tmob=NULL; /* for trigger assignment */
   struct obj_data *tobj=NULL;  /* for trigger assignment */
+
+  if (instance_zone_is_template(zone) || instance_zone_is_runtime(zone)) {
+    zone_table[zone].age = 0;
+    return;
+  }
 
   for (cmd_no = 0; ZCMD.command != 'S'; cmd_no++) {
 

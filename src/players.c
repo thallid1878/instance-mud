@@ -23,6 +23,7 @@
 #include "dg_scripts.h" /* To enable saving of player variables to disk */
 #include "quest.h"
 #include "storage.h"
+#include "instance.h"
 
 #define LOAD_HIT	0
 #define LOAD_MANA	1
@@ -498,6 +499,7 @@ void save_char(struct char_data * ch)
   FILE *fl;
   char filename[40], buf[MAX_STRING_LENGTH], bits[127], bits2[127], bits3[127], bits4[127];
   int i, j, id, save_index = FALSE;
+  room_vnum save_loadroom;
   struct affected_type *aff, tmp_aff[MAX_AFFECT];
   struct obj_data *char_eq[NUM_WEARS];
   trig_data *t;
@@ -533,6 +535,10 @@ void save_char(struct char_data * ch)
     mudlog(NRM, LVL_GOD, TRUE, "SYSERR: Couldn't open player file %s for write", filename);
     return;
   }
+
+  save_loadroom = GET_LOADROOM(ch);
+  if (GET_INSTANCE_ID(ch) > 0)
+    save_loadroom = instance_safe_load_room_vnum(ch);
 
   /* Unaffect everything a character can be affected by. */
   for (i = 0; i < NUM_WEARS; i++) {
@@ -627,7 +633,7 @@ void save_char(struct char_data * ch)
   if (GET_WIMP_LEV(ch)	   != PFDEF_WIMPLEV)	fprintf(fl, "Wimp: %d\n", GET_WIMP_LEV(ch));
   if (GET_FREEZE_LEV(ch)   != PFDEF_FREEZELEV)	fprintf(fl, "Frez: %d\n", GET_FREEZE_LEV(ch));
   if (GET_INVIS_LEV(ch)	   != PFDEF_INVISLEV)	fprintf(fl, "Invs: %d\n", GET_INVIS_LEV(ch));
-  if (GET_LOADROOM(ch)	   != PFDEF_LOADROOM)	fprintf(fl, "Room: %d\n", GET_LOADROOM(ch));
+  if (save_loadroom	   != PFDEF_LOADROOM)	fprintf(fl, "Room: %d\n", save_loadroom);
 
   if (GET_BAD_PWS(ch)	   != PFDEF_BADPWS)	fprintf(fl, "Badp: %d\n", GET_BAD_PWS(ch));
   if (GET_PRACTICES(ch)	   != PFDEF_PRACTICES)	fprintf(fl, "Lern: %d\n", GET_PRACTICES(ch));

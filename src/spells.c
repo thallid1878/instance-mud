@@ -21,6 +21,7 @@
 #include "dg_scripts.h"
 #include "act.h"
 #include "fight.h"
+#include "instance.h"
 
 
 
@@ -59,7 +60,8 @@ ASPELL(spell_recall)
   if (victim == NULL || IS_NPC(victim))
     return;
 
-  if (ZONE_FLAGGED(GET_ROOM_ZONE(IN_ROOM(victim)), ZONE_NOASTRAL)) {
+  if (ZONE_FLAGGED(GET_ROOM_ZONE(IN_ROOM(victim)), ZONE_NOASTRAL) ||
+      instance_room_is_template(IN_ROOM(victim))) {
     send_to_char(ch, "A bright flash prevents your spell from working!");
     return;
   }
@@ -81,7 +83,8 @@ ASPELL(spell_teleport)
   if (victim == NULL || IS_NPC(victim))
     return;
 
-  if (ZONE_FLAGGED(GET_ROOM_ZONE(IN_ROOM(victim)), ZONE_NOASTRAL)) {
+  if (ZONE_FLAGGED(GET_ROOM_ZONE(IN_ROOM(victim)), ZONE_NOASTRAL) ||
+      instance_room_is_template(IN_ROOM(victim))) {
     send_to_char(ch, "A bright flash prevents your spell from working!");
     return;
   }
@@ -90,7 +93,7 @@ ASPELL(spell_teleport)
     to_room = rand_number(0, top_of_world);
   } while (ROOM_FLAGGED(to_room, ROOM_PRIVATE) || ROOM_FLAGGED(to_room, ROOM_DEATH) ||
            ROOM_FLAGGED(to_room, ROOM_GODROOM) || ZONE_FLAGGED(GET_ROOM_ZONE(to_room), ZONE_CLOSED) ||
-           ZONE_FLAGGED(GET_ROOM_ZONE(to_room), ZONE_NOASTRAL));
+           ZONE_FLAGGED(GET_ROOM_ZONE(to_room), ZONE_NOASTRAL) || instance_room_is_template(to_room));
 
   act("$n slowly fades out of existence and is gone.",
       FALSE, victim, 0, 0, TO_ROOM);
@@ -115,7 +118,8 @@ ASPELL(spell_summon)
   }
 
   if (ZONE_FLAGGED(GET_ROOM_ZONE(IN_ROOM(victim)), ZONE_NOASTRAL) ||
-      ZONE_FLAGGED(GET_ROOM_ZONE(IN_ROOM(ch)), ZONE_NOASTRAL)) {
+      ZONE_FLAGGED(GET_ROOM_ZONE(IN_ROOM(ch)), ZONE_NOASTRAL) ||
+      instance_room_is_template(IN_ROOM(victim)) || instance_room_is_template(IN_ROOM(ch))) {
     send_to_char(ch, "A bright flash prevents your spell from working!");
     return;
   }

@@ -22,6 +22,7 @@
 #define MYCMD		(OLC_ZONE(d)->cmd[subcmd])
 #define OLC_CMD(d)	(OLC_ZONE(d)->cmd[OLC_VAL(d)])
 #define MAX_DUPLICATES 100
+#define NUM_EDITABLE_ZONE_FLAGS ZONE_INSTANCE
 
 /* local functions */
 static int start_change_command(struct descriptor_data *d, int pos);
@@ -209,6 +210,7 @@ static void zedit_setup(struct descriptor_data *d, int room_num)
 
   for (i=0; i<ZN_ARRAY_MAX; i++)
     zone->zone_flags[(i)] = zone_table[OLC_ZNUM(d)].zone_flags[(i)];
+  REMOVE_BIT_AR(zone->zone_flags, ZONE_INSTANCE);
 
   zone->min_level = zone_table[OLC_ZNUM(d)].min_level;
   zone->max_level = zone_table[OLC_ZNUM(d)].max_level;
@@ -350,6 +352,7 @@ static void zedit_save_internally(struct descriptor_data *d)
     zone_table[OLC_ZNUM(d)].max_level = OLC_ZONE(d)->max_level;
     for (i=0; i<ZN_ARRAY_MAX; i++)
       zone_table[OLC_ZNUM(d)].zone_flags[(i)] = OLC_ZONE(d)->zone_flags[(i)];
+    REMOVE_BIT_AR(zone_table[OLC_ZNUM(d)].zone_flags, ZONE_INSTANCE);
   }
   add_to_save_list(zone_table[OLC_ZNUM(d)].number, SL_ZON);
 }
@@ -376,7 +379,7 @@ static void zedit_disp_flag_menu(struct descriptor_data *d)
   char bits[MAX_STRING_LENGTH];
 
   clear_screen(d);
-  column_list(d->character, 0, zone_bits, NUM_ZONE_FLAGS, TRUE);
+  column_list(d->character, 0, zone_bits, NUM_EDITABLE_ZONE_FLAGS, TRUE);
 
   sprintbitarray(OLC_ZONE(d)->zone_flags, zone_bits, ZN_ARRAY_MAX, bits);
   write_to_output(d, "\r\nZone flags: \tc%s\tn\r\n"
@@ -1202,7 +1205,7 @@ void zedit_parse(struct descriptor_data *d, char *arg)
 /*-------------------------------------------------------------------*/
   case ZEDIT_ZONE_FLAGS:
     number = atoi(arg);
-    if (number < 0 || number > NUM_ZONE_FLAGS) {
+    if (number < 0 || number > NUM_EDITABLE_ZONE_FLAGS) {
       write_to_output(d, "That is not a valid choice!\r\n");
       zedit_disp_flag_menu(d);
     } else if (number == 0) {

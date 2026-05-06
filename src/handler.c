@@ -24,6 +24,7 @@
 #include "fight.h"
 #include "quest.h"
 #include "mud_event.h"
+#include "instance.h"
 
 /* local file scope variables */
 static int extractions_pending = 0;
@@ -379,13 +380,17 @@ void char_from_room(struct char_data *ch)
 /* place a character in a room */
 void char_to_room(struct char_data *ch, room_rnum room)
 {
-  if (ch == NULL || room == NOWHERE || room > top_of_world)
+  if (ch == NULL || !valid_room_rnum(room))
     log("SYSERR: Illegal value(s) passed to char_to_room. (Room: %d/%d Ch: %p",
 		room, top_of_world, (void *)ch);
   else {
+    if (instance_room_is_template(room))
+      room = valid_room_rnum(r_mortal_start_room) ? r_mortal_start_room : 0;
+
     ch->next_in_room = world[room].people;
     world[room].people = ch;
     IN_ROOM(ch) = room;
+    ch->instance_id = instance_room_id(room);
 
     autoquest_trigger_check(ch, 0, 0, AQ_ROOM_FIND);
     autoquest_trigger_check(ch, 0, 0, AQ_MOB_FIND);
@@ -411,6 +416,7 @@ void obj_to_char(struct obj_data *object, struct char_data *ch)
     ch->carrying = object;
     object->carried_by = ch;
     IN_ROOM(object) = NOWHERE;
+    object->instance_id = GET_INSTANCE_ID(ch);
     IS_CARRYING_W(ch) += GET_OBJ_WEIGHT(object);
     IS_CARRYING_N(ch)++;
 
@@ -442,6 +448,7 @@ void obj_from_char(struct obj_data *object)
   IS_CARRYING_N(object->carried_by)--;
   object->carried_by = NULL;
   object->next_content = NULL;
+  object->instance_id = 0;
 }
 
 /* Return the effect of a piece of armor in position eq_pos */
@@ -658,11 +665,14 @@ struct char_data *get_char_num(mob_rnum nr)
 /* put an object in a room */
 void obj_to_room(struct obj_data *object, room_rnum room)
 {
-  if (!object || room == NOWHERE || room > top_of_world){
+  if (!object || !valid_room_rnum(room)){
     log("SYSERR: Illegal value(s) passed to obj_to_room. (Room #%d/%d, obj %p)",
 	room, top_of_world, (void *)object);
   }
   else {
+    if (instance_room_is_template(room))
+      room = valid_room_rnum(r_mortal_start_room) ? r_mortal_start_room : 0;
+
     if (world[room].contents == NULL){  // if list is empty
       world[room].contents = object; // add object to list
     }
@@ -673,6 +683,7 @@ void obj_to_room(struct obj_data *object, room_rnum room)
     }
     object->next_content = NULL; // mostly for sanity. should do nothing.
     IN_ROOM(object) = room;
+    object->instance_id = instance_room_id(room);
     object->carried_by = NULL;
     if (ROOM_FLAGGED(room, ROOM_HOUSE))
       SET_BIT_AR(ROOM_FLAGS(room), ROOM_HOUSE_CRASH);

@@ -29,6 +29,7 @@
 #include "shop.h"
 #include "quest.h"
 #include "modify.h"
+#include "instance.h"
 
 /* Local defined utility functions */
 /* do_group utility functions */
@@ -60,10 +61,13 @@ ACMD(do_quit)
      * in extract_char(), since there is no check if a player rents out and it
      * can leave them in an equally screwy situation. */
 
+    if (GET_INSTANCE_ID(ch) > 0)
+      GET_LOADROOM(ch) = instance_safe_load_room_vnum(ch);
+    else
+      GET_LOADROOM(ch) = GET_ROOM_VNUM(IN_ROOM(ch));
+
     if (CONFIG_FREE_RENT)
       Crash_rentsave(ch, 0);
-
-    GET_LOADROOM(ch) = GET_ROOM_VNUM(IN_ROOM(ch));
 
     /* Stop snooping so you can't see passwords during deletion or change. */
     if (ch->desc->snoop_by) {
@@ -82,11 +86,14 @@ ACMD(do_save)
     return;
 
   send_to_char(ch, "Saving %s.\r\n", GET_NAME(ch));
+  if (GET_INSTANCE_ID(ch) > 0)
+    GET_LOADROOM(ch) = instance_safe_load_room_vnum(ch);
+  else
+    GET_LOADROOM(ch) = GET_ROOM_VNUM(IN_ROOM(ch));
   save_char(ch);
   Crash_crashsave(ch);
   if (ROOM_FLAGGED(IN_ROOM(ch), ROOM_HOUSE_CRASH))
     House_crashsave(GET_ROOM_VNUM(IN_ROOM(ch)));
-  GET_LOADROOM(ch) = GET_ROOM_VNUM(IN_ROOM(ch));
 }
 
 /* Generic function for commands which are normally overridden by special
