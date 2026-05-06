@@ -179,6 +179,7 @@ ACMD(do_assist);
 ACMD(do_bash);
 ACMD(do_backstab);
 ACMD(do_flee);
+ACMD(do_buystat);
 ACMD(do_kick);
 ACMD(do_kill);
 ACMD(do_order);
@@ -308,6 +309,7 @@ ACMD(do_wizutil);
 #define SCMD_THAW     5
 #define SCMD_UNAFFECT 6
 /* Functions without subcommands */
+ACMD(do_addexp);
 ACMD(do_advance);
 ACMD(do_at);
 ACMD(do_checkloadstatus);

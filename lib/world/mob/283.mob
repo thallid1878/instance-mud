@@ -93,7 +93,6 @@ comes in for the kill.  If I were you, I'd get out of here and fast!
 8 8 0
 BareHandAttack: 4
 Str: 18
-StrAdd: 18
 Dex: 18
 Int: 18
 Wis: 18
@@ -360,7 +359,6 @@ The walls are strangely made of stone...
 8 8 0
 BareHandAttack: 6
 Str: 25
-StrAdd: 100
 Dex: 16
 Int: 4
 Wis: 3

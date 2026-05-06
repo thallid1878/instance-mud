@@ -628,6 +628,7 @@ typedef signed char sbyte;          /**< 1 byte; vals = -127 to 127 */
 typedef unsigned char ubyte;        /**< 1 byte; vals = 0 to 255 */
 typedef signed short int sh_int;    /**< 2 bytes; vals = -32,768 to 32,767 */
 typedef unsigned short int ush_int; /**< 2 bytes; vals = 0 to 65,535 */
+typedef signed short int stat_value_t; /**< Character stat value; usable range -255 to 255. */
 #if !defined(__cplusplus)	/* Anyone know a portable method? */
 typedef char bool; /**< Technically 1 signed byte; vals should only = TRUE or FALSE. */
 #endif
@@ -882,13 +883,12 @@ struct char_player_data
  * player strength). */
 struct char_ability_data
 {
-  sbyte str;     /**< Strength.  */
-  sbyte str_add; /**< Strength multiplier if str = 18. Usually from 0 to 100 */
-  sbyte intel;   /**< Intelligence */
-  sbyte wis;     /**< Wisdom */
-  sbyte dex;     /**< Dexterity */
-  sbyte con;     /**< Constitution */
-  sbyte cha;     /**< Charisma */
+  stat_value_t str; /**< Strength.  */
+  stat_value_t intel; /**< Intelligence */
+  stat_value_t wis;   /**< Wisdom */
+  stat_value_t dex;   /**< Dexterity */
+  stat_value_t con;   /**< Constitution */
+  stat_value_t cha;   /**< Charisma */
 };
 
 /** Character 'points', or health statistics. */

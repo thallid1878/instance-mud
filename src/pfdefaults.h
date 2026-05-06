@@ -37,7 +37,6 @@
 #define PFDEF_DAMROLL		0
 #define PFDEF_AC		0
 #define PFDEF_STR		0
-#define PFDEF_STRADD		0
 #define PFDEF_DEX		0
 #define PFDEF_INT		0
 #define PFDEF_WIS		0

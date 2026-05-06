@@ -1617,8 +1617,7 @@ Excluding the subfield () returns the value. Adding a subfield adjusts it.
 
 @uField@n            - @uvariable returns:@n
 
-cha/con/dex/int - Checks the stat. @RHELP TRIG-STAT@n. Subfield adjusts. 
-str/stradd/wis()  () is a subfield and allows a change to the variable.
+cha/con/dex/int/str/wis - Checks the stat. @RHELP TRIG-STAT@n. Subfield adjusts.
 alias           - The list of aliases of the mob or the player name. 
 align()         - The actor's alignment @RHELP ALIGN@n. Subfield adjusts.
 affect()        - Checks the actor for the affect. @RHELP AFFECT@n 
@@ -8557,7 +8556,6 @@ sex                 God    BOTH  MISC
 showvnums           Imm    PC    BINARY
 siteok              God    PC    BINARY
 str                 Imm    BOTH  NUMBER
-stradd              Imm    BOTH  NUMBER
 thief               God    PC    BINARY
 thirst              Imm    BOTH  MISC  
 title               God    PC    MISC  
@@ -10549,7 +10547,7 @@ Trig Usage: %actor.<stat>(<#>)%
             %actor.str(18) sets it to 18
 
 Checks the actor's stat. A number in the subfield sets.
-Stats include: cha, con, dex, int, str, stradd (only if str is 18).
+Stats include: cha, con, dex, int, str, wis.
 
 See also: STATS
 #31

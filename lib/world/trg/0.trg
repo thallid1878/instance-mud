@@ -639,7 +639,7 @@ if %actor.canbeseen% && %actor.is_pc%
   %echo% CONSTITUTION:    %actor.con%
   %echo% DEXTERITY:       %actor.dex%
   %echo% INTELLIGENCE:    %actor.int%
-  %echo% STRENGTH/STRADD: %actor.str%/%actor.stradd%
+  %echo% STRENGTH:        %actor.str%
   %echo% WISDOM:          %actor.wis%
   %echo% ALIAS:           %actor.alias%
   %echo% ALIGN:           %actor.align%

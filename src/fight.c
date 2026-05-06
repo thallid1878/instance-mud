@@ -62,7 +62,8 @@ static void group_gain(struct char_data *ch, struct char_data *victim);
 static void solo_gain(struct char_data *ch, struct char_data *victim);
 /** @todo refactor this function name */
 static char *replace_string(const char *str, const char *weapon_singular, const char *weapon_plural);
-static int compute_thaco(struct char_data *ch, struct char_data *vict);
+static bool melee_hit_roll(struct char_data *ch, struct char_data *victim,
+  int *attacker_roll, int *defender_roll);
 
 
 #define IS_WEAPON(type) (((type) >= TYPE_HIT) && ((type) < TYPE_SUFFERING))
@@ -87,7 +88,7 @@ int compute_armor_class(struct char_data *ch)
   int armorclass = GET_AC(ch);
 
   if (AWAKE(ch))
-    armorclass += dex_app[GET_DEX(ch)].defensive * 10;
+    armorclass += dex_app[STAT_APP_INDEX(GET_DEX(ch))].defensive * 10;
 
   return (MAX(-100, armorclass));      /* -100 is lowest */
 }
@@ -810,29 +811,19 @@ int damage(struct char_data *ch, struct char_data *victim, int dam, int attackty
   return (dam);
 }
 
-/* Calculate the THAC0 of the attacker. 'victim' currently isn't used but you
- * could use it for special cases like weapons that hit evil creatures easier
- * or a weapon that always misses attacking an animal. */
-static int compute_thaco(struct char_data *ch, struct char_data *victim)
+static bool melee_hit_roll(struct char_data *ch, struct char_data *victim,
+  int *attacker_roll, int *defender_roll)
 {
-  int calc_thaco;
+  *attacker_roll = rand_number(1, 20) + GET_STR(ch) + GET_HITROLL(ch);
+  *defender_roll = rand_number(1, 20) + GET_DEX(victim) + GET_HITROLL(victim);
 
-  if (!IS_NPC(ch))
-    calc_thaco = thaco(GET_CLASS(ch), GET_LEVEL(ch));
-  else		/* THAC0 for monsters is set in the HitRoll */
-    calc_thaco = 20;
-  calc_thaco -= str_app[STRENGTH_APPLY_INDEX(ch)].tohit;
-  calc_thaco -= GET_HITROLL(ch);
-  calc_thaco -= (int) ((GET_INT(ch) - 13) / 1.5);	/* Intelligence helps! */
-  calc_thaco -= (int) ((GET_WIS(ch) - 13) / 1.5);	/* So does wisdom */
-
-  return calc_thaco;
+  return *attacker_roll > *defender_roll;
 }
 
 void hit(struct char_data *ch, struct char_data *victim, int type)
 {
   struct obj_data *wielded = GET_EQ(ch, WEAR_WIELD);
-  int w_type, victim_ac, calc_thaco, dam, diceroll;
+  int w_type, dam, attacker_roll = 0, defender_roll = 0;
 
   /* Check that the attacker and victim exist */
   if (!ch || !victim) return;
@@ -857,31 +848,15 @@ void hit(struct char_data *ch, struct char_data *victim, int type)
       w_type = TYPE_HIT;
   }
 
-  /* Calculate chance of hit. Lower THAC0 is better for attacker. */
-  calc_thaco = compute_thaco(ch, victim);
-
-  /* Calculate the raw armor including magic armor.  Lower AC is better for defender. */
-  victim_ac = compute_armor_class(victim) / 10;
-
-  /* roll the die and take your chances... */
-  diceroll = rand_number(1, 20);
-
-  /* report for debugging if necessary */
-  if (CONFIG_DEBUG_MODE >= NRM)
-    send_to_char(ch, "\t1Debug:\r\n   \t2Thaco: \t3%d\r\n   \t2AC: \t3%d\r\n   \t2Diceroll: \t3%d\tn\r\n", 
-      calc_thaco, victim_ac, diceroll);
-
-  /* Decide whether this is a hit or a miss.
-   *  Victim asleep = hit, otherwise:
-   *     1   = Automatic miss.
-   *   2..19 = Checked vs. AC.
-   *    20   = Automatic hit. */
-  if (diceroll == 20 || !AWAKE(victim))
+  if (!AWAKE(victim))
     dam = TRUE;
-  else if (diceroll == 1)
-    dam = FALSE;
   else
-    dam = (calc_thaco - diceroll <= victim_ac);
+    dam = melee_hit_roll(ch, victim, &attacker_roll, &defender_roll);
+
+  if (CONFIG_DEBUG_MODE >= NRM)
+    send_to_char(ch, "\t1Debug:\r\n   \t2Melee attack roll: \t3%d\r\n"
+      "   \t2Melee defense roll: \t3%d\tn\r\n",
+      attacker_roll, defender_roll);
 
   if (!dam)
     /* the attacker missed the victim */

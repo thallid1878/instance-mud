@@ -905,7 +905,6 @@ say you are a: %actor.himher%
 say you have %actor.inventory% in your inventory.
 say you know the skill backstab %actor.skill(backstab)%
 say your str is %actor.str%
-say your stradd is %actor.stradd%
 say your vnum is %actor.vnum%
 say your wis is %actor.wis%
 say your weight is %actor.weight%

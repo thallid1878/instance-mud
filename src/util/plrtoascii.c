@@ -26,7 +26,7 @@
 /* Char's abilities.  Used in char_file_u *DO*NOT*CHANGE* */
 struct char_ability_data_plrtoascii {
    sbyte str;
-   sbyte str_add;      /* 000 - 100 if strength 18             */
+   sbyte str_add;      /* Legacy binary 18/xx strength. Ignored. */
    sbyte intel;
    sbyte wis;
    sbyte dex;
@@ -273,8 +273,8 @@ void convert(char *filename)
 
 /* char_ability_data */
     cad = &(player.abilities);
-    if (cad->str != PFDEF_STR || cad->str_add != PFDEF_STRADD)
-      fprintf(outfile, "Str : %d/%d\n", cad->str, cad->str_add);
+    if (cad->str != PFDEF_STR)
+      fprintf(outfile, "Str : %d\n", cad->str);
     if (cad->intel != PFDEF_INT)
       fprintf(outfile, "Int : %d\n", cad->intel);
     if (cad->wis != PFDEF_WIS)

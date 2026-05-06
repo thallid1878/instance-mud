@@ -274,7 +274,6 @@ int load_char(const char *name, struct char_data *ch)
     GET_DAMROLL(ch) = PFDEF_DAMROLL;
     GET_AC(ch) = PFDEF_AC;
     ch->real_abils.str = PFDEF_STR;
-    ch->real_abils.str_add = PFDEF_STRADD;
     ch->real_abils.dex = PFDEF_DEX;
     ch->real_abils.intel = PFDEF_INT;
     ch->real_abils.wis = PFDEF_WIS;
@@ -641,7 +640,7 @@ void save_char(struct char_data * ch)
   if (GET_MANA(ch)	   != PFDEF_MANA || GET_MAX_MANA(ch) != PFDEF_MAXMANA) fprintf(fl, "Mana: %d/%d\n", GET_MANA(ch), GET_MAX_MANA(ch));
   if (GET_MOVE(ch)	   != PFDEF_MOVE || GET_MAX_MOVE(ch) != PFDEF_MAXMOVE) fprintf(fl, "Move: %d/%d\n", GET_MOVE(ch), GET_MAX_MOVE(ch));
 
-  if (GET_STR(ch)	   != PFDEF_STR  || GET_ADD(ch)      != PFDEF_STRADD)  fprintf(fl, "Str : %d/%d\n", GET_STR(ch),  GET_ADD(ch));
+  if (GET_STR(ch)	   != PFDEF_STR)	fprintf(fl, "Str : %d\n", GET_STR(ch));
 
 
   if (GET_INT(ch)	   != PFDEF_INT)	fprintf(fl, "Int : %d\n", GET_INT(ch));
@@ -920,7 +919,6 @@ static void load_HMVS(struct char_data *ch, const char *line, int mode)
 
   case LOAD_STRENGTH:
     ch->real_abils.str = num;
-    ch->real_abils.str_add = num2;
     break;
   }
 }

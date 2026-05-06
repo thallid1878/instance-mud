@@ -1057,25 +1057,12 @@ void find_replacement(void *go, struct script_data *sc, trig_data *trig,
           else if (!str_cmp(field, "str")) {
             if (subfield && *subfield) {
               int addition = atoi(subfield);
-              int max = (IS_NPC(c) || GET_LEVEL(c) >= LVL_GRGOD) ? 25 : 18;
               c->real_abils.str += addition;
-              if (c->real_abils.str > max) c->real_abils.str = max;
-              if (c->real_abils.str < 3) c->real_abils.str = 3;
+              if (c->real_abils.str > MAX_STAT_VALUE) c->real_abils.str = MAX_STAT_VALUE;
+              if (c->real_abils.str < MIN_STAT_VALUE) c->real_abils.str = MIN_STAT_VALUE;
               affect_total(c);
             }
             snprintf(str, slen, "%d", GET_STR(c));
-          }
-          else if (!str_cmp(field, "stradd")) {
-            if (GET_STR(c) >= 18) {
-              if (subfield && *subfield) {
-                int addition = atoi(subfield);
-                c->real_abils.str_add += addition;
-                if (c->real_abils.str_add > 100) c->real_abils.str_add = 100;
-                if (c->real_abils.str_add < 0) c->real_abils.str_add = 0;
-                affect_total(c);
-              }
-              snprintf(str, slen, "%d", GET_ADD(c));
-            }
           }
           break;
         case 't':

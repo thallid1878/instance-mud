@@ -840,8 +840,8 @@ static void do_stat_character(struct char_data *ch, struct char_data *k)
 
     send_to_char(ch, "Played: [%dh %dm], Age: [%d], STL[%d]/per[%d]/NSTL[%d]",
             k->player.time.played / 3600, (k->player.time.played % 3600) / 60,
-            age(k)->year, GET_PRACTICES(k), int_app[GET_INT(k)].learn,
-	    wis_app[GET_WIS(k)].bonus);
+            age(k)->year, GET_PRACTICES(k), int_app[STAT_APP_INDEX(GET_INT(k))].learn,
+	    wis_app[STAT_APP_INDEX(GET_WIS(k))].bonus);
     /* Display OLC zone for immorts. */
     if (GET_LEVEL(k) >= LVL_BUILDER) {
       if (GET_OLC_ZONE(k)==AEDIT_PERMISSION)
@@ -857,9 +857,9 @@ static void do_stat_character(struct char_data *ch, struct char_data *k)
     }
     send_to_char(ch, "\r\n");
   }
-  send_to_char(ch, "Str: [%s%d/%d%s]  Int: [%s%d%s]  Wis: [%s%d%s]  "
+  send_to_char(ch, "Str: [%s%d%s]  Int: [%s%d%s]  Wis: [%s%d%s]  "
 	  "Dex: [%s%d%s]  Con: [%s%d%s]  Cha: [%s%d%s]\r\n",
-	  CCCYN(ch, C_NRM), GET_STR(k), GET_ADD(k), CCNRM(ch, C_NRM),
+	  CCCYN(ch, C_NRM), GET_STR(k), CCNRM(ch, C_NRM),
 	  CCCYN(ch, C_NRM), GET_INT(k), CCNRM(ch, C_NRM),
 	  CCCYN(ch, C_NRM), GET_WIS(k), CCNRM(ch, C_NRM),
 	  CCCYN(ch, C_NRM), GET_DEX(k), CCNRM(ch, C_NRM),
@@ -880,7 +880,7 @@ static void do_stat_character(struct char_data *ch, struct char_data *k)
                       CCYEL(ch, C_NRM), GET_PAGE_LENGTH(k), CCCYN(ch, C_NRM), CCNRM(ch, C_NRM));
 
   send_to_char(ch, "AC: [%d%+d/10], Hitroll: [%2d], Damroll: [%2d], Saving throws: [%d/%d/%d/%d/%d]\r\n",
-	  GET_AC(k), dex_app[GET_DEX(k)].defensive, k->points.hitroll,
+	  GET_AC(k), dex_app[STAT_APP_INDEX(GET_DEX(k))].defensive, k->points.hitroll,
 	  k->points.damroll, GET_SAVE(k, 0), GET_SAVE(k, 1), GET_SAVE(k, 2),
 	  GET_SAVE(k, 3), GET_SAVE(k, 4));
 
@@ -1517,6 +1517,62 @@ ACMD(do_purge)
   }
 }
 
+ACMD(do_addexp)
+{
+  struct char_data *victim = ch;
+  char arg1[MAX_INPUT_LENGTH], arg2[MAX_INPUT_LENGTH];
+  long amount, old_exp, new_exp;
+
+  two_arguments(argument, arg1, arg2);
+
+  if (!*arg1) {
+    send_to_char(ch, "Usage: addexp [player] <amount>\r\n");
+    return;
+  }
+
+  if (*arg2) {
+    if (!(victim = get_char_vis(ch, arg1, NULL, FIND_CHAR_WORLD))) {
+      send_to_char(ch, "That player is not here.\r\n");
+      return;
+    }
+    if (!is_number(arg2)) {
+      send_to_char(ch, "Amount must be a number.\r\n");
+      return;
+    }
+    amount = atol(arg2);
+  } else {
+    if (!is_number(arg1)) {
+      send_to_char(ch, "Usage: addexp [player] <amount>\r\n");
+      return;
+    }
+    amount = atol(arg1);
+  }
+
+  if (IS_NPC(victim)) {
+    send_to_char(ch, "You can only adjust player experience with addexp.\r\n");
+    return;
+  }
+
+  old_exp = GET_EXP(victim);
+  new_exp = old_exp + amount;
+  if (new_exp < 0)
+    new_exp = 0;
+  if (new_exp > INT_MAX)
+    new_exp = INT_MAX;
+
+  GET_EXP(victim) = (int)new_exp;
+  save_char(victim);
+
+  send_to_char(ch, "%s experience: %ld %+ld = %d.\r\n",
+    GET_NAME(victim), old_exp, amount, GET_EXP(victim));
+  if (victim != ch)
+    send_to_char(victim, "%s adjusts your experience: %ld %+ld = %d.\r\n",
+      GET_NAME(ch), old_exp, amount, GET_EXP(victim));
+
+  mudlog(BRF, LVL_IMMORT, TRUE, "(GC) %s adjusted %s's experience by %+ld to %d.",
+    GET_NAME(ch), GET_NAME(victim), amount, GET_EXP(victim));
+}
+
 ACMD(do_advance)
 {
   struct char_data *victim;
@@ -1654,7 +1710,6 @@ ACMD(do_restore)
           SET_SKILL(vict, i, 100);
 
       if (GET_LEVEL(vict) >= LVL_GRGOD) {
-	vict->real_abils.str_add = 100;
 	vict->real_abils.intel = 25;
 	vict->real_abils.wis = 25;
 	vict->real_abils.dex = 25;
@@ -2377,8 +2432,8 @@ ACMD(do_wizutil)
       send_to_char(ch, "Rerolled...\r\n");
       roll_real_abils(vict);
       log("(GC) %s has rerolled %s.", GET_NAME(ch), GET_NAME(vict));
-      send_to_char(ch, "New stats: Str %d/%d, Int %d, Wis %d, Dex %d, Con %d, Cha %d\r\n",
-	      GET_STR(vict), GET_ADD(vict), GET_INT(vict), GET_WIS(vict),
+      send_to_char(ch, "New stats: Str %d, Int %d, Wis %d, Dex %d, Con %d, Cha %d\r\n",
+	      GET_STR(vict), GET_INT(vict), GET_WIS(vict),
 	      GET_DEX(vict), GET_CON(vict), GET_CHA(vict));
       break;
     case SCMD_PARDON:
@@ -2925,8 +2980,7 @@ static struct set_struct {
    { "showvnums",  LVL_BUILDER,  PC, BINARY },
    { "siteok",   LVL_GOD,  PC,   BINARY },
    { "str",		LVL_BUILDER, 	BOTH, 	NUMBER },
-   { "stradd",		LVL_BUILDER, 	BOTH, 	NUMBER },
-   { "thief",		LVL_GOD, 	PC, 	BINARY }, /* 50 */
+   { "thief",		LVL_GOD, 	PC, 	BINARY }, /* 49 */
    { "thirst",		LVL_BUILDER, 	BOTH, 	MISC },
    { "title",		LVL_GOD, 	PC, 	MISC   },
    { "variable",        LVL_GRGOD,	PC,	MISC },
@@ -3006,10 +3060,7 @@ static int perform_set(struct char_data *ch, struct char_data *vict, int mode, c
       SET_OR_REMOVE(PRF_FLAGS(vict), PRF_BRIEF);
       break;
     case 6:  /* cha */
-      if (IS_NPC(vict) || GET_LEVEL(vict) >= LVL_GRGOD)
-        RANGE(3, 25);
-      else
-        RANGE(3, 18);
+      RANGE(MIN_STAT_VALUE, MAX_STAT_VALUE);
       vict->real_abils.cha = value;
       affect_total(vict);
       break;
@@ -3025,10 +3076,7 @@ static int perform_set(struct char_data *ch, struct char_data *vict, int mode, c
       SET_OR_REMOVE(PRF_FLAGS(vict), (PRF_COLOR_2));
       break;
     case 9: /* con */
-      if (IS_NPC(vict) || GET_LEVEL(vict) >= LVL_GRGOD)
-        RANGE(3, 25);
-      else
-        RANGE(3, 18);
+      RANGE(MIN_STAT_VALUE, MAX_STAT_VALUE);
       vict->real_abils.con = value;
       affect_total(vict);
       break;
@@ -3040,10 +3088,7 @@ static int perform_set(struct char_data *ch, struct char_data *vict, int mode, c
       SET_OR_REMOVE(PLR_FLAGS(vict), PLR_DELETED);
       break;
     case 12: /* dex */
-      if (IS_NPC(vict) || GET_LEVEL(vict) >= LVL_GRGOD)
-        RANGE(3, 25);
-      else
-        RANGE(3, 18);
+      RANGE(MIN_STAT_VALUE, MAX_STAT_VALUE);
       vict->real_abils.dex = value;
       affect_total(vict);
       break;
@@ -3101,10 +3146,7 @@ static int perform_set(struct char_data *ch, struct char_data *vict, int mode, c
        }
        break;
    case 21: /* int */
-      if (IS_NPC(vict) || GET_LEVEL(vict) >= LVL_GRGOD)
-        RANGE(3, 25);
-      else
-        RANGE(3, 18);
+      RANGE(MIN_STAT_VALUE, MAX_STAT_VALUE);
       vict->real_abils.intel = value;
       affect_total(vict);
       break;
@@ -3278,24 +3320,14 @@ static int perform_set(struct char_data *ch, struct char_data *vict, int mode, c
       SET_OR_REMOVE(PLR_FLAGS(vict), PLR_SITEOK);
       break;
     case 48: /* str */
-      if (IS_NPC(vict) || GET_LEVEL(vict) >= LVL_GRGOD)
-        RANGE(3, 25);
-      else
-        RANGE(3, 18);
+      RANGE(MIN_STAT_VALUE, MAX_STAT_VALUE);
       vict->real_abils.str = value;
-      vict->real_abils.str_add = 0;
       affect_total(vict);
       break;
-    case 49: /* stradd */
-      vict->real_abils.str_add = RANGE(0, 100);
-      if (value > 0)
-        vict->real_abils.str = 18;
-      affect_total(vict);
-      break;
-    case 50: /* thief */
+    case 49: /* thief */
       SET_OR_REMOVE(PLR_FLAGS(vict), PLR_THIEF);
       break;
-    case 51: /* thirst */
+    case 50: /* thirst */
       if (!str_cmp(val_arg, "off")) {
         GET_COND(vict, THIRST) = -1;
         send_to_char(ch, "%s's thirst is now off.\r\n", GET_NAME(vict));
@@ -3309,28 +3341,25 @@ static int perform_set(struct char_data *ch, struct char_data *vict, int mode, c
         return (0);
       }
       break;
-    case 52: /* title */
+    case 51: /* title */
       set_title(vict, val_arg);
       send_to_char(ch, "%s's title is now: %s\r\n", GET_NAME(vict), GET_TITLE(vict));
       break;
-    case 53: /* variable */
+    case 52: /* variable */
       return perform_set_dg_var(ch, vict, val_arg);
-    case 54: /* weight */
+    case 53: /* weight */
       GET_WEIGHT(vict) = value;
       affect_total(vict);
       break;
-    case 55: /* wis */
-      if (IS_NPC(vict) || GET_LEVEL(vict) >= LVL_GRGOD)
-        RANGE(3, 25);
-      else
-        RANGE(3, 18);
+    case 54: /* wis */
+      RANGE(MIN_STAT_VALUE, MAX_STAT_VALUE);
       vict->real_abils.wis = value;
       affect_total(vict);
       break;
-    case 56: /* questpoints */
+    case 55: /* questpoints */
       GET_QUESTPOINTS(vict) = RANGE(0, 100000000);
       break;
-    case 57: /* questhistory */
+    case 56: /* questhistory */
       qvnum = atoi(val_arg);
       if (real_quest(qvnum) == NOTHING) {
         send_to_char(ch, "That quest doesn't exist.\r\n");

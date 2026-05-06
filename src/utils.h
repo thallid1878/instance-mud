@@ -498,8 +498,6 @@ do                                                              \
 
 /** Current strength of ch. */
 #define GET_STR(ch)     ((ch)->aff_abils.str)
-/** Current strength modifer of ch. */
-#define GET_ADD(ch)     ((ch)->aff_abils.str_add)
 /** Current dexterity of ch. */
 #define GET_DEX(ch)     ((ch)->aff_abils.dex)
 /** Current intelligence of ch. */
@@ -510,6 +508,11 @@ do                                                              \
 #define GET_CON(ch)     ((ch)->aff_abils.con)
 /** Current charisma of ch. */
 #define GET_CHA(ch)     ((ch)->aff_abils.cha)
+
+#define STAT_BASE_VALUE 10
+#define MIN_STAT_VALUE -255
+#define MAX_STAT_VALUE 255
+#define STAT_APP_INDEX(stat) (MAX(0, MIN((stat), 25)))
 
 /** Experience points of ch. */
 #define GET_EXP(ch)	  ((ch)->points.exp)
@@ -640,14 +643,8 @@ do                                                              \
 /** Return the memory of ch. */
 #define MEMORY(ch)		((ch)->mob_specials.memory)
 
-/** Return the equivalent strength of ch if ch has level 18 strength. */
-#define STRENGTH_APPLY_INDEX(ch) \
-        ( ((GET_ADD(ch) ==0) || (GET_STR(ch) != 18)) ? GET_STR(ch) :\
-          (GET_ADD(ch) <= 50) ? 26 :( \
-          (GET_ADD(ch) <= 75) ? 27 :( \
-          (GET_ADD(ch) <= 90) ? 28 :( \
-          (GET_ADD(ch) <= 99) ? 29 :  30 ) ) )                   \
-        )
+/** Return the clamped strength index used by the legacy strength tables. */
+#define STRENGTH_APPLY_INDEX(ch) (STAT_APP_INDEX(GET_STR(ch)))
 
 /** Return how much weight ch can carry. */
 #define CAN_CARRY_W(ch) (str_app[STRENGTH_APPLY_INDEX(ch)].carry_w)

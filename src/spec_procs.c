@@ -34,9 +34,10 @@ static const char *how_good(int percent);
 static int skill_rank(int percent);
 static int skill_percent_from_rank(int rank);
 static int skill_rank_cost(int rank);
-static int stat_cost(int stat);
 static bool is_buyable_skill(int skill_num);
-static bool practice_stat(struct char_data *ch, char *argument);
+static int stat_purchase_cost(int stat);
+static bool find_purchasable_stat(struct char_data *ch, char *argument,
+  stat_value_t **stat, const char **name);
 static void npc_steal(struct char_data *ch, struct char_data *victim);
 
 /* Special procedures for mobiles. */
@@ -95,11 +96,6 @@ static int skill_rank_cost(int rank)
   return rank * rank * 1000;
 }
 
-static int stat_cost(int stat)
-{
-  return (stat + 1) * (stat + 1) * 1000;
-}
-
 static bool is_buyable_skill(int skill_num)
 {
   if (skill_num <= MAX_SPELLS || skill_num > MAX_SKILLS)
@@ -112,6 +108,80 @@ static bool is_buyable_skill(int skill_num)
   return TRUE;
 }
 
+static int stat_purchase_cost(int stat)
+{
+  int points_bought = MAX(0, stat - STAT_BASE_VALUE);
+
+  return (points_bought + 1) * 100;
+}
+
+static bool find_purchasable_stat(struct char_data *ch, char *argument,
+  stat_value_t **stat, const char **name)
+{
+  if (is_abbrev(argument, "strength")) {
+    *stat = &ch->real_abils.str;
+    *name = "strength";
+  } else if (is_abbrev(argument, "dexterity")) {
+    *stat = &ch->real_abils.dex;
+    *name = "dexterity";
+  } else if (is_abbrev(argument, "intelligence")) {
+    *stat = &ch->real_abils.intel;
+    *name = "intelligence";
+  } else if (is_abbrev(argument, "wisdom")) {
+    *stat = &ch->real_abils.wis;
+    *name = "wisdom";
+  } else if (is_abbrev(argument, "constitution")) {
+    *stat = &ch->real_abils.con;
+    *name = "constitution";
+  } else if (is_abbrev(argument, "charisma")) {
+    *stat = &ch->real_abils.cha;
+    *name = "charisma";
+  } else
+    return FALSE;
+
+  return TRUE;
+}
+
+ACMD(do_buystat)
+{
+  char arg[MAX_INPUT_LENGTH];
+  stat_value_t *stat = NULL;
+  const char *name = NULL;
+  int cost;
+
+  if (IS_NPC(ch))
+    return;
+
+  one_argument(argument, arg);
+  if (!*arg) {
+    send_to_char(ch, "Usage: buystat <str|dex|int|wis|con|cha>\r\n");
+    return;
+  }
+
+  if (!find_purchasable_stat(ch, arg, &stat, &name)) {
+    send_to_char(ch, "Unknown stat. Use str, dex, int, wis, con, or cha.\r\n");
+    return;
+  }
+
+  if (*stat >= MAX_STAT_VALUE) {
+    send_to_char(ch, "Your %s is already at its current maximum.\r\n", name);
+    return;
+  }
+
+  cost = stat_purchase_cost(*stat);
+  if (GET_EXP(ch) < cost) {
+    send_to_char(ch, "You need %d experience to raise %s.\r\n", cost, name);
+    return;
+  }
+
+  GET_EXP(ch) -= cost;
+  *stat += 1;
+  affect_total(ch);
+  save_char(ch);
+  send_to_char(ch, "You spend %d experience and raise your %s to %d.\r\n",
+    cost, name, *stat);
+}
+
 void list_skills(struct char_data *ch)
 {
   const char *overflow = "\r\n**OVERFLOW**\r\n";
@@ -120,8 +190,7 @@ void list_skills(struct char_data *ch)
   char buf2[MAX_STRING_LENGTH];
 
   len = snprintf(buf2, sizeof(buf2), "Experience available: %d\r\n"
-	"Buy or upgrade with: practice <skill>\r\n"
-	"Raise stats with: practice stat <str|dex|int|wis|con|cha>\r\n\r\n",
+	"Buy or upgrade with: practice <skill>\r\n\r\n",
 	GET_EXP(ch));
 
   for (sortpos = 1; sortpos <= MAX_SKILLS; sortpos++) {
@@ -149,62 +218,6 @@ void list_skills(struct char_data *ch)
   page_string(ch->desc, buf2, TRUE);
 }
 
-static bool practice_stat(struct char_data *ch, char *argument)
-{
-  sbyte *stat = NULL;
-  const char *name = NULL;
-  int cost;
-
-  skip_spaces(&argument);
-
-  if (!*argument) {
-    send_to_char(ch, "Raise which stat: str, dex, int, wis, con, or cha?\r\n");
-    return TRUE;
-  }
-
-  if (is_abbrev(argument, "strength")) {
-    stat = &ch->real_abils.str;
-    name = "strength";
-  } else if (is_abbrev(argument, "dexterity")) {
-    stat = &ch->real_abils.dex;
-    name = "dexterity";
-  } else if (is_abbrev(argument, "intelligence")) {
-    stat = &ch->real_abils.intel;
-    name = "intelligence";
-  } else if (is_abbrev(argument, "wisdom")) {
-    stat = &ch->real_abils.wis;
-    name = "wisdom";
-  } else if (is_abbrev(argument, "constitution")) {
-    stat = &ch->real_abils.con;
-    name = "constitution";
-  } else if (is_abbrev(argument, "charisma")) {
-    stat = &ch->real_abils.cha;
-    name = "charisma";
-  } else {
-    send_to_char(ch, "Unknown stat. Use str, dex, int, wis, con, or cha.\r\n");
-    return TRUE;
-  }
-
-  if (*stat >= 25) {
-    send_to_char(ch, "Your %s is already at its current maximum.\r\n", name);
-    return TRUE;
-  }
-
-  cost = stat_cost(*stat);
-  if (GET_EXP(ch) < cost) {
-    send_to_char(ch, "You need %d experience to raise %s.\r\n", cost, name);
-    return TRUE;
-  }
-
-  GET_EXP(ch) -= cost;
-  *stat += 1;
-  ch->aff_abils = ch->real_abils;
-  save_char(ch);
-  send_to_char(ch, "You spend %d experience and raise your %s to %d.\r\n",
-    cost, name, *stat);
-  return TRUE;
-}
-
 bool practice_purchase(struct char_data *ch, char *argument)
 {
   int skill_num, rank, cost;
@@ -222,8 +235,10 @@ bool practice_purchase(struct char_data *ch, char *argument)
     return TRUE;
   }
 
-  if (is_abbrev(arg, "stat"))
-    return practice_stat(ch, argument);
+  if (is_abbrev(arg, "stat")) {
+    send_to_char(ch, "Stats are raised with: buystat <str|dex|int|wis|con|cha>\r\n");
+    return TRUE;
+  }
 
   skill_num = find_skill_num(skill_name_arg);
   if (!is_buyable_skill(skill_num)) {
@@ -791,4 +806,3 @@ SPECIAL(bank)
   } else
     return (FALSE);
 }
-

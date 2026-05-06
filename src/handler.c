@@ -256,25 +256,12 @@ void affect_total(struct char_data *ch)
   for (af = ch->affected; af; af = af->next)
     affect_modify_ar(ch, af->location, af->modifier, af->bitvector, TRUE);
 
-  /* Make certain values are between 0..25, not < 0 and not > 25! */
-  i = (IS_NPC(ch) || GET_LEVEL(ch) >= LVL_GRGOD) ? 25 : 18;
-
-  GET_DEX(ch) = MAX(0, MIN(GET_DEX(ch), i));
-  GET_INT(ch) = MAX(0, MIN(GET_INT(ch), i));
-  GET_WIS(ch) = MAX(0, MIN(GET_WIS(ch), i));
-  GET_CON(ch) = MAX(0, MIN(GET_CON(ch), i));
-  GET_CHA(ch) = MAX(0, MIN(GET_CHA(ch), i));
-  GET_STR(ch) = MAX(0, GET_STR(ch));
-
-  if (IS_NPC(ch) || GET_LEVEL(ch) >= LVL_GRGOD) {
-    GET_STR(ch) = MIN(GET_STR(ch), i);
-  } else {
-    if (GET_STR(ch) > 18) {
-      i = GET_ADD(ch) + ((GET_STR(ch) - 18) * 10);
-      GET_ADD(ch) = MIN(i, 100);
-      GET_STR(ch) = 18;
-    }
-  }
+  GET_DEX(ch) = MAX(MIN_STAT_VALUE, MIN(GET_DEX(ch), MAX_STAT_VALUE));
+  GET_INT(ch) = MAX(MIN_STAT_VALUE, MIN(GET_INT(ch), MAX_STAT_VALUE));
+  GET_WIS(ch) = MAX(MIN_STAT_VALUE, MIN(GET_WIS(ch), MAX_STAT_VALUE));
+  GET_CON(ch) = MAX(MIN_STAT_VALUE, MIN(GET_CON(ch), MAX_STAT_VALUE));
+  GET_CHA(ch) = MAX(MIN_STAT_VALUE, MIN(GET_CHA(ch), MAX_STAT_VALUE));
+  GET_STR(ch) = MAX(MIN_STAT_VALUE, MIN(GET_STR(ch), MAX_STAT_VALUE));
 }
 
 /* Insert an affect_type in a char_data structure. Automatically sets

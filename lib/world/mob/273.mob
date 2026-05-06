@@ -76,7 +76,6 @@ you had survived as long as he has on this cursed space station!
 8 8 1
 BareHandAttack: 13
 Str: 20
-StrAdd: 100
 Dex: 20
 Int: 19
 Wis: 18
@@ -97,7 +96,6 @@ stand and fight this black monstrosity!
 8 8 0
 BareHandAttack: 9
 Str: 24
-StrAdd: 100
 Dex: 23
 Int: 12
 Wis: 7
@@ -116,7 +114,6 @@ smiling HUMAN face!
 280 78400
 8 8 2
 Str: 18
-StrAdd: 100
 Dex: 19
 E
 #27307

@@ -1352,8 +1352,6 @@ void roll_real_abils(struct char_data *ch)
       }
   }
 
-  ch->real_abils.str_add = 0;
-
   if (GET_CLASS(ch) == CLASS_NONE) {
     ch->real_abils.str = table[0];
     ch->real_abils.dex = table[1];
@@ -1361,8 +1359,6 @@ void roll_real_abils(struct char_data *ch)
     ch->real_abils.intel = table[3];
     ch->real_abils.wis = table[4];
     ch->real_abils.cha = table[5];
-    if (ch->real_abils.str == 18)
-      ch->real_abils.str_add = rand_number(0, 100);
     ch->aff_abils = ch->real_abils;
     return;
   }
@@ -1399,8 +1395,6 @@ void roll_real_abils(struct char_data *ch)
     ch->real_abils.wis = table[3];
     ch->real_abils.intel = table[4];
     ch->real_abils.cha = table[5];
-    if (ch->real_abils.str == 18)
-      ch->real_abils.str_add = rand_number(0, 100);
     break;
   }
   ch->aff_abils = ch->real_abils;
@@ -1440,7 +1434,7 @@ void advance_level(struct char_data *ch)
 {
   int add_hp, add_mana = 0, add_move = 0, i;
 
-  add_hp = con_app[GET_CON(ch)].hitp + rand_number(8, 12);
+  add_hp = con_app[STAT_APP_INDEX(GET_CON(ch))].hitp + rand_number(8, 12);
   add_mana = rand_number(1, 6);
   add_move = rand_number(1, 3);
 
@@ -2036,4 +2030,3 @@ const char *title_female(int chclass, int level)
   /* Default title for classes which do not have titles defined */
   return "the Classless";
 }
-

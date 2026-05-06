@@ -80,6 +80,7 @@ cpp_extern const struct command_info cmd_info[] = {
   { "sw"       , "sw"      , POS_STANDING, do_move     , 0, SCMD_SW },
   
   /* now, the main list */
+  { "addexp"   , "addexp"  , POS_DEAD    , do_addexp   , LVL_IMMORT, 0 },
   { "at"       , "at"      , POS_DEAD    , do_at       , LVL_IMMORT, 0 },
   { "advance"  , "adv"     , POS_DEAD    , do_advance  , LVL_GRGOD, 0 },
   { "aedit"    , "aed"     , POS_DEAD    , do_oasis_aedit, LVL_GOD, 0 },
@@ -109,6 +110,7 @@ cpp_extern const struct command_info cmd_info[] = {
   { "brief"    , "br"      , POS_DEAD    , do_gen_tog  , 0, SCMD_BRIEF },
   { "buildwalk", "buildwalk", POS_STANDING, do_gen_tog , LVL_BUILDER, SCMD_BUILDWALK },
   { "buy"      , "bu"      , POS_STANDING, do_not_here , 0, 0 },
+  { "buystat"  , "buystat" , POS_RESTING , do_buystat  , 0, 0 },
   { "bug"      , "bug"     , POS_DEAD    , do_ibt      , 0, SCMD_BUG },
 
   { "cast"     , "c"       , POS_SITTING , do_cast     , 1, 0 },
