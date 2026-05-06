@@ -26,43 +26,33 @@
 
 /* Names first */
 const char *class_abbrevs[] = {
-  "Mu",
-  "Cl",
-  "Th",
-  "Wa",
+  "--",
+  "--",
+  "--",
+  "--",
+  "--",
   "\n"
 };
 
 const char *pc_class_types[] = {
-  "Magic User",
-  "Cleric",
-  "Thief",
-  "Warrior",
+  "Classless",
+  "Classless",
+  "Classless",
+  "Classless",
+  "Classless",
   "\n"
 };
 
-/* The menu for choosing a class in interpreter.c: */
+/* Character creation no longer asks players to choose a class. */
 const char *class_menu =
-"\r\n"
-"Select a class:\r\n"
-"  [\t(C\t)]leric\r\n"
-"  [\t(T\t)]hief\r\n"
-"  [\t(W\t)]arrior\r\n"
-"  [\t(M\t)]agic-user\r\n";
+"\r\n";
 
 /* The code to interpret a class letter -- used in interpreter.c when a new
  * character is selecting a class and by 'set class' in act.wizard.c. */
 int parse_class(char arg)
 {
-  arg = LOWER(arg);
-
-  switch (arg) {
-  case 'm': return CLASS_MAGIC_USER;
-  case 'c': return CLASS_CLERIC;
-  case 'w': return CLASS_WARRIOR;
-  case 't': return CLASS_THIEF;
-  default:  return CLASS_UNDEFINED;
-  }
+  (void)arg;
+  return CLASS_NONE;
 }
 
 /* bitvectors (i.e., powers of two) for each class, mainly for use in do_who
@@ -71,12 +61,8 @@ int parse_class(char arg)
  * the limit of your bitvector_t, typically 0-31. */
 bitvector_t find_class_bitvector(const char *arg)
 {
-  size_t rpos, ret = 0;
-
-  for (rpos = 0; rpos < strlen(arg); rpos++)
-    ret |= (1 << parse_class(arg[rpos]));
-
-  return (ret);
+  (void)arg;
+  return 0;
 }
 
 /* These are definitions which control the guildmasters for each class.
@@ -106,11 +92,11 @@ bitvector_t find_class_bitvector(const char *arg)
 /* #define PRAC_TYPE		3  should it say 'spell' or 'skill'?	*/
 
 int prac_params[4][NUM_CLASSES] = {
-  /* MAG	CLE	THE	WAR */
-  { 95,		95,	85,	80	},	/* learned level */
-  { 100,	100,	12,	12	},	/* max per practice */
-  { 25,		25,	0,	0	},	/* min per practice */
-  { SPELL,	SPELL,	SKILL,	SKILL	},	/* prac name */
+  /* Classless */
+  { 100, 100, 100, 100, 100 },	/* learned level */
+  { 100, 100, 100, 100, 100 },	/* max per practice */
+  { 0, 0, 0, 0, 0 },	/* min per practice */
+  { SKILL, SKILL, SKILL, SKILL, SKILL },	/* prac name */
 };
 
 /* The appropriate rooms for each guildmaster/guildguard; controls which types
@@ -124,14 +110,6 @@ int prac_params[4][NUM_CLASSES] = {
 struct guild_info_type guild_info[] = {
 
 /* Midgaard */
- { CLASS_MAGIC_USER,    3017,    SOUTH   },
- { CLASS_CLERIC,        3004,    NORTH   },
- { CLASS_THIEF,         3027,    EAST   },
- { CLASS_WARRIOR,       3021,    EAST   },
-
-/* Brass Dragon */
-  { -999 /* all */ ,	5065,	WEST	},
-
 /* this must go last -- add new guards above! */
   { -1, NOWHERE, -1}
 };
@@ -140,6 +118,9 @@ struct guild_info_type guild_info[] = {
  * not forget to change extern declaration in magic.c if you add to this. */
 byte saving_throws(int class_num, int type, int level)
 {
+  if (class_num == CLASS_NONE)
+    class_num = CLASS_WARRIOR;
+
   switch (class_num) {
   case CLASS_MAGIC_USER:
     switch (type) {
@@ -1170,6 +1151,9 @@ byte saving_throws(int class_num, int type, int level)
 /* THAC0 for classes and levels.  (To Hit Armor Class 0) */
 int thaco(int class_num, int level)
 {
+  if (class_num == CLASS_NONE)
+    class_num = CLASS_WARRIOR;
+
   switch (class_num) {
   case CLASS_MAGIC_USER:
     switch (level) {
@@ -1370,6 +1354,19 @@ void roll_real_abils(struct char_data *ch)
 
   ch->real_abils.str_add = 0;
 
+  if (GET_CLASS(ch) == CLASS_NONE) {
+    ch->real_abils.str = table[0];
+    ch->real_abils.dex = table[1];
+    ch->real_abils.con = table[2];
+    ch->real_abils.intel = table[3];
+    ch->real_abils.wis = table[4];
+    ch->real_abils.cha = table[5];
+    if (ch->real_abils.str == 18)
+      ch->real_abils.str_add = rand_number(0, 100);
+    ch->aff_abils = ch->real_abils;
+    return;
+  }
+
   switch (GET_CLASS(ch)) {
   case CLASS_MAGIC_USER:
     ch->real_abils.intel = table[0];
@@ -1412,7 +1409,8 @@ void roll_real_abils(struct char_data *ch)
 /* Some initializations for characters, including initial skills */
 void do_start(struct char_data *ch)
 {
-  GET_LEVEL(ch) = 1;
+  SET_BIT_AR(PLR_FLAGS(ch), PLR_PLAYER);
+  sync_player_level_from_flags(ch);
   GET_EXP(ch) = 1;
 
   set_title(ch, NULL);
@@ -1421,27 +1419,6 @@ void do_start(struct char_data *ch)
   GET_MAX_HIT(ch)  = 10;
   GET_MAX_MANA(ch) = 100;
   GET_MAX_MOVE(ch) = 82;
-
-  switch (GET_CLASS(ch)) {
-
-  case CLASS_MAGIC_USER:
-    break;
-
-  case CLASS_CLERIC:
-    break;
-
-  case CLASS_THIEF:
-    SET_SKILL(ch, SKILL_SNEAK, 10);
-    SET_SKILL(ch, SKILL_HIDE, 5);
-    SET_SKILL(ch, SKILL_STEAL, 15);
-    SET_SKILL(ch, SKILL_BACKSTAB, 10);
-    SET_SKILL(ch, SKILL_PICK_LOCK, 10);
-    SET_SKILL(ch, SKILL_TRACK, 10);
-    break;
-
-  case CLASS_WARRIOR:
-    break;
-  }
 
   advance_level(ch);
 
@@ -1463,36 +1440,9 @@ void advance_level(struct char_data *ch)
 {
   int add_hp, add_mana = 0, add_move = 0, i;
 
-  add_hp = con_app[GET_CON(ch)].hitp;
-
-  switch (GET_CLASS(ch)) {
-
-  case CLASS_MAGIC_USER:
-    add_hp += rand_number(3, 8);
-    add_mana = rand_number(GET_LEVEL(ch), (int)(1.5 * GET_LEVEL(ch)));
-    add_mana = MIN(add_mana, 10);
-    add_move = rand_number(0, 2);
-    break;
-
-  case CLASS_CLERIC:
-    add_hp += rand_number(5, 10);
-    add_mana = rand_number(GET_LEVEL(ch), (int)(1.5 * GET_LEVEL(ch)));
-    add_mana = MIN(add_mana, 10);
-    add_move = rand_number(0, 2);
-    break;
-
-  case CLASS_THIEF:
-    add_hp += rand_number(7, 13);
-    add_mana = 0;
-    add_move = rand_number(1, 3);
-    break;
-
-  case CLASS_WARRIOR:
-    add_hp += rand_number(10, 15);
-    add_mana = 0;
-    add_move = rand_number(1, 3);
-    break;
-  }
+  add_hp = con_app[GET_CON(ch)].hitp + rand_number(8, 12);
+  add_mana = rand_number(1, 6);
+  add_move = rand_number(1, 3);
 
   ch->points.max_hit += MAX(1, add_hp);
   ch->points.max_move += MAX(1, add_move);
@@ -1500,10 +1450,7 @@ void advance_level(struct char_data *ch)
   if (GET_LEVEL(ch) > 1)
     ch->points.max_mana += add_mana;
 
-  if (IS_MAGIC_USER(ch) || IS_CLERIC(ch))
-    GET_PRACTICES(ch) += MAX(2, wis_app[GET_WIS(ch)].bonus);
-  else
-    GET_PRACTICES(ch) += MIN(2, MAX(1, wis_app[GET_WIS(ch)].bonus));
+  GET_PRACTICES(ch) = 0;
 
   if (GET_LEVEL(ch) >= LVL_IMMORT) {
     for (i = 0; i < 3; i++)
@@ -1539,18 +1486,8 @@ int backstab_mult(int level)
  * usable by a particular class, based on the ITEM_ANTI_{class} bitvectors. */
 int invalid_class(struct char_data *ch, struct obj_data *obj)
 {
-  if (OBJ_FLAGGED(obj, ITEM_ANTI_MAGIC_USER) && IS_MAGIC_USER(ch))
-    return TRUE;
-
-  if (OBJ_FLAGGED(obj, ITEM_ANTI_CLERIC) && IS_CLERIC(ch))
-    return TRUE;
-
-  if (OBJ_FLAGGED(obj, ITEM_ANTI_WARRIOR) && IS_WARRIOR(ch))
-    return TRUE;
-
-  if (OBJ_FLAGGED(obj, ITEM_ANTI_THIEF) && IS_THIEF(ch))
-    return TRUE;
-
+  (void)ch;
+  (void)obj;
   return FALSE;
 }
 
@@ -1643,6 +1580,9 @@ void init_spell_levels(void)
 /* Function to return the exp required for each class/level */
 int level_exp(int chclass, int level)
 {
+  if (chclass == CLASS_NONE)
+    chclass = CLASS_WARRIOR;
+
   if (level > LVL_IMPL || level < 0) {
     log("SYSERR: Requesting exp for invalid level %d!", level);
     return 0;

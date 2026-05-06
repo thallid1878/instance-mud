@@ -3503,9 +3503,13 @@ void init_char(struct char_data *ch)
   if (ch->player_specials == NULL)
     CREATE(ch->player_specials, struct player_special_data, 1);
 
+  GET_CLASS(ch) = CLASS_NONE;
+  SET_BIT_AR(PLR_FLAGS(ch), PLR_PLAYER);
+
   /* If this is our first player make him IMPL. */
   if (top_of_p_table == 0) {
-    GET_LEVEL(ch) = LVL_IMPL;
+    SET_BIT_AR(PLR_FLAGS(ch), PLR_IMPL);
+    sync_player_level_from_flags(ch);
     GET_EXP(ch) = 7000000;
 
     /* The implementor never goes through do_start(). */

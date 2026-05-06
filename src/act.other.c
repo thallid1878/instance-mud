@@ -285,15 +285,13 @@ ACMD(do_steal)
 
 ACMD(do_practice)
 {
-  char arg[MAX_INPUT_LENGTH];
-
   if (IS_NPC(ch))
     return;
 
-  one_argument(argument, arg);
+  skip_spaces(&argument);
 
-  if (*arg)
-    send_to_char(ch, "You can only practice skills in your guild.\r\n");
+  if (*argument)
+    practice_purchase(ch, argument);
   else
     list_skills(ch);
 }

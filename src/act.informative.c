@@ -2469,9 +2469,6 @@ ACMD(do_whois)
   send_to_char(ch, "Name: %s %s\r\nSex: %s\r\n", GET_NAME(victim),
                    (victim->player.title ? victim->player.title : ""), buf);
 
-  sprinttype (victim->player.chclass, pc_class_types, buf, sizeof(buf));
-  send_to_char(ch, "Class: %s\r\n", buf);
-
   send_to_char(ch, "Level: %d\r\n", GET_LEVEL(victim));
 
   if (!(GET_LEVEL(victim) < LVL_IMMORT) || (GET_LEVEL(ch) >= GET_LEVEL(victim))) {

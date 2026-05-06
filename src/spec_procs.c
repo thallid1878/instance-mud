@@ -31,6 +31,12 @@
 /* locally defined functions of local (file) scope */
 static int compare_spells(const void *x, const void *y);
 static const char *how_good(int percent);
+static int skill_rank(int percent);
+static int skill_percent_from_rank(int rank);
+static int skill_rank_cost(int rank);
+static int stat_cost(int stat);
+static bool is_buyable_skill(int skill_num);
+static bool practice_stat(struct char_data *ch, char *argument);
 static void npc_steal(struct char_data *ch, struct char_data *victim);
 
 /* Special procedures for mobiles. */
@@ -59,26 +65,51 @@ void sort_spells(void)
 
 static const char *how_good(int percent)
 {
+  static char buf[32];
+  int rank = skill_rank(percent);
+
   if (percent < 0)
     return " (error)";
-  if (percent == 0)
+  if (rank == 0)
     return " (not learned)";
-  if (percent <= 10)
-    return " (awful)";
-  if (percent <= 20)
-    return " (bad)";
-  if (percent <= 40)
-    return " (poor)";
-  if (percent <= 55)
-    return " (average)";
-  if (percent <= 70)
-    return " (fair)";
-  if (percent <= 80)
-    return " (good)";
-  if (percent <= 85)
-    return " (very good)";
 
-  return " (superb)";
+  snprintf(buf, sizeof(buf), " (level %d)", rank);
+  return buf;
+}
+
+static int skill_rank(int percent)
+{
+  if (percent <= 0)
+    return 0;
+
+  return MIN(10, MAX(1, (percent + 9) / 10));
+}
+
+static int skill_percent_from_rank(int rank)
+{
+  return MIN(100, MAX(0, rank) * 10);
+}
+
+static int skill_rank_cost(int rank)
+{
+  return rank * rank * 1000;
+}
+
+static int stat_cost(int stat)
+{
+  return (stat + 1) * (stat + 1) * 1000;
+}
+
+static bool is_buyable_skill(int skill_num)
+{
+  if (skill_num <= MAX_SPELLS || skill_num > MAX_SKILLS)
+    return FALSE;
+  if (spell_info[skill_num].name == unused_spellname)
+    return FALSE;
+  if (!str_cmp(spell_info[skill_num].name, unused_spellname))
+    return FALSE;
+
+  return TRUE;
 }
 
 static const char *prac_types[] = {
@@ -99,18 +130,29 @@ static const char *prac_types[] = {
 void list_skills(struct char_data *ch)
 {
   const char *overflow = "\r\n**OVERFLOW**\r\n";
-  int i, sortpos, ret;
+  int i, rank, sortpos, ret;
   size_t len = 0;
   char buf2[MAX_STRING_LENGTH];
 
-  len = snprintf(buf2, sizeof(buf2), "You have %d practice session%s remaining.\r\n"
-	"You know of the following %ss:\r\n", GET_PRACTICES(ch),
-	GET_PRACTICES(ch) == 1 ? "" : "s", SPLSKL(ch));
+  len = snprintf(buf2, sizeof(buf2), "Experience available: %d\r\n"
+	"Buy or upgrade with: practice <skill>\r\n"
+	"Raise stats with: practice stat <str|dex|int|wis|con|cha>\r\n\r\n",
+	GET_EXP(ch));
 
   for (sortpos = 1; sortpos <= MAX_SKILLS; sortpos++) {
     i = spell_sort_info[sortpos];
-    if (GET_LEVEL(ch) >= spell_info[i].min_level[(int) GET_CLASS(ch)]) {
-    ret = snprintf(buf2 + len, sizeof(buf2) - len, "%-20s %s\r\n", spell_info[i].name, how_good(GET_SKILL(ch, i)));
+    if (is_buyable_skill(i)) {
+      rank = skill_rank(GET_SKILL(ch, i));
+      ret = snprintf(buf2 + len, sizeof(buf2) - len, "%-20s %s",
+        spell_info[i].name, how_good(GET_SKILL(ch, i)));
+      if (ret < 0 || len + ret >= sizeof(buf2))
+        break;
+      len += ret;
+      if (rank < 10)
+        ret = snprintf(buf2 + len, sizeof(buf2) - len, " next: %d xp\r\n",
+          skill_rank_cost(rank + 1));
+      else
+        ret = snprintf(buf2 + len, sizeof(buf2) - len, " mastered\r\n");
       if (ret < 0 || len + ret >= sizeof(buf2))
         break;
       len += ret;
@@ -122,47 +164,115 @@ void list_skills(struct char_data *ch)
   page_string(ch->desc, buf2, TRUE);
 }
 
-SPECIAL(guild)
+static bool practice_stat(struct char_data *ch, char *argument)
 {
-  int skill_num, percent;
-
-  if (IS_NPC(ch) || !CMD_IS("practice"))
-    return (FALSE);
+  sbyte *stat = NULL;
+  const char *name = NULL;
+  int cost;
 
   skip_spaces(&argument);
 
   if (!*argument) {
+    send_to_char(ch, "Raise which stat: str, dex, int, wis, con, or cha?\r\n");
+    return TRUE;
+  }
+
+  if (is_abbrev(argument, "strength")) {
+    stat = &ch->real_abils.str;
+    name = "strength";
+  } else if (is_abbrev(argument, "dexterity")) {
+    stat = &ch->real_abils.dex;
+    name = "dexterity";
+  } else if (is_abbrev(argument, "intelligence")) {
+    stat = &ch->real_abils.intel;
+    name = "intelligence";
+  } else if (is_abbrev(argument, "wisdom")) {
+    stat = &ch->real_abils.wis;
+    name = "wisdom";
+  } else if (is_abbrev(argument, "constitution")) {
+    stat = &ch->real_abils.con;
+    name = "constitution";
+  } else if (is_abbrev(argument, "charisma")) {
+    stat = &ch->real_abils.cha;
+    name = "charisma";
+  } else {
+    send_to_char(ch, "Unknown stat. Use str, dex, int, wis, con, or cha.\r\n");
+    return TRUE;
+  }
+
+  if (*stat >= 25) {
+    send_to_char(ch, "Your %s is already at its current maximum.\r\n", name);
+    return TRUE;
+  }
+
+  cost = stat_cost(*stat);
+  if (GET_EXP(ch) < cost) {
+    send_to_char(ch, "You need %d experience to raise %s.\r\n", cost, name);
+    return TRUE;
+  }
+
+  GET_EXP(ch) -= cost;
+  *stat += 1;
+  ch->aff_abils = ch->real_abils;
+  save_char(ch);
+  send_to_char(ch, "You spend %d experience and raise your %s to %d.\r\n",
+    cost, name, *stat);
+  return TRUE;
+}
+
+bool practice_purchase(struct char_data *ch, char *argument)
+{
+  int skill_num, rank, cost;
+  char arg[MAX_INPUT_LENGTH], skill_name_arg[MAX_INPUT_LENGTH];
+
+  if (IS_NPC(ch))
+    return TRUE;
+
+  skip_spaces(&argument);
+  strlcpy(skill_name_arg, argument, sizeof(skill_name_arg));
+  argument = one_argument(argument, arg);
+
+  if (!*arg) {
     list_skills(ch);
-    return (TRUE);
-  }
-  if (GET_PRACTICES(ch) <= 0) {
-    send_to_char(ch, "You do not seem to be able to practice now.\r\n");
-    return (TRUE);
+    return TRUE;
   }
 
-  skill_num = find_skill_num(argument);
+  if (is_abbrev(arg, "stat"))
+    return practice_stat(ch, argument);
 
-  if (skill_num < 1 ||
-      GET_LEVEL(ch) < spell_info[skill_num].min_level[(int) GET_CLASS(ch)]) {
-    send_to_char(ch, "You do not know of that %s.\r\n", SPLSKL(ch));
-    return (TRUE);
+  skill_num = find_skill_num(skill_name_arg);
+  if (!is_buyable_skill(skill_num)) {
+    send_to_char(ch, "You cannot buy that skill right now.\r\n");
+    return TRUE;
   }
-  if (GET_SKILL(ch, skill_num) >= LEARNED(ch)) {
-    send_to_char(ch, "You are already learned in that area.\r\n");
-    return (TRUE);
+
+  rank = skill_rank(GET_SKILL(ch, skill_num));
+  if (rank >= 10) {
+    send_to_char(ch, "You have already mastered %s.\r\n", spell_info[skill_num].name);
+    return TRUE;
   }
-  send_to_char(ch, "You practice for a while...\r\n");
-  GET_PRACTICES(ch)--;
 
-  percent = GET_SKILL(ch, skill_num);
-  percent += MIN(MAXGAIN(ch), MAX(MINGAIN(ch), int_app[GET_INT(ch)].learn));
+  cost = skill_rank_cost(rank + 1);
+  if (GET_EXP(ch) < cost) {
+    send_to_char(ch, "You need %d experience to improve %s to level %d.\r\n",
+      cost, spell_info[skill_num].name, rank + 1);
+    return TRUE;
+  }
 
-  SET_SKILL(ch, skill_num, MIN(LEARNED(ch), percent));
+  GET_EXP(ch) -= cost;
+  SET_SKILL(ch, skill_num, skill_percent_from_rank(rank + 1));
+  save_char(ch);
+  send_to_char(ch, "You spend %d experience and improve %s to level %d.\r\n",
+    cost, spell_info[skill_num].name, rank + 1);
+  return TRUE;
+}
 
-  if (GET_SKILL(ch, skill_num) >= LEARNED(ch))
-    send_to_char(ch, "You are now learned in that area.\r\n");
+SPECIAL(guild)
+{
+  if (IS_NPC(ch) || !CMD_IS("practice"))
+    return (FALSE);
 
-  return (TRUE);
+  return practice_purchase(ch, argument);
 }
 
 SPECIAL(dump)

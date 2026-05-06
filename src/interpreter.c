@@ -1626,18 +1626,7 @@ void nanny(struct descriptor_data *d, char *arg)
       return;
     }
 
-    write_to_output(d, "%s\r\nClass: ", class_menu);
-    STATE(d) = CON_QCLASS;
-    break;
-
-  case CON_QCLASS:
-    load_result = parse_class(*arg);
-    if (load_result == CLASS_UNDEFINED) {
-      write_to_output(d, "\r\nThat's not a class.\r\nClass: ");
-      return;
-    } else {
-      GET_CLASS(d->character) = load_result;
-    }
+    GET_CLASS(d->character) = CLASS_NONE;
 
       if (d->olc) {
         free(d->olc);
@@ -1662,6 +1651,11 @@ void nanny(struct descriptor_data *d, char *arg)
     {
       mudlog(BRF, MAX(LVL_IMMORT, GET_INVIS_LEV(d->character)), TRUE, "Failure to AddRecentPlayer (returned FALSE).");
     }
+    break;
+
+  case CON_QCLASS:
+    STATE(d) = CON_QSEX;
+    nanny(d, arg);
     break;
 
   case CON_RMOTD:		/* read CR after printing motd   */

@@ -59,6 +59,8 @@ struct time_info_data *mud_time_passed(time_t t2, time_t t1);
 void prune_crlf(char *txt);
 void column_list(struct char_data *ch, int num_cols, const char **list, int list_length, bool show_nums);
 int get_flag_by_name(const char *flag_list[], char *flag_name);
+int player_role_level(struct char_data *ch);
+void sync_player_level_from_flags(struct char_data *ch);
 int file_head( FILE *file, char *buf, size_t bufsize, int lines_to_read );
 int file_tail( FILE *file, char *buf, size_t bufsize, int lines_to_read );
 size_t file_sizeof( FILE *file );
@@ -850,20 +852,16 @@ do                                                              \
 		((dir) == SOUTHEAST) || ((dir) == SOUTHWEST) )
 
 /** Return the class abbreviation for ch. */
-#define CLASS_ABBR(ch) (IS_NPC(ch) ? "--" : class_abbrevs[(int)GET_CLASS(ch)])
+#define CLASS_ABBR(ch) "--"
 
 /** 1 if ch is magic user class, 0 if not. */
-#define IS_MAGIC_USER(ch)	(!IS_NPC(ch) && \
-        (GET_CLASS(ch) == CLASS_MAGIC_USER))
+#define IS_MAGIC_USER(ch)	FALSE
 /** 1 if ch is cleric class, 0 if not. */
-#define IS_CLERIC(ch)		(!IS_NPC(ch) && \
-        (GET_CLASS(ch) == CLASS_CLERIC))
+#define IS_CLERIC(ch)		FALSE
 /** 1 if ch is thief class, 0 if not. */
-#define IS_THIEF(ch)		(!IS_NPC(ch) && \
-        (GET_CLASS(ch) == CLASS_THIEF))
+#define IS_THIEF(ch)		FALSE
 /** 1 if ch is warrior class, 0 if not. */
-#define IS_WARRIOR(ch)		(!IS_NPC(ch) && \
-        (GET_CLASS(ch) == CLASS_WARRIOR))
+#define IS_WARRIOR(ch)		FALSE
 
 /** Defines if ch is outdoors or not. */
 #define OUTSIDE(ch) (!ROOM_FLAGGED(IN_ROOM(ch), ROOM_INDOORS))

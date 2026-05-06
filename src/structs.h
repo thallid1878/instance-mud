@@ -144,22 +144,23 @@
 #define GROUP_ANON    (1 << 1)  /**< Group is Anonymous */
 #define GROUP_NPC     (1 << 2)  /**< Group created by NPC and thus not listed */
 
-/* PC classes */
-#define CLASS_UNDEFINED	  (-1) /**< PC Class undefined */
-#define CLASS_MAGIC_USER  0    /**< PC Class Magic User */
-#define CLASS_CLERIC      1    /**< PC Class Cleric */
-#define CLASS_THIEF       2    /**< PC Class Thief */
-#define CLASS_WARRIOR     3    /**< PC Class Warrior */
-/** Total number of available PC Classes */
-#define NUM_CLASSES	  4
-
-/* NPC classes (currently unused - feel free to implement!) */
-#define CLASS_OTHER       0    /**< NPC Class Other (or undefined) */
-#define CLASS_UNDEAD      1    /**< NPC Class Undead */
-#define CLASS_HUMANOID    2    /**< NPC Class Humanoid */
-#define CLASS_ANIMAL      3    /**< NPC Class Animal */
-#define CLASS_DRAGON      4    /**< NPC Class Dragon */
-#define CLASS_GIANT       5    /**< NPC Class Giant */
+/* PC/NPC classes have been collapsed into a single classless identity.
+ * Legacy class names remain as aliases so older tables compile while class
+ * checks are removed in-place. */
+#define CLASS_UNDEFINED	  (-1) /**< Class undefined */
+#define CLASS_NONE        0    /**< Classless player or mobile */
+#define CLASS_MAGIC_USER  1    /**< Legacy alias only */
+#define CLASS_CLERIC      2    /**< Legacy alias only */
+#define CLASS_THIEF       3    /**< Legacy alias only */
+#define CLASS_WARRIOR     4    /**< Legacy alias only */
+#define CLASS_OTHER       CLASS_NONE
+#define CLASS_UNDEAD      CLASS_MAGIC_USER
+#define CLASS_HUMANOID    CLASS_CLERIC
+#define CLASS_ANIMAL      CLASS_THIEF
+#define CLASS_DRAGON      CLASS_WARRIOR
+#define CLASS_GIANT       CLASS_WARRIOR
+/** Total number of available classes */
+#define NUM_CLASSES	  5
 
 /* Sex */
 #define SEX_NEUTRAL   0   /**< Neutral Sex (Hermaphrodite) */
@@ -202,6 +203,12 @@
 #define PLR_BUG          17   /**< Player is writing a bug */
 #define PLR_IDEA         18   /**< Player is writing an idea */
 #define PLR_TYPO         19   /**< Player is writing a typo */
+#define PLR_PLAYER       20   /**< Player role: standard player */
+#define PLR_BUILDER      21   /**< Player role: builder */
+#define PLR_IMMORT       22   /**< Player role: immortal */
+#define PLR_GOD          23   /**< Player role: god */
+#define PLR_GRGOD        24   /**< Player role: greater god */
+#define PLR_IMPL         25   /**< Player role: implementor */
 
 /* Mobile flags: used by char_data.char_specials.act */
 #define MOB_SPEC            0   /**< Mob has a callable spec-proc */
@@ -523,13 +530,11 @@
 #define ZN_ARRAY_MAX    4  /**< # Bytes in Bit vector - Zone Flags */
 
 /* other #defined constants */
-/* **DO**NOT** blindly change the number of levels in your MUD merely by
- * changing these numbers and without changing the rest of the code to match.
- * Other changes throughout the code are required.  See coding.doc for details.
- *
- * LVL_IMPL should always be the HIGHEST possible immortal level, and
- * LVL_IMMORT should always be the LOWEST immortal level.  The number of
- * mortal levels will always be LVL_IMMORT - 1. */
+/* These are legacy access ranks used by command tables and permission checks.
+ * For players, the authority source is now the saved PLR_* role flags above;
+ * the numeric rank is derived from those flags when a character is loaded or
+ * saved. NPC level continues to use the numeric player.level field directly. */
+#define LVL_PLAYER  1   /**< Rank of regular players */
 #define LVL_IMPL    34  /**< Level of Implementors */
 #define LVL_GRGOD   33  /**< Level of Greater Gods */
 #define LVL_GOD     32  /**< Level of Gods */

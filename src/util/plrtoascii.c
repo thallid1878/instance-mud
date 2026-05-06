@@ -204,7 +204,6 @@ void convert(char *filename)
     if (player.sex != PFDEF_SEX)
       fprintf(outfile, "Sex : %d\n", (int)player.sex); 
     if (player.chclass != PFDEF_CLASS)
-      fprintf(outfile, "Clas: %d\n", (int)player.chclass); 
     if (player.level != PFDEF_LEVEL)
       fprintf(outfile, "Levl: %d\n", (int)player.level); 
     fprintf(outfile, "Brth: %d\n", (int)player.birth);

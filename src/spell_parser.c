@@ -643,7 +643,7 @@ ACMD(do_cast) {
 }
 
 void spell_level(int spell, int chclass, int level) {
-  int bad = 0;
+  int i;
 
   if (spell < 0 || spell > TOP_SPELL_DEFINE) {
     log("SYSERR: attempting assign to illegal spellnum %d/%d", spell,
@@ -651,20 +651,16 @@ void spell_level(int spell, int chclass, int level) {
     return;
   }
 
-  if (chclass < 0 || chclass >= NUM_CLASSES) {
-    log("SYSERR: assigning '%s' to illegal class %d/%d.", skill_name(spell),
-        chclass, NUM_CLASSES - 1);
-    bad = 1;
-  }
+  (void)chclass;
 
   if (level < 1 || level > LVL_IMPL) {
     log("SYSERR: assigning '%s' to illegal level %d/%d.", skill_name(spell),
         level, LVL_IMPL);
-    bad = 1;
+    return;
   }
 
-  if (!bad)
-    spell_info[spell].min_level[chclass] = level;
+  for (i = 0; i < NUM_CLASSES; i++)
+    spell_info[spell].min_level[i] = MIN(spell_info[spell].min_level[i], level);
 }
 
 /* Assign the spells on boot up */

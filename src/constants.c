@@ -179,11 +179,12 @@ const char *player_bits[] = {
   "IBT_BUG",
   "IBT_IDEA",
   "IBT_TYPO",
-  "UNUSED1",
-  "UNUSED2",
-  "UNUSED3",
-  "UNUSED4",
-  "UNUSED5",
+  "PLAYER",
+  "BUILDER",
+  "IMMORT",
+  "GOD",
+  "GRGOD",
+  "IMPL",
   "\n"
 };
 

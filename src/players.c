@@ -474,6 +474,10 @@ int load_char(const char *name, struct char_data *ch)
   }
 
   affect_total(ch);
+  GET_CLASS(ch) = CLASS_NONE;
+  SET_BIT_AR(PLR_FLAGS(ch), PLR_PLAYER);
+  if (GET_LEVEL(ch) != PFDEF_LEVEL || player_role_level(ch) > LVL_PLAYER)
+    sync_player_level_from_flags(ch);
 
   /* initialization for imms */
   if (GET_LEVEL(ch) >= LVL_IMMORT) {
@@ -500,6 +504,10 @@ void save_char(struct char_data * ch)
 
   if (IS_NPC(ch) || GET_PFILEPOS(ch) < 0)
     return;
+
+  SET_BIT_AR(PLR_FLAGS(ch), PLR_PLAYER);
+  if (GET_LEVEL(ch) != PFDEF_LEVEL || player_role_level(ch) > LVL_PLAYER)
+    sync_player_level_from_flags(ch);
 
   /* If ch->desc is not null, then update session data before saving. */
   if (ch->desc) {
@@ -574,7 +582,6 @@ void save_char(struct char_data * ch)
   if (POOFIN(ch))				fprintf(fl, "PfIn: %s\n", POOFIN(ch));
   if (POOFOUT(ch))				fprintf(fl, "PfOt: %s\n", POOFOUT(ch));
   if (GET_SEX(ch)	     != PFDEF_SEX)	fprintf(fl, "Sex : %d\n", GET_SEX(ch));
-  if (GET_CLASS(ch)	   != PFDEF_CLASS)	fprintf(fl, "Clas: %d\n", GET_CLASS(ch));
   if (GET_LEVEL(ch)	   != PFDEF_LEVEL)	fprintf(fl, "Levl: %d\n", GET_LEVEL(ch));
 
   fprintf(fl, "Id  : %ld\n", GET_IDNUM(ch));

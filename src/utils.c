@@ -100,6 +100,37 @@ char *CAP(char *txt)
   return (txt);
 }
 
+int player_role_level(struct char_data *ch)
+{
+  if (ch == NULL)
+    return LVL_PLAYER;
+
+  if (IS_NPC(ch))
+    return GET_LEVEL(ch);
+
+  if (PLR_FLAGGED(ch, PLR_IMPL))
+    return LVL_IMPL;
+  if (PLR_FLAGGED(ch, PLR_GRGOD))
+    return LVL_GRGOD;
+  if (PLR_FLAGGED(ch, PLR_GOD))
+    return LVL_GOD;
+  if (PLR_FLAGGED(ch, PLR_IMMORT))
+    return LVL_IMMORT;
+  if (PLR_FLAGGED(ch, PLR_BUILDER))
+    return LVL_BUILDER;
+
+  return LVL_PLAYER;
+}
+
+void sync_player_level_from_flags(struct char_data *ch)
+{
+  if (ch == NULL || IS_NPC(ch))
+    return;
+
+  SET_BIT_AR(PLR_FLAGS(ch), PLR_PLAYER);
+  GET_LEVEL(ch) = player_role_level(ch);
+}
+
 #if !defined(HAVE_STRLCPY)
 /** A 'strlcpy' function in the same fashion as 'strdup' below. This copies up
  * to totalsize - 1 bytes from the source string, placing them and a trailing
