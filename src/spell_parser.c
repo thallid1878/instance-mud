@@ -202,20 +202,27 @@ int call_magic(struct char_data *caster, struct char_data *cvict,
     send_to_char(caster, "This mob is protected.\r\n");
     return (0);
   }
-  /* determine the type of saving throw */
-  switch (casttype) {
-  case CAST_STAFF:
-  case CAST_SCROLL:
-  case CAST_POTION:
-  case CAST_WAND:
-    savetype = SAVING_ROD;
-    break;
-  case CAST_SPELL:
-    savetype = SAVING_SPELL;
-    break;
-  default:
-    savetype = SAVING_BREATH;
-    break;
+  savetype = spell_savetype(spellnum, casttype);
+
+  if (SINFO.violent && cvict) {
+    int attacker_roll = 0, defender_roll = 0;
+
+    if (!spell_attack_hits(caster, cvict, savetype, &attacker_roll, &defender_roll)) {
+      act("Your spell misses $N.", FALSE, caster, 0, cvict, TO_CHAR);
+      act("$n's spell misses you.", FALSE, caster, 0, cvict, TO_VICT);
+
+      if (CONFIG_DEBUG_MODE >= NRM)
+        send_to_char(caster, "\t1Debug:\r\n   \t2Spell attack roll: \t3%d\r\n"
+          "   \t2Spell defense roll: \t3%d\tn\r\n",
+          attacker_roll, defender_roll);
+
+      return (0);
+    }
+
+    if (CONFIG_DEBUG_MODE >= NRM)
+      send_to_char(caster, "\t1Debug:\r\n   \t2Spell attack roll: \t3%d\r\n"
+        "   \t2Spell defense roll: \t3%d\tn\r\n",
+        attacker_roll, defender_roll);
   }
 
   if (IS_SET(SINFO.routines, MAG_DAMAGE))
@@ -924,4 +931,3 @@ void mag_assign_spells(void) {
   skillo(SKILL_WHIRLWIND, "whirlwind");
   skillo(SKILL_BANDAGE, "bandage");
 }
-

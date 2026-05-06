@@ -512,6 +512,8 @@ do                                                              \
 #define STAT_BASE_VALUE 10
 #define MIN_STAT_VALUE -255
 #define MAX_STAT_VALUE 255
+#define MIN_AFFECTED_STAT_VALUE -32768
+#define MAX_AFFECTED_STAT_VALUE 32767
 #define STAT_APP_INDEX(stat) (MAX(0, MIN((stat), 25)))
 
 /** Experience points of ch. */
@@ -536,6 +538,9 @@ do                                                              \
 #define GET_BANK_GOLD(ch) ((ch)->points.bank_gold)
 /** Current to-hit roll modifier for ch. */
 #define GET_HITROLL(ch)	  ((ch)->points.hitroll)
+#define HIDDEN_HITROLL_BONUS 20
+#define GET_EFFECTIVE_HITROLL(ch) \
+        (GET_HITROLL(ch) + (AFF_FLAGGED((ch), AFF_HIDE) ? HIDDEN_HITROLL_BONUS : 0))
 /** Current damage roll modifier for ch. */
 #define GET_DAMROLL(ch)   ((ch)->points.damroll)
 

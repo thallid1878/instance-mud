@@ -236,6 +236,11 @@ int find_skill_num(char *name);
 int mag_damage(int level, struct char_data *ch, struct char_data *victim,
   int spellnum, int savetype);
 
+bool spell_attack_hits(struct char_data *ch, struct char_data *victim, int savetype,
+  int *attacker_roll, int *defender_roll);
+
+int spell_savetype(int spellnum, int casttype);
+
 void mag_affects(int level, struct char_data *ch, struct char_data *victim,
   int spellnum, int savetype);
 

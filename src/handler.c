@@ -256,12 +256,12 @@ void affect_total(struct char_data *ch)
   for (af = ch->affected; af; af = af->next)
     affect_modify_ar(ch, af->location, af->modifier, af->bitvector, TRUE);
 
-  GET_DEX(ch) = MAX(MIN_STAT_VALUE, MIN(GET_DEX(ch), MAX_STAT_VALUE));
-  GET_INT(ch) = MAX(MIN_STAT_VALUE, MIN(GET_INT(ch), MAX_STAT_VALUE));
-  GET_WIS(ch) = MAX(MIN_STAT_VALUE, MIN(GET_WIS(ch), MAX_STAT_VALUE));
-  GET_CON(ch) = MAX(MIN_STAT_VALUE, MIN(GET_CON(ch), MAX_STAT_VALUE));
-  GET_CHA(ch) = MAX(MIN_STAT_VALUE, MIN(GET_CHA(ch), MAX_STAT_VALUE));
-  GET_STR(ch) = MAX(MIN_STAT_VALUE, MIN(GET_STR(ch), MAX_STAT_VALUE));
+  GET_DEX(ch) = MAX(MIN_AFFECTED_STAT_VALUE, MIN(GET_DEX(ch), MAX_AFFECTED_STAT_VALUE));
+  GET_INT(ch) = MAX(MIN_AFFECTED_STAT_VALUE, MIN(GET_INT(ch), MAX_AFFECTED_STAT_VALUE));
+  GET_WIS(ch) = MAX(MIN_AFFECTED_STAT_VALUE, MIN(GET_WIS(ch), MAX_AFFECTED_STAT_VALUE));
+  GET_CON(ch) = MAX(MIN_AFFECTED_STAT_VALUE, MIN(GET_CON(ch), MAX_AFFECTED_STAT_VALUE));
+  GET_CHA(ch) = MAX(MIN_AFFECTED_STAT_VALUE, MIN(GET_CHA(ch), MAX_AFFECTED_STAT_VALUE));
+  GET_STR(ch) = MAX(MIN_AFFECTED_STAT_VALUE, MIN(GET_STR(ch), MAX_AFFECTED_STAT_VALUE));
 }
 
 /* Insert an affect_type in a char_data structure. Automatically sets

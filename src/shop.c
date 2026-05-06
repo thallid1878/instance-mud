@@ -1618,11 +1618,11 @@ bool shopping_identify(char *arg, struct char_data *ch, struct char_data *keeper
         case ITEM_ARMOR:
           if(GET_OBJ_VAL(obj,1) == 0)
           {
-            send_to_char(ch, "AC-apply: [%d]\r\n", GET_OBJ_VAL(obj, 0));
+            send_to_char(ch, "Armor: [%d]\r\n", GET_OBJ_VAL(obj, 0));
           }
           else
           {
-            send_to_char(ch, "AC-apply: [%d] - This item has magical affects.\r\n", GET_OBJ_VAL(obj, 0));
+            send_to_char(ch, "Armor: [%d] - This item has magical affects.\r\n", GET_OBJ_VAL(obj, 0));
           }
           break;
         case ITEM_CONTAINER:

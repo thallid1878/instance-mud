@@ -40,6 +40,11 @@ static void look_at_char(struct char_data *i, struct char_data *ch);
 static void look_at_target(struct char_data *ch, char *arg);
 static void look_in_direction(struct char_data *ch, int dir);
 static void look_in_obj(struct char_data *ch, char *arg);
+static long stat_experience_spent(stat_value_t stat);
+static int score_skill_rank(int percent);
+static bool score_is_buyable_skill(int skill_num);
+static long skill_experience_spent(struct char_data *ch);
+static long character_power_rating(struct char_data *ch);
 /* do_look, do_inventory utility functions */
 static void list_obj_to_char(struct obj_data *list, struct char_data *ch, int mode, int show);
 /* do_look, do_equipment, do_examine, do_inventory */
@@ -803,58 +808,131 @@ ACMD(do_gold)
     send_to_char(ch, "You have %d gold coins.\r\n", GET_GOLD(ch));
 }
 
+static long stat_experience_spent(stat_value_t stat)
+{
+  long points_bought = MAX(0, stat - STAT_BASE_VALUE);
+
+  return (points_bought * (points_bought + 1) / 2) * 100;
+}
+
+static int score_skill_rank(int percent)
+{
+  if (percent <= 0)
+    return 0;
+
+  return MIN(10, MAX(1, (percent + 9) / 10));
+}
+
+static bool score_is_buyable_skill(int skill_num)
+{
+  if (skill_num <= MAX_SPELLS || skill_num > MAX_SKILLS)
+    return FALSE;
+  if (spell_info[skill_num].name == unused_spellname)
+    return FALSE;
+  if (!str_cmp(spell_info[skill_num].name, unused_spellname))
+    return FALSE;
+
+  return TRUE;
+}
+
+static long skill_experience_spent(struct char_data *ch)
+{
+  long total = 0;
+  int skill_num, rank, i;
+
+  for (skill_num = 1; skill_num <= MAX_SKILLS; skill_num++) {
+    if (!score_is_buyable_skill(skill_num))
+      continue;
+
+    rank = score_skill_rank(GET_SKILL(ch, skill_num));
+    for (i = 1; i <= rank; i++)
+      total += i * i * 1000;
+  }
+
+  return total;
+}
+
+static long character_power_rating(struct char_data *ch)
+{
+  long spent = 0;
+
+  spent += stat_experience_spent(ch->real_abils.str);
+  spent += stat_experience_spent(ch->real_abils.intel);
+  spent += stat_experience_spent(ch->real_abils.wis);
+  spent += stat_experience_spent(ch->real_abils.dex);
+  spent += stat_experience_spent(ch->real_abils.con);
+  spent += stat_experience_spent(ch->real_abils.cha);
+  spent += skill_experience_spent(ch);
+
+  return spent / 10000;
+}
+
 ACMD(do_score)
 {
   struct time_info_data playing_time;
+  bool found_affect = FALSE;
+  const char *sex;
+  char left[MAX_INPUT_LENGTH];
 
   if (IS_NPC(ch))
     return;
 
-  send_to_char(ch, "You are %d years old.", GET_AGE(ch));
+  switch (GET_SEX(ch)) {
+  case SEX_MALE:
+    sex = "Male";
+    break;
+  case SEX_FEMALE:
+    sex = "Female";
+    break;
+  default:
+    sex = "Neutral";
+    break;
+  }
 
+  send_to_char(ch, "Name : %s %s\r\n", GET_NAME(ch), GET_TITLE(ch));
+  snprintf(left, sizeof(left), "Power: %6ld", character_power_rating(ch));
+  send_to_char(ch, "%-32sSex  : %s\r\n", left, sex);
+  snprintf(left, sizeof(left), "Align: %6d", GET_ALIGNMENT(ch));
+  send_to_char(ch, "%-32sArmor: %3d\r\n", left, compute_armor_value(ch));
+  snprintf(left, sizeof(left), "Hitroll: %4d", GET_EFFECTIVE_HITROLL(ch));
+  send_to_char(ch, "%-32sDamroll: %3d\r\n", left, GET_DAMROLL(ch));
+
+  send_to_char(ch, "Age  : %2d years", GET_AGE(ch));
   if (age(ch)->month == 0 && age(ch)->day == 0)
-    send_to_char(ch, "  It's your birthday today.\r\n");
+    send_to_char(ch, " (It's your birthday today.)\r\n");
   else
     send_to_char(ch, "\r\n");
 
-  send_to_char(ch, "You have %d(%d) hit, %d(%d) mana and %d(%d) movement points.\r\n",
-      GET_HIT(ch), GET_MAX_HIT(ch), GET_MANA(ch), GET_MAX_MANA(ch),
-      GET_MOVE(ch), GET_MAX_MOVE(ch));
-
-  send_to_char(ch, "Your armor class is %d/10, and your alignment is %d.\r\n",
-      compute_armor_class(ch), GET_ALIGNMENT(ch));
-
-  send_to_char(ch, "You have %d exp, %d gold coins, and %d questpoints.\r\n",
-      GET_EXP(ch), GET_GOLD(ch), GET_QUESTPOINTS(ch));
-
-  if (GET_LEVEL(ch) < LVL_IMMORT)
-    send_to_char(ch, "You need %d exp to reach your next level.\r\n",
-    level_exp(GET_CLASS(ch), GET_LEVEL(ch) + 1) - GET_EXP(ch));
-
-  send_to_char(ch, "You have earned %d quest points.\r\n", GET_QUESTPOINTS(ch));
-  send_to_char(ch, "You have completed %d quest%s, ",
-       GET_NUM_QUESTS(ch),
-       GET_NUM_QUESTS(ch) == 1 ? "" : "s");
-  if (GET_QUEST(ch) == NOTHING)
-    send_to_char(ch, "and you are not on a quest at the moment.\r\n");
-  else
-  {
-    send_to_char(ch, "and your current quest is: %s", QST_NAME(real_quest(GET_QUEST(ch))));
-
-    if (!IS_NPC(ch) && PRF_FLAGGED(ch, PRF_SHOWVNUMS))
-        send_to_char(ch, " [%d]\r\n", GET_QUEST(ch));
-    else
-        send_to_char(ch, "\r\n");
-  }
-
   playing_time = *real_time_passed((time(0) - ch->player.time.logon) +
                   ch->player.time.played, 0);
-  send_to_char(ch, "You have been playing for %d day%s and %d hour%s.\r\n",
+  send_to_char(ch, "Played: %d day%s and %d hour%s\r\n",
      playing_time.day, playing_time.day == 1 ? "" : "s",
      playing_time.hours, playing_time.hours == 1 ? "" : "s");
 
-  send_to_char(ch, "This ranks you as %s %s (level %d).\r\n",
-      GET_NAME(ch), GET_TITLE(ch), GET_LEVEL(ch));
+  send_to_char(ch, "Stats:\r\n");
+  send_to_char(ch, "--------------------------------------------\r\n");
+  send_to_char(ch, "Str: %5d (base %5d) | %d/%d HP\r\n",
+    GET_STR(ch), ch->real_abils.str, GET_HIT(ch), GET_MAX_HIT(ch));
+  send_to_char(ch, "Int: %5d (base %5d) | %d/%d Mana\r\n",
+    GET_INT(ch), ch->real_abils.intel, GET_MANA(ch), GET_MAX_MANA(ch));
+  send_to_char(ch, "Wis: %5d (base %5d) | %d/%d Moves\r\n",
+    GET_WIS(ch), ch->real_abils.wis, GET_MOVE(ch), GET_MAX_MOVE(ch));
+  send_to_char(ch, "Con: %5d (base %5d) | Gold: %d\r\n",
+    GET_CON(ch), ch->real_abils.con, GET_GOLD(ch));
+  send_to_char(ch, "Dex: %5d (base %5d) | Bank: %d\r\n",
+    GET_DEX(ch), ch->real_abils.dex, GET_BANK_GOLD(ch));
+  send_to_char(ch, "Cha: %5d (base %5d) | Questpoints: %d\r\n",
+    GET_CHA(ch), ch->real_abils.cha, GET_QUESTPOINTS(ch));
+  send_to_char(ch, "--------------------------------------------\r\n");
+  send_to_char(ch, "Experience: %d\r\n", GET_EXP(ch));
+  send_to_char(ch, "Completed quests: %d\r\n", GET_NUM_QUESTS(ch));
+  if (GET_QUEST(ch) != NOTHING) {
+    send_to_char(ch, "Current quest: %s", QST_NAME(real_quest(GET_QUEST(ch))));
+    if (PRF_FLAGGED(ch, PRF_SHOWVNUMS))
+      send_to_char(ch, " [%d]\r\n", GET_QUEST(ch));
+    else
+      send_to_char(ch, "\r\n");
+  }
 
   switch (GET_POS(ch)) {
   case POS_DEAD:
@@ -903,29 +981,47 @@ ACMD(do_score)
   if (GET_COND(ch, THIRST) == 0)
     send_to_char(ch, "You are thirsty.\r\n");
 
-  if (AFF_FLAGGED(ch, AFF_BLIND) && GET_LEVEL(ch) < LVL_IMMORT)
-    send_to_char(ch, "You have been blinded!\r\n");
+  send_to_char(ch, "Affections:\r\n");
 
-  if (AFF_FLAGGED(ch, AFF_INVISIBLE))
-    send_to_char(ch, "You are invisible.\r\n");
+  if (affected_by_spell(ch, SPELL_ARMOR)) {
+    send_to_char(ch, " Armor\r\n");
+    found_affect = TRUE;
+  }
+  if (affected_by_spell(ch, SPELL_BLESS)) {
+    send_to_char(ch, " Bless\r\n");
+    found_affect = TRUE;
+  }
+  if (AFF_FLAGGED(ch, AFF_BLIND)) {
+    send_to_char(ch, " Blindness\r\n");
+    found_affect = TRUE;
+  }
+  if (AFF_FLAGGED(ch, AFF_CHARM)) {
+    send_to_char(ch, " Charm Person\r\n");
+    found_affect = TRUE;
+  }
+  if (AFF_FLAGGED(ch, AFF_DETECT_INVIS)) {
+    send_to_char(ch, " Detect Invisible\r\n");
+    found_affect = TRUE;
+  }
+  if (AFF_FLAGGED(ch, AFF_INFRAVISION)) {
+    send_to_char(ch, " Infravision\r\n");
+    found_affect = TRUE;
+  }
+  if (AFF_FLAGGED(ch, AFF_INVISIBLE)) {
+    send_to_char(ch, " Invisible\r\n");
+    found_affect = TRUE;
+  }
+  if (AFF_FLAGGED(ch, AFF_POISON)) {
+    send_to_char(ch, " Poison\r\n");
+    found_affect = TRUE;
+  }
+  if (AFF_FLAGGED(ch, AFF_SANCTUARY)) {
+    send_to_char(ch, " Sanctuary\r\n");
+    found_affect = TRUE;
+  }
 
-  if (AFF_FLAGGED(ch, AFF_DETECT_INVIS))
-    send_to_char(ch, "You are sensitive to the presence of invisible things.\r\n");
-
-  if (AFF_FLAGGED(ch, AFF_SANCTUARY))
-    send_to_char(ch, "You are protected by Sanctuary.\r\n");
-
-  if (AFF_FLAGGED(ch, AFF_POISON))
-    send_to_char(ch, "You are poisoned!\r\n");
-
-  if (AFF_FLAGGED(ch, AFF_CHARM))
-    send_to_char(ch, "You have been charmed!\r\n");
-
-  if (affected_by_spell(ch, SPELL_ARMOR))
-    send_to_char(ch, "You feel protected.\r\n");
-
-  if (AFF_FLAGGED(ch, AFF_INFRAVISION))
-    send_to_char(ch, "Your eyes are glowing red.\r\n");
+  if (!found_affect)
+    send_to_char(ch, " None.\r\n");
 
   if (PRF_FLAGGED(ch, PRF_SUMMONABLE))
     send_to_char(ch, "You are summonable by other players.\r\n");

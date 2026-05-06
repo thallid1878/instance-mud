@@ -83,6 +83,50 @@ void appear(struct char_data *ch)
 	FALSE, ch, 0, 0, TO_ROOM);
 }
 
+static int armor_value_for_position(struct char_data *ch, int eq_pos)
+{
+  int factor, j, armor;
+
+  if (!GET_EQ(ch, eq_pos) || GET_OBJ_TYPE(GET_EQ(ch, eq_pos)) != ITEM_ARMOR)
+    return 0;
+
+  switch (eq_pos) {
+  case WEAR_BODY:
+    factor = 3;
+    break;
+  case WEAR_HEAD:
+  case WEAR_LEGS:
+    factor = 2;
+    break;
+  default:
+    factor = 1;
+    break;
+  }
+
+  armor = factor * GET_OBJ_VAL(GET_EQ(ch, eq_pos), 0);
+
+  for (j = 0; j < MAX_OBJ_AFFECT; j++)
+    if (GET_EQ(ch, eq_pos)->affected[j].location == APPLY_AC)
+      armor += GET_EQ(ch, eq_pos)->affected[j].modifier;
+
+  return armor;
+}
+
+int compute_armor_value(struct char_data *ch)
+{
+  struct affected_type *af;
+  int pos, armor = 0;
+
+  for (pos = 0; pos < NUM_WEARS; pos++)
+    armor += armor_value_for_position(ch, pos);
+
+  for (af = ch->affected; af; af = af->next)
+    if (af->location == APPLY_AC)
+      armor += af->modifier;
+
+  return MAX(0, armor);
+}
+
 int compute_armor_class(struct char_data *ch)
 {
   int armorclass = GET_AC(ch);
@@ -615,6 +659,7 @@ int damage(struct char_data *ch, struct char_data *victim, int dam, int attackty
   char local_buf[256];
   struct char_data *tmp_char;
   struct obj_data *corpse_obj;
+  int armor;
 
   if (GET_POS(victim) <= POS_DEAD) {
     /* This is "normal"-ish now with delayed extraction. -gg 3/15/2001 */
@@ -679,6 +724,13 @@ int damage(struct char_data *ch, struct char_data *victim, int dam, int attackty
   /* Cut damage in half if victim has sanct, to a minimum 1 */
   if (AFF_FLAGGED(victim, AFF_SANCTUARY) && dam >= 2)
     dam /= 2;
+
+  if (dam > 0) {
+    armor = compute_armor_value(victim);
+    if (armor > 0)
+      dam = (dam * 100) / (100 + armor);
+    dam = MAX(1, dam);
+  }
 
   /* Set the maximum damage per round and subtract the hit points */
   dam = MAX(MIN(dam, 100), 0);
@@ -814,8 +866,9 @@ int damage(struct char_data *ch, struct char_data *victim, int dam, int attackty
 static bool melee_hit_roll(struct char_data *ch, struct char_data *victim,
   int *attacker_roll, int *defender_roll)
 {
-  *attacker_roll = rand_number(1, 20) + GET_STR(ch) + GET_HITROLL(ch);
-  *defender_roll = rand_number(1, 20) + GET_DEX(victim) + GET_HITROLL(victim);
+  *attacker_roll = rand_number(1, 20) + GET_STR(ch) + GET_EFFECTIVE_HITROLL(ch);
+  *defender_roll = rand_number(1, 20) + GET_DEX(victim) +
+    GET_EFFECTIVE_HITROLL(victim);
 
   return *attacker_roll > *defender_roll;
 }

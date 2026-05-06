@@ -23,6 +23,7 @@ struct attack_hit_type {
 /* Functions available in fight.c */
 void appear(struct char_data *ch);
 void check_killer(struct char_data *ch, struct char_data *vict);
+int compute_armor_value(struct char_data *ch);
 int compute_armor_class(struct char_data *ch);
 int damage(struct char_data *ch, struct char_data *victim, int dam, int attacktype);
 void death_cry(struct char_data *ch);

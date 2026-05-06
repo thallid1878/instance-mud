@@ -731,7 +731,7 @@ static void do_stat_object(struct char_data *ch, struct obj_data *j)
 	    GET_OBJ_VAL(j, 1), GET_OBJ_VAL(j, 2), ((GET_OBJ_VAL(j, 2) + 1) / 2.0) * GET_OBJ_VAL(j, 1),  attack_hit_text[GET_OBJ_VAL(j, 3)].singular);
     break;
   case ITEM_ARMOR:
-    send_to_char(ch, "AC-apply: [%d]\r\n", GET_OBJ_VAL(j, 0));
+    send_to_char(ch, "Armor: [%d]\r\n", GET_OBJ_VAL(j, 0));
     break;
   case ITEM_CONTAINER:
     sprintbit(GET_OBJ_VAL(j, 1), container_bits, buf, sizeof(buf));
@@ -879,8 +879,8 @@ static void do_stat_character(struct char_data *ch, struct char_data *k)
                       CCCYN(ch, C_NRM), CCYEL(ch, C_NRM), GET_SCREEN_WIDTH(k), CCNRM(ch, C_NRM),
                       CCYEL(ch, C_NRM), GET_PAGE_LENGTH(k), CCCYN(ch, C_NRM), CCNRM(ch, C_NRM));
 
-  send_to_char(ch, "AC: [%d%+d/10], Hitroll: [%2d], Damroll: [%2d], Saving throws: [%d/%d/%d/%d/%d]\r\n",
-	  GET_AC(k), dex_app[STAT_APP_INDEX(GET_DEX(k))].defensive, k->points.hitroll,
+  send_to_char(ch, "Armor: [%d], Hitroll: [%2d], Damroll: [%2d], Saving throws: [%d/%d/%d/%d/%d]\r\n",
+	  compute_armor_value(k), k->points.hitroll,
 	  k->points.damroll, GET_SAVE(k, 0), GET_SAVE(k, 1), GET_SAVE(k, 2),
 	  GET_SAVE(k, 3), GET_SAVE(k, 4));
 
@@ -3577,11 +3577,11 @@ ACMD(do_links)
 #define MAX_AFFECTS_ALLOWED        3
 #define MAX_OBJ_GOLD_ALLOWED       1000000
 
-/* Armor class limits*/
+/* Armor limits */
 #define TOTAL_WEAR_CHECKS  (NUM_ITEM_WEARS-2)  /*minus Wield and Take*/
 static struct zcheck_armor {
   bitvector_t bitvector;          /* from Structs.h                       */
-  int ac_allowed;                 /* Max. AC allowed for this body part  */
+  int ac_allowed;                 /* Max. armor allowed for this body part */
   char *message;                  /* phrase for error message            */
 } zarmor[] = {
   {ITEM_WEAR_FINGER, 10, "Ring"},
@@ -3624,7 +3624,7 @@ static struct zcheck_affs {
   {APPLY_MOVE,       -50,  50, "movement"},
   {APPLY_GOLD,         0,   0, "gold"},
   {APPLY_EXP,          0,   0, "experience"},
-  {APPLY_AC,         -10,  10, "magical AC"},
+  {APPLY_AC,         -10,  10, "magical armor"},
   {APPLY_HITROLL,      0, -99, "hitroll"},       /* Handled seperately below */
   {APPLY_DAMROLL,      0, -99, "damroll"},       /* Handled seperately below */
   {APPLY_SAVING_PARA, -2,   2, "saving throw (paralysis)"},

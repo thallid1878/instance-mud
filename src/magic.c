@@ -54,6 +54,41 @@ int mag_savingthrow(struct char_data *ch, int type, int modifier)
   return (FALSE);
 }
 
+bool spell_attack_hits(struct char_data *ch, struct char_data *victim, int savetype,
+  int *attacker_roll, int *defender_roll)
+{
+  *attacker_roll = rand_number(1, 20) + GET_INT(ch) + GET_EFFECTIVE_HITROLL(ch);
+  *defender_roll = rand_number(1, 20) + GET_WIS(victim) +
+    GET_EFFECTIVE_HITROLL(victim) + GET_SAVE(victim, savetype);
+
+  return *attacker_roll > *defender_roll;
+}
+
+int spell_savetype(int spellnum, int casttype)
+{
+  switch (spellnum) {
+  case SPELL_CHARM:
+  case SPELL_SLEEP:
+    return SAVING_PARA;
+
+  case SPELL_ENERGY_DRAIN:
+  case SPELL_HARM:
+    return SAVING_PETRI;
+  }
+
+  switch (casttype) {
+  case CAST_STAFF:
+  case CAST_SCROLL:
+  case CAST_POTION:
+  case CAST_WAND:
+    return SAVING_ROD;
+  case CAST_SPELL:
+    return SAVING_SPELL;
+  default:
+    return SAVING_BREATH;
+  }
+}
+
 /* affect_update: called from comm.c (causes spells to wear off) */
 void affect_update(void)
 {
@@ -332,7 +367,7 @@ void mag_affects(int level, struct char_data *ch, struct char_data *victim,
 
   case SPELL_ARMOR:
     af[0].location = APPLY_AC;
-    af[0].modifier = -20;
+    af[0].modifier = 20;
     af[0].duration = 24;
     accum_duration = TRUE;
     to_vict = "You feel someone protecting you.";
@@ -358,14 +393,9 @@ void mag_affects(int level, struct char_data *ch, struct char_data *victim,
     }
 
     af[0].location = APPLY_HITROLL;
-    af[0].modifier = -4;
+    af[0].modifier = -20;
     af[0].duration = 2;
     SET_BIT_AR(af[0].bitvector, AFF_BLIND);
-
-    af[1].location = APPLY_AC;
-    af[1].modifier = 40;
-    af[1].duration = 2;
-    SET_BIT_AR(af[1].bitvector, AFF_BLIND);
 
     to_room = "$n seems to be blinded!";
     to_vict = "You have been blinded!";
@@ -434,8 +464,8 @@ void mag_affects(int level, struct char_data *ch, struct char_data *victim,
       victim = ch;
 
     af[0].duration = 12 + (GET_LEVEL(ch) / 4);
-    af[0].modifier = -40;
-    af[0].location = APPLY_AC;
+    af[0].modifier = 20;
+    af[0].location = APPLY_HITROLL;
     SET_BIT_AR(af[0].bitvector, AFF_INVISIBLE);
     accum_duration = TRUE;
     to_vict = "You vanish.";
@@ -615,6 +645,7 @@ void mag_areas(int level, struct char_data *ch, int spellnum, int savetype)
 {
   struct char_data *tch, *next_tch;
   const char *to_char = NULL, *to_room = NULL;
+  int attacker_roll = 0, defender_roll = 0;
 
   if (ch == NULL)
     return;
@@ -636,6 +667,7 @@ void mag_areas(int level, struct char_data *ch, int spellnum, int savetype)
 
   for (tch = world[IN_ROOM(ch)].people; tch; tch = next_tch) {
     next_tch = tch->next_in_room;
+    attacker_roll = defender_roll = 0;
 
     /* The skips: 1: the caster
      *            2: immortals
@@ -655,8 +687,23 @@ void mag_areas(int level, struct char_data *ch, int spellnum, int savetype)
       continue;
 	if ((spellnum == SPELL_EARTHQUAKE) && AFF_FLAGGED(tch, AFF_FLYING))
 	  continue;
+    if (!spell_attack_hits(ch, tch, savetype, &attacker_roll, &defender_roll)) {
+      act("Your spell misses $N.", FALSE, ch, 0, tch, TO_CHAR);
+      act("$n's spell misses you.", FALSE, ch, 0, tch, TO_VICT);
+
+      if (CONFIG_DEBUG_MODE >= NRM)
+        send_to_char(ch, "\t1Debug:\r\n   \t2Spell attack roll: \t3%d\r\n"
+          "   \t2Spell defense roll: \t3%d\tn\r\n",
+          attacker_roll, defender_roll);
+
+      continue;
+    }
+    if (CONFIG_DEBUG_MODE >= NRM)
+      send_to_char(ch, "\t1Debug:\r\n   \t2Spell attack roll: \t3%d\r\n"
+        "   \t2Spell defense roll: \t3%d\tn\r\n",
+        attacker_roll, defender_roll);
     /* Doesn't matter if they die here so we don't check. -gg 6/24/98 */
-    mag_damage(level, ch, tch, spellnum, 1);
+    mag_damage(level, ch, tch, spellnum, savetype);
   }
 }
 

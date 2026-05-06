@@ -454,7 +454,7 @@
 #define APPLY_MOVE             14	/**< Apply to max move points	*/
 #define APPLY_GOLD             15	/**< Reserved			*/
 #define APPLY_EXP              16	/**< Reserved			*/
-#define APPLY_AC               17	/**< Apply to Armor Class		*/
+#define APPLY_AC               17	/**< Apply to Armor		*/
 #define APPLY_HITROLL          18	/**< Apply to hitroll		*/
 #define APPLY_DAMROLL          19	/**< Apply to damage roll		*/
 #define APPLY_SAVING_PARA      20	/**< Apply to save throw: paralysis	*/
@@ -628,7 +628,7 @@ typedef signed char sbyte;          /**< 1 byte; vals = -127 to 127 */
 typedef unsigned char ubyte;        /**< 1 byte; vals = 0 to 255 */
 typedef signed short int sh_int;    /**< 2 bytes; vals = -32,768 to 32,767 */
 typedef unsigned short int ush_int; /**< 2 bytes; vals = 0 to 65,535 */
-typedef signed short int stat_value_t; /**< Character stat value; usable range -255 to 255. */
+typedef signed int stat_value_t;       /**< Character stat value storage. */
 #if !defined(__cplusplus)	/* Anyone know a portable method? */
 typedef char bool; /**< Technically 1 signed byte; vals should only = TRUE or FALSE. */
 #endif
@@ -901,11 +901,8 @@ struct char_point_data
   sh_int move;     /**< Current move point, or stamina, level */
   sh_int max_move; /**< Max move point, or stamina, level */
 
-  /** Current armor class. Internal use goes from -100 (totally armored) to
-   * 100 (totally naked). Externally expressed as -10 (totally armored) to
-   * 10 (totally naked). Currently follows the old and decrepit Advanced
-   * Dungeons and Dragons method of dealing with character defense, or
-   * Armor class. */
+  /** Legacy armor accumulator. Lower values mean more armor; damage reduction
+   * converts this to a positive armor value with 100 - armor. */
   sh_int armor;
   int gold;        /**< Current gold carried on character */
   int bank_gold;   /**< Gold the char has in a bank account	*/
@@ -1197,7 +1194,7 @@ struct dex_app_type
 {
   sh_int reaction; /**< Historically affects reaction savings throws. */
   sh_int miss_att; /**< Historically affects missile attacks */
-  sh_int defensive; /**< Alters character's inherent armor class */
+  sh_int defensive; /**< Historically altered character armor class */
 };
 
 /** Describes the bonuses applied for a specific value of a character's

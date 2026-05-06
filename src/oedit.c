@@ -421,7 +421,7 @@ static void oedit_disp_val1_menu(struct descriptor_data *d)
     write_to_output(d, "Modifier to Hitroll : ");
     break;
   case ITEM_ARMOR:
-    write_to_output(d, "Apply to AC : ");
+    write_to_output(d, "Apply to Armor : ");
     break;
   case ITEM_CONTAINER:
     write_to_output(d, "Max weight to contain (-1 for unlimited) : ");
