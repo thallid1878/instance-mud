@@ -22,6 +22,7 @@
 #include "config.h"
 #include "modify.h"
 #include "genolc.h" /* for strip_cr and sprintascii */
+#include "storage.h"
 
 /* these factors should be unique integers */
 #define RENT_FACTOR    1
@@ -266,7 +267,7 @@ int Crash_delete_file(char *name)
   if (!get_filename(filename, sizeof(filename), CRASH_FILE, name))
     return FALSE;
 
-  if (!(fl = fopen(filename, "r"))) {
+  if (!(fl = storage_fopen_read(filename))) {
     if (errno != ENOENT)  /* if it fails but NOT because of no file */
       log("SYSERR: deleting crash file %s (1): %s", filename, strerror(errno));
     return FALSE;
@@ -274,7 +275,9 @@ int Crash_delete_file(char *name)
   fclose(fl);
 
   /* if it fails, NOT because of no file */
-  if (remove(filename) < 0 && errno != ENOENT)
+  if (storage_is_sql())
+    storage_sql_delete_path(filename);
+  else if (remove(filename) < 0 && errno != ENOENT)
     log("SYSERR: deleting crash file %s (2): %s", filename, strerror(errno));
 
   return TRUE;
@@ -291,7 +294,7 @@ int Crash_delete_crashfile(struct char_data *ch)
   if (!get_filename(filename, sizeof(filename), CRASH_FILE, GET_NAME(ch)))
     return FALSE;
 
-  if (!(fl = fopen(filename, "r"))) {
+  if (!(fl = storage_fopen_read(filename))) {
     if (errno != ENOENT)  /* if it fails, NOT because of no file */
       log("SYSERR: checking for crash file %s (3): %s", filename, strerror(errno));
     return FALSE;
@@ -321,7 +324,7 @@ int Crash_clean_file(char *name)
     return FALSE;
 
   /* Open so that permission problems will be flagged now, at boot time. */
-  if (!(fl = fopen(filename, "r"))) {
+  if (!(fl = storage_fopen_read(filename))) {
     if (errno != ENOENT)  /* if it fails, NOT because of no file */
       log("SYSERR: OPENING OBJECT FILE %s (4): %s", filename, strerror(errno));
     return FALSE;
@@ -386,7 +389,7 @@ void Crash_listrent(struct char_data *ch, char *name)
   if (!get_filename(filename, sizeof(filename), CRASH_FILE, name))
     return;
 
-  if (!(fl = fopen(filename, "r"))) {
+  if (!(fl = storage_fopen_read(filename))) {
     send_to_char(ch, "%s has no rent file.\r\n", name);
     return;
   }
@@ -566,7 +569,7 @@ void Crash_crashsave(struct char_data *ch)
   if (!get_filename(buf, sizeof(buf), CRASH_FILE, GET_NAME(ch)))
     return;
 
-  if (!(fp = fopen(buf, "w")))
+  if (!(fp = storage_fopen_write(buf)))
     return;
 
   if (!objsave_write_rentcode(fp, RENT_CRASH, 0, ch))
@@ -575,20 +578,20 @@ void Crash_crashsave(struct char_data *ch)
   for (j = 0; j < NUM_WEARS; j++)
     if (GET_EQ(ch, j)) {
       if (!Crash_save(GET_EQ(ch, j), fp, j + 1)) {
-        fclose(fp);
+        storage_fclose_write(fp, buf);
         return;
       }
       Crash_restore_weight(GET_EQ(ch, j));
     }
 
   if (!Crash_save(ch->carrying, fp, 0)) {
-    fclose(fp);
+    storage_fclose_write(fp, buf);
     return;
   }
   Crash_restore_weight(ch->carrying);
 
   fprintf(fp, "$~\n");
-  fclose(fp);
+  storage_fclose_write(fp, buf);
   REMOVE_BIT_AR(PLR_FLAGS(ch), PLR_CRASH);
 }
 
@@ -605,7 +608,7 @@ void Crash_idlesave(struct char_data *ch)
   if (!get_filename(buf, sizeof(buf), CRASH_FILE, GET_NAME(ch)))
     return;
 
-  if (!(fp = fopen(buf, "w")))
+  if (!(fp = storage_fopen_write(buf)))
     return;
 
   Crash_extract_norent_eq(ch);
@@ -637,7 +640,7 @@ void Crash_idlesave(struct char_data *ch)
   if (ch->carrying == NULL) {
     for (j = 0; j < NUM_WEARS && GET_EQ(ch, j) == NULL; j++) /* Nothing */ ;
     if (j == NUM_WEARS) {  /* No equipment or inventory. */
-      fclose(fp);
+      storage_fclose_write(fp, buf);
       Crash_delete_file(GET_NAME(ch));
       return;
     }
@@ -649,7 +652,7 @@ void Crash_idlesave(struct char_data *ch)
   for (j = 0; j < NUM_WEARS; j++) {
     if (GET_EQ(ch, j)) {
       if (!Crash_save(GET_EQ(ch, j), fp, j + 1)) {
-        fclose(fp);
+        storage_fclose_write(fp, buf);
         return;
       }
       Crash_restore_weight(GET_EQ(ch, j));
@@ -657,11 +660,11 @@ void Crash_idlesave(struct char_data *ch)
     }
   }
   if (!Crash_save(ch->carrying, fp, 0)) {
-    fclose(fp);
+    storage_fclose_write(fp, buf);
     return;
   }
   fprintf(fp, "$~\n");
-  fclose(fp);
+  storage_fclose_write(fp, buf);
 
   Crash_extract_objs(ch->carrying);
 }
@@ -678,7 +681,7 @@ void Crash_rentsave(struct char_data *ch, int cost)
   if (!get_filename(buf, sizeof(buf), CRASH_FILE, GET_NAME(ch)))
     return;
 
-  if (!(fp = fopen(buf, "w")))
+  if (!(fp = storage_fopen_write(buf)))
     return;
 
   Crash_extract_norent_eq(ch);
@@ -690,7 +693,7 @@ void Crash_rentsave(struct char_data *ch, int cost)
   for (j = 0; j < NUM_WEARS; j++)
     if (GET_EQ(ch, j)) {
       if (!Crash_save(GET_EQ(ch,j), fp, j + 1)) {
-        fclose(fp);
+        storage_fclose_write(fp, buf);
         return;
       }
       Crash_restore_weight(GET_EQ(ch, j));
@@ -698,11 +701,11 @@ void Crash_rentsave(struct char_data *ch, int cost)
 
     }
   if (!Crash_save(ch->carrying, fp, 0)) {
-    fclose(fp);
+    storage_fclose_write(fp, buf);
     return;
   }
   fprintf(fp, "$~\n");
-  fclose(fp);
+  storage_fclose_write(fp, buf);
 
   Crash_extract_objs(ch->carrying);
 }
@@ -737,7 +740,7 @@ static void Crash_cryosave(struct char_data *ch, int cost)
   if (!get_filename(buf, sizeof(buf), CRASH_FILE, GET_NAME(ch)))
     return;
 
-  if (!(fp = fopen(buf, "w")))
+  if (!(fp = storage_fopen_write(buf)))
     return;
 
   Crash_extract_norent_eq(ch);
@@ -751,18 +754,18 @@ static void Crash_cryosave(struct char_data *ch, int cost)
   for (j = 0; j < NUM_WEARS; j++)
     if (GET_EQ(ch, j)) {
       if (!Crash_save(GET_EQ(ch, j), fp, j + 1)) {
-        fclose(fp);
+        storage_fclose_write(fp, buf);
         return;
       }
       Crash_restore_weight(GET_EQ(ch, j));
       Crash_extract_objs(GET_EQ(ch, j));
     }
   if (!Crash_save(ch->carrying, fp, 0)) {
-    fclose(fp);
+    storage_fclose_write(fp, buf);
     return;
   }
   fprintf(fp, "$~\n");
-  fclose(fp);
+  storage_fclose_write(fp, buf);
 
   Crash_extract_objs(ch->carrying);
   SET_BIT_AR(PLR_FLAGS(ch), PLR_CRYO);
@@ -1194,7 +1197,7 @@ static int Crash_load_objs(struct char_data *ch) {
   for (i = 0; i < MAX_BAG_ROWS; i++)
     cont_row[i] = NULL;
 
-  if (!(fl = fopen(filename, "r"))) {
+  if (!(fl = storage_fopen_read(filename))) {
     if (errno != ENOENT) { /* if it fails, NOT because of no file */
       snprintf(buf, MAX_STRING_LENGTH, "SYSERR: READING OBJECT FILE %s (5)", filename);
       perror(buf);

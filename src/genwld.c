@@ -14,6 +14,7 @@
 #include "comm.h"
 #include "genolc.h"
 #include "genwld.h"
+#include "storage.h"
 #include "genzon.h"
 #include "shop.h"
 #include "dg_olc.h"
@@ -266,7 +267,7 @@ int save_rooms(zone_rnum rzone)
   int i;
   struct room_data *room;
   FILE *sf;
-  char filename[128];
+  char filename[128], oldname[128];
   char buf[MAX_STRING_LENGTH];
   char buf1[MAX_STRING_LENGTH];
   char buf2[MAX_STRING_LENGTH];
@@ -283,8 +284,10 @@ int save_rooms(zone_rnum rzone)
   log("GenOLC: save_rooms: Saving rooms in zone #%d (%d-%d).",
 	zone_table[rzone].number, genolc_zone_bottom(rzone), zone_table[rzone].top);
 
-  snprintf(filename, sizeof(filename), "%s/%d.new", WLD_PREFIX, zone_table[rzone].number);
-  if (!(sf = fopen(filename, "w"))) {
+  snprintf(oldname, sizeof(oldname), "%s/%d.wld", WLD_PREFIX, zone_table[rzone].number);
+  snprintf(filename, sizeof(filename), storage_is_sql() ? "%s" : "%s/%d.new",
+    storage_is_sql() ? oldname : WLD_PREFIX, zone_table[rzone].number);
+  if (!(sf = storage_fopen_write(filename))) {
     perror("SYSERR: save_rooms");
     return FALSE;
   }
@@ -380,13 +383,13 @@ int save_rooms(zone_rnum rzone)
 
   /* Write the final line and close it. */
   fprintf(sf, "$~\n");
-  fclose(sf);
+  storage_fclose_write(sf, filename);
 
   /* Old file we're replacing. */
-  snprintf(buf, sizeof(buf), "%s/%d.wld", WLD_PREFIX, zone_table[rzone].number);
-
-  remove(buf);
-  rename(filename, buf);
+  if (!storage_is_sql()) {
+    remove(oldname);
+    rename(filename, oldname);
+  }
 
   if (in_save_list(zone_table[rzone].number, SL_WLD))
     remove_from_save_list(zone_table[rzone].number, SL_WLD);

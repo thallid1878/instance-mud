@@ -19,6 +19,7 @@
 #include "house.h"
 #include "constants.h"
 #include "modify.h"
+#include "storage.h"
 
 /* local (file scope only) globals */
 static struct house_control_rec house_control[MAX_HOUSES];
@@ -64,7 +65,7 @@ static int House_load(room_vnum vnum)
     return (0);
   if (!House_get_filename(vnum, filename, sizeof(filename)))
     return (0);
-  if (!(fl = fopen(filename, "r")))	/* no file found */
+  if (!(fl = storage_fopen_read(filename)))	/* no file found */
     return (0);
 
 	loaded = objsave_parse_objects(fl);
@@ -128,15 +129,15 @@ void House_crashsave(room_vnum vnum)
     return;
   if (!House_get_filename(vnum, buf, sizeof(buf)))
     return;
-  if (!(fp = fopen(buf, "wb"))) {
+  if (!(fp = storage_fopen_write(buf))) {
     perror("SYSERR: Error saving house file");
     return;
   }
   if (!House_save(world[rnum].contents, fp)) {
-    fclose(fp);
+    storage_fclose_write(fp, buf);
     return;
   }
-  fclose(fp);
+  storage_fclose_write(fp, buf);
   House_restore_weight(world[rnum].contents);
   REMOVE_BIT_AR(ROOM_FLAGS(rnum), ROOM_HOUSE_CRASH);
 }
@@ -149,13 +150,15 @@ static void House_delete_file(room_vnum vnum)
 
   if (!House_get_filename(vnum, filename, sizeof(filename)))
     return;
-  if (!(fl = fopen(filename, "rb"))) {
+  if (!(fl = storage_fopen_read(filename))) {
     if (errno != ENOENT)
       log("SYSERR: Error deleting house file #%d. (1): %s", vnum, strerror(errno));
     return;
   }
   fclose(fl);
-  if (remove(filename) < 0)
+  if (storage_is_sql())
+    storage_sql_delete_path(filename);
+  else if (remove(filename) < 0)
     log("SYSERR: Error deleting house file #%d. (2): %s", vnum, strerror(errno));
 }
 
@@ -170,7 +173,7 @@ static void House_listrent(struct char_data *ch, room_vnum vnum)
 
   if (!House_get_filename(vnum, filename, sizeof(filename)))
     return;
-  if (!(fl = fopen(filename, "rb"))) {
+  if (!(fl = storage_fopen_read(filename))) {
     send_to_char(ch, "No objects on file for house #%d.\r\n", vnum);
     return;
   }
@@ -214,7 +217,7 @@ static void House_save_control(void)
 {
   FILE *fl;
 
-  if (!(fl = fopen(HCONTROL_FILE, "wb"))) {
+  if (!(fl = storage_fopen_write(HCONTROL_FILE))) {
     perror("SYSERR: Unable to open house control file.");
     return;
   }
@@ -224,7 +227,7 @@ static void House_save_control(void)
     return;	  
   }
 
-  fclose(fl);
+  storage_fclose_write(fl, HCONTROL_FILE);
 }
 
 /* Call from boot_db - will load control recs, load objs, set atrium bits. 
@@ -237,7 +240,7 @@ void House_boot(void)
 
   memset((char *)house_control,0,sizeof(struct house_control_rec)*MAX_HOUSES);
 
-  if (!(fl = fopen(HCONTROL_FILE, "rb"))) {
+  if (!(fl = storage_fopen_read(HCONTROL_FILE))) {
     if (errno == ENOENT)
       log("   No houses to load. File '%s' does not exist.", HCONTROL_FILE);
     else

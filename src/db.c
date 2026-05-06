@@ -38,6 +38,7 @@
 #include "mud_event.h"
 #include "msgedit.h"
 #include "screen.h"
+#include "storage.h"
 #include <sys/stat.h>
 
 /*  declarations of most of the 'global' variables */
@@ -981,7 +982,7 @@ void index_boot(int mode)
     index_filename = INDEX_FILE;
 
   snprintf(buf2, sizeof(buf2), "%s%s", prefix, index_filename);
-  if (!(db_index = fopen(buf2, "r"))) {
+  if (!(db_index = storage_fopen_read(buf2))) {
     log("SYSERR: opening index file '%s': %s", buf2, strerror(errno));
     exit(1);
   }
@@ -1006,7 +1007,7 @@ void index_boot(int mode)
       break;
 
     snprintf(buf2, sizeof(buf2), "%s%s", prefix, buf1);
-    if (!(db_file = fopen(buf2, "r"))) {
+    if (!(db_file = storage_fopen_read(buf2))) {
       log("SYSERR: File '%s' listed in '%s/%s': %s", buf2, prefix,
           index_filename, strerror(errno));
     } else {
@@ -1090,7 +1091,7 @@ void index_boot(int mode)
       break;
 
     snprintf(buf2, sizeof(buf2), "%s%s", prefix, buf1);
-    if (!(db_file = fopen(buf2, "r"))) {
+    if (!(db_file = storage_fopen_read(buf2))) {
       log("SYSERR: %s: %s", buf2, strerror(errno));
       exit(1);
     }

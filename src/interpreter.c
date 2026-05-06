@@ -298,6 +298,7 @@ cpp_extern const struct command_info cmd_info[] = {
   { "sneak"    , "sneak"   , POS_STANDING, do_sneak    , 1, 0 },
   { "snoop"    , "snoop"   , POS_DEAD    , do_snoop    , LVL_GOD, 0 },
   { "socials"  , "socials" , POS_DEAD    , do_commands , 0, SCMD_SOCIALS },
+  { "sqlimport", "sqlimport", POS_DEAD   , do_sqlimport, LVL_IMPL, 0 },
   { "split"    , "split"   , POS_SITTING , do_split    , 1, 0 },
   { "stand"    , "st"      , POS_RESTING , do_stand    , 0, 0 },
   { "stat"     , "stat"    , POS_DEAD    , do_stat     , LVL_IMMORT, 0 },

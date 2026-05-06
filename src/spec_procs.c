@@ -112,21 +112,6 @@ static bool is_buyable_skill(int skill_num)
   return TRUE;
 }
 
-static const char *prac_types[] = {
-  "spell",
-  "skill"
-};
-
-#define LEARNED_LEVEL	0	/* % known which is considered "learned" */
-#define MAX_PER_PRAC	1	/* max percent gain in skill per practice */
-#define MIN_PER_PRAC	2	/* min percent gain in skill per practice */
-#define PRAC_TYPE	3	/* should it say 'spell' or 'skill'?	 */
-
-#define LEARNED(ch) (prac_params[LEARNED_LEVEL][(int)GET_CLASS(ch)])
-#define MINGAIN(ch) (prac_params[MIN_PER_PRAC][(int)GET_CLASS(ch)])
-#define MAXGAIN(ch) (prac_params[MAX_PER_PRAC][(int)GET_CLASS(ch)])
-#define SPLSKL(ch) (prac_types[prac_params[PRAC_TYPE][(int)GET_CLASS(ch)]])
-
 void list_skills(struct char_data *ch)
 {
   const char *overflow = "\r\n**OVERFLOW**\r\n";

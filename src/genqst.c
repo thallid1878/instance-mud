@@ -14,6 +14,7 @@
 #include "utils.h"
 #include "db.h"
 #include "quest.h"
+#include "storage.h"
 #include "genolc.h"
 #include "genzon.h" /* for create_world_index */
 
@@ -196,9 +197,11 @@ int save_quests(zone_rnum zone_num)
         zone_table[zone_num].number,
  genolc_zone_bottom(zone_num), zone_table[zone_num].top);
 
-  snprintf(filename, sizeof(filename), "%s/%d.new",
- QST_PREFIX, zone_table[zone_num].number);
-  if (!(sf = fopen(filename, "w"))) {
+  snprintf(oldname, sizeof(oldname), "%s/%d.qst",
+           QST_PREFIX, zone_table[zone_num].number);
+  snprintf(filename, sizeof(filename), storage_is_sql() ? "%s" : "%s/%d.new",
+           storage_is_sql() ? oldname : QST_PREFIX, zone_table[zone_num].number);
+  if (!(sf = storage_fopen_write(filename))) {
     perror("SYSERR: save_quests");
     return FALSE;
   }
@@ -262,13 +265,13 @@ int save_quests(zone_rnum zone_num)
   }
   /* Write the final line and close it.  */
   fprintf(sf, "$~\n");
-  fclose(sf);
+  storage_fclose_write(sf, filename);
 
   /* Old file we're replacing. */
-  snprintf(oldname, sizeof(oldname), "%s/%d.qst",
-           QST_PREFIX, zone_table[zone_num].number);
-  remove(oldname);
-  rename(filename, oldname);
+  if (!storage_is_sql()) {
+    remove(oldname);
+    rename(filename, oldname);
+  }
 
   /* Do we need to update the index file? */
   if (num_quests > 0)

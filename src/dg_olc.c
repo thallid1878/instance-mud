@@ -21,6 +21,7 @@
 #include "genzon.h"      /* for real_zone_by_thing */
 #include "constants.h"   /* for the *trig_types */
 #include "modify.h"      /* for smash_tilde */
+#include "storage.h"
 
 
 /* local functions */
@@ -805,10 +806,12 @@ void trigedit_save(struct descriptor_data *d)
 #ifdef CIRCLE_MAC
   snprintf(fname, sizeof(fname), "%s:%i.new", TRG_PREFIX, zone);
 #else
-  snprintf(fname, sizeof(fname), "%s/%i.new", TRG_PREFIX, zone);
+  snprintf(buf, sizeof(buf), "%s/%d.trg", TRG_PREFIX, zone);
+  snprintf(fname, sizeof(fname), storage_is_sql() ? "%s" : "%s/%i.new",
+    storage_is_sql() ? buf : TRG_PREFIX, zone);
 #endif
 
-  if (!(trig_file = fopen(fname, "w"))) {
+  if (!(trig_file = storage_fopen_write(fname))) {
     mudlog(BRF, MAX(LVL_GOD, GET_INVIS_LEV(d->character)), TRUE,
            "SYSERR: OLC: Can't open trig file \"%s\"", fname);
     return;
@@ -821,7 +824,7 @@ void trigedit_save(struct descriptor_data *d)
       if (fprintf(trig_file, "#%d\n", i) < 0) {
         mudlog(BRF, MAX(LVL_GOD, GET_INVIS_LEV(d->character)), TRUE,
                "SYSERR: OLC: Can't write trig file!");
-        fclose(trig_file);
+        storage_fclose_write(trig_file, fname);
         return;
       }
       sprintascii(bitBuf, GET_TRIG_TYPE(trig));
@@ -849,7 +852,7 @@ void trigedit_save(struct descriptor_data *d)
   }
 
   fprintf(trig_file, "$%c\n", STRING_TERMINATOR);
-  fclose(trig_file);
+  storage_fclose_write(trig_file, fname);
 
 #ifdef CIRCLE_MAC
   snprintf(buf, sizeof(buf), "%s:%d.trg", TRG_PREFIX, zone);
@@ -857,8 +860,10 @@ void trigedit_save(struct descriptor_data *d)
   snprintf(buf, sizeof(buf), "%s/%d.trg", TRG_PREFIX, zone);
 #endif
 
-  remove(buf);
-  rename(fname, buf);
+  if (!storage_is_sql()) {
+    remove(buf);
+    rename(fname, buf);
+  }
 
   write_to_output(d, "Trigger saved to disk.\r\n");
   trigedit_create_index(zone, "trg");
@@ -872,6 +877,9 @@ static void trigedit_create_index(int znum, char *type)
   int num, found = FALSE;
 
   prefix = TRG_PREFIX;
+
+  if (storage_is_sql())
+    return;
 
   snprintf(old_name, sizeof(old_name), "%s/index", prefix);
   snprintf(new_name, sizeof(new_name), "%s/newindex", prefix);
@@ -909,6 +917,7 @@ static void trigedit_create_index(int znum, char *type)
   /* Out with the old, in with the new. */
   remove(old_name);
   rename(new_name, old_name);
+  storage_sql_import_path(old_name);
 }
 
 void dg_olc_script_copy(struct descriptor_data *d)

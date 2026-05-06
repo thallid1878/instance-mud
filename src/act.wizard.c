@@ -34,6 +34,7 @@
 #include "quest.h"
 #include "ban.h"
 #include "screen.h"
+#include "storage.h"
 
 /* local utility functions with file scope */
 static int perform_set(struct char_data *ch, struct char_data *vict, int mode, char *val_arg);
@@ -55,8 +56,49 @@ static struct recent_player *create_recent(void);
 const char *get_spec_func_name(SPECIAL(*func));
 bool zedit_get_levels(struct descriptor_data *d, char *buf);
 
+struct sqlimport_world_type {
+  const char *type;
+  const char *subdir;
+  const char *extension;
+};
+
+static const struct sqlimport_world_type sqlimport_world_types[] = {
+  { "mob", "world/mob", ".mob" },
+  { "obj", "world/obj", ".obj" },
+  { "qst", "world/qst", ".qst" },
+  { "shp", "world/shp", ".shp" },
+  { "trg", "world/trg", ".trg" },
+  { "wld", "world/wld", ".wld" },
+  { "zon", "world/zon", ".zon" }
+};
+
 /* Local Globals */
 static struct recent_player *recent_list = NULL;  /** Global list of recent players */
+
+static const struct sqlimport_world_type *find_sqlimport_world_type(const char *type)
+{
+  size_t i;
+
+  for (i = 0; i < sizeof(sqlimport_world_types) / sizeof(sqlimport_world_types[0]); i++)
+    if (!str_cmp(type, sqlimport_world_types[i].type))
+      return &sqlimport_world_types[i];
+
+  return NULL;
+}
+
+static bool sqlimport_safe_filename(const char *filename)
+{
+  return *filename && !strchr(filename, '/') && !strchr(filename, '\\') &&
+    !strstr(filename, "..");
+}
+
+static bool sqlimport_has_extension(const char *filename, const char *extension)
+{
+  size_t filename_len = strlen(filename), extension_len = strlen(extension);
+
+  return filename_len >= extension_len &&
+    !str_cmp(filename + filename_len - extension_len, extension);
+}
 
 static int purge_room(room_rnum room)
 {
@@ -4517,6 +4559,55 @@ ACMD(do_changelog)
   fclose(fl);
   fclose(new);
   send_to_char(ch, "Change added.\r\n");
+}
+
+ACMD(do_sqlimport)
+{
+  char type_arg[MAX_INPUT_LENGTH], file_arg[MAX_INPUT_LENGTH];
+  char filename[MAX_INPUT_LENGTH], path[MAX_STRING_LENGTH];
+  const struct sqlimport_world_type *world_type;
+  FILE *fl;
+
+  two_arguments(argument, type_arg, file_arg);
+
+  if (!*type_arg || !*file_arg) {
+    send_to_char(ch, "Usage: sqlimport <mob|obj|qst|shp|trg|wld|zon> <filename>\r\n");
+    return;
+  }
+
+  if (!storage_is_sql()) {
+    send_to_char(ch, "The sqlimport command is only available when --usesql is active.\r\n");
+    return;
+  }
+
+  if (!(world_type = find_sqlimport_world_type(type_arg))) {
+    send_to_char(ch, "Unknown SQL import type '%s'. Use mob, obj, qst, shp, trg, wld, or zon.\r\n",
+      type_arg);
+    return;
+  }
+
+  if (!sqlimport_safe_filename(file_arg)) {
+    send_to_char(ch, "SQL import filenames must be simple file names, not paths.\r\n");
+    return;
+  }
+
+  if (sqlimport_has_extension(file_arg, world_type->extension))
+    snprintf(filename, sizeof(filename), "%s", file_arg);
+  else
+    snprintf(filename, sizeof(filename), "%s%s", file_arg, world_type->extension);
+
+  snprintf(path, sizeof(path), "%s/%s", world_type->subdir, filename);
+
+  if (!(fl = fopen(path, "rb"))) {
+    send_to_char(ch, "Could not find %s.\r\n", path);
+    return;
+  }
+  fclose(fl);
+
+  storage_sql_import_path(path);
+  mudlog(BRF, LVL_IMPL, TRUE, "%s imported %s into SQL storage.", GET_NAME(ch), path);
+  send_to_char(ch, "Imported %s into SQL storage.\r\n", path);
+  send_to_char(ch, "The running world still uses the current in-memory data until reload or reboot.\r\n");
 }
 
 #define PLIST_FORMAT \

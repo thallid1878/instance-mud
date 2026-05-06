@@ -12,6 +12,7 @@
 #include "db.h"
 #include "genolc.h"
 #include "genzon.h"
+#include "storage.h"
 #include "dg_scripts.h"
 
 /* local functions */
@@ -90,73 +91,73 @@ zone_rnum create_new_zone(zone_vnum vzone_num, room_vnum bottom, room_vnum top, 
 
   /* Create the zone file. */
   snprintf(buf, sizeof(buf), "%s/%d.zon", ZON_PREFIX, vzone_num);
-  if (!(fp = fopen(buf, "w"))) {
+  if (!(fp = storage_fopen_write(buf))) {
     mudlog(BRF, LVL_IMPL, TRUE, "SYSERR: OLC: Can't write new zone file.");
     *error = "Could not write zone file.\r\n";
     return NOWHERE;
   }
   fprintf(fp, "#%d\nNone~\nNew Zone~\n%d %d 30 2\nS\n$\n", vzone_num, bottom, top);
-  fclose(fp);
+  storage_fclose_write(fp, buf);
 
   /* Create the room file. */
   snprintf(buf, sizeof(buf), "%s/%d.wld", WLD_PREFIX, vzone_num);
-  if (!(fp = fopen(buf, "w"))) {
+  if (!(fp = storage_fopen_write(buf))) {
     mudlog(BRF, LVL_IMPL, TRUE, "SYSERR: OLC: Can't write new world file.");
     *error = "Could not write world file.\r\n";
     return NOWHERE;
   }
   fprintf(fp, "#%d\nThe Beginning~\nNot much here.\n~\n%d 0 0\nS\n$\n", bottom, vzone_num);
-  fclose(fp);
+  storage_fclose_write(fp, buf);
 
   /* Create the mobile file. */
   snprintf(buf, sizeof(buf), "%s/%d.mob", MOB_PREFIX, vzone_num);
-  if (!(fp = fopen(buf, "w"))) {
+  if (!(fp = storage_fopen_write(buf))) {
     mudlog(BRF, LVL_IMPL, TRUE, "SYSERR: OLC: Can't write new mob file.");
     *error = "Could not write mobile file.\r\n";
     return NOWHERE;
   }
   fprintf(fp, "$\n");
-  fclose(fp);
+  storage_fclose_write(fp, buf);
 
   /* Create the object file. */
   snprintf(buf, sizeof(buf), "%s/%d.obj", OBJ_PREFIX, vzone_num);
-  if (!(fp = fopen(buf, "w"))) {
+  if (!(fp = storage_fopen_write(buf))) {
     mudlog(BRF, LVL_IMPL, TRUE, "SYSERR: OLC: Can't write new obj file.");
     *error = "Could not write object file.\r\n";
     return NOWHERE;
   }
   fprintf(fp, "$\n");
-  fclose(fp);
+  storage_fclose_write(fp, buf);
 
   /* Create the shop file. */
   snprintf(buf, sizeof(buf), "%s/%d.shp", SHP_PREFIX, vzone_num);
-  if (!(fp = fopen(buf, "w"))) {
+  if (!(fp = storage_fopen_write(buf))) {
     mudlog(BRF, LVL_IMPL, TRUE, "SYSERR: OLC: Can't write new shop file.");
     *error = "Could not write shop file.\r\n";
     return NOWHERE;
   }
   fprintf(fp, "$~\n");
-  fclose(fp);
+  storage_fclose_write(fp, buf);
 
   /* Create the quests file */
   snprintf(buf, sizeof(buf), "%s/%d.qst", QST_PREFIX, vzone_num);
-  if (!(fp = fopen(buf, "w"))) {
+  if (!(fp = storage_fopen_write(buf))) {
     mudlog(BRF, LVL_IMPL, TRUE, "SYSERR: OLC: Can't write new quest file");
     *error = "Could not write quest file.\r\n";
     return NOWHERE;
   }
   fprintf(fp, "$~\n");
-  fclose(fp);
+  storage_fclose_write(fp, buf);
 
   /* Create the trigger file. */
   snprintf(buf, sizeof(buf), "%s/%d.trg", TRG_PREFIX, vzone_num);
-  if (!(fp = fopen(buf, "w"))) {
+  if (!(fp = storage_fopen_write(buf))) {
     mudlog(BRF, LVL_IMPL, TRUE, "SYSERR: OLC: Can't write new trigger file");
     *error = "Could not write trigger file.\r\n";
     return NOWHERE;
   }
   fprintf(fp, "$~\n");
-  fclose(fp);
+  storage_fclose_write(fp, buf);
 
   /* Update index files. */
   create_world_index(vzone_num, "qst");
@@ -222,6 +223,9 @@ void create_world_index(int znum, const char *type)
   int num, found = FALSE;
   char buf[MAX_STRING_LENGTH];
   char buf1[MAX_STRING_LENGTH];
+
+  if (storage_is_sql())
+    return;
 
   switch (*type) {
   case 'z':
@@ -342,8 +346,10 @@ int save_zone(zone_rnum zone_num)
     return FALSE;
   }
 
-  snprintf(fname, sizeof(fname), "%s/%d.new", ZON_PREFIX, zone_table[zone_num].number);
-  if (!(zfile = fopen(fname, "w"))) {
+  snprintf(oldname, sizeof(oldname), "%s/%d.zon", ZON_PREFIX, zone_table[zone_num].number);
+  snprintf(fname, sizeof(fname), storage_is_sql() ? "%s" : "%s/%d.new",
+    storage_is_sql() ? oldname : ZON_PREFIX, zone_table[zone_num].number);
+  if (!(zfile = storage_fopen_write(fname))) {
     mudlog(BRF, LVL_BUILDER, TRUE, "SYSERR: OLC: save_zones:  Can't write zone %d.", zone_table[zone_num].number);
     return FALSE;
   }
@@ -481,10 +487,11 @@ int save_zone(zone_rnum zone_num)
               ZCMD(zone_num, subcmd).sarg1, ZCMD(zone_num, subcmd).sarg2);
   }
   fputs("S\n$\n", zfile);
-  fclose(zfile);
-  snprintf(oldname, sizeof(oldname), "%s/%d.zon", ZON_PREFIX, zone_table[zone_num].number);
-  remove(oldname);
-  rename(fname, oldname);
+  storage_fclose_write(zfile, fname);
+  if (!storage_is_sql()) {
+    remove(oldname);
+    rename(fname, oldname);
+  }
 
   if (in_save_list(zone_table[zone_num].number, SL_ZON))
     remove_from_save_list(zone_table[zone_num].number, SL_ZON);

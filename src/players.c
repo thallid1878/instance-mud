@@ -22,6 +22,7 @@
 #include "config.h" /* for pclean_criteria[] */
 #include "dg_scripts.h" /* To enable saving of player variables to disk */
 #include "quest.h"
+#include "storage.h"
 
 #define LOAD_HIT	0
 #define LOAD_MANA	1
@@ -52,7 +53,7 @@ void build_player_index(void)
   char arg2[80];
 
   sprintf(index_name, "%s%s", LIB_PLRFILES, INDEX_FILE);
-  if (!(plr_index = fopen(index_name, "r"))) {
+  if (!(plr_index = storage_fopen_read(index_name))) {
     top_of_p_table = -1;
     log("No player index file!  First new char will be IMP!");
     return;
@@ -156,7 +157,7 @@ void save_player_index(void)
   FILE *index_file;
 
   sprintf(index_name, "%s%s", LIB_PLRFILES, INDEX_FILE);
-  if (!(index_file = fopen(index_name, "w"))) {
+  if (!(index_file = storage_fopen_write(index_name))) {
     log("SYSERR: Could not write player index file");
     return;
   }
@@ -170,7 +171,7 @@ void save_player_index(void)
     }
   fprintf(index_file, "~\n");
 
-  fclose(index_file);
+  storage_fclose_write(index_file, index_name);
 }
 
 void free_player_index(void)
@@ -240,7 +241,7 @@ int load_char(const char *name, struct char_data *ch)
   else {
     if (!get_filename(filename, sizeof(filename), PLR_FILE, player_table[id].name))
       return (-1);
-    if (!(fl = fopen(filename, "r"))) {
+    if (!(fl = storage_fopen_read(filename))) {
       mudlog(NRM, LVL_GOD, TRUE, "SYSERR: Couldn't open player file %s", filename);
       return (-1);
     }
@@ -529,7 +530,7 @@ void save_char(struct char_data * ch)
 
   if (!get_filename(filename, sizeof(filename), PLR_FILE, GET_NAME(ch)))
     return;
-  if (!(fl = fopen(filename, "w"))) {
+  if (!(fl = storage_fopen_write(filename))) {
     mudlog(NRM, LVL_GOD, TRUE, "SYSERR: Couldn't open player file %s for write", filename);
     return;
   }
@@ -698,7 +699,7 @@ void save_char(struct char_data * ch)
   write_aliases_ascii(fl, ch);
   save_char_vars_ascii(fl, ch);
 
-  fclose(fl);
+  storage_fclose_write(fl, filename);
 
   /* More char_to_store code to add spell and eq affections back in. */
   for (i = 0; i < MAX_AFFECT; i++) {
@@ -782,8 +783,12 @@ void remove_player(int pfilepos)
 
   /* Unlink all player-owned files */
   for (i = 0; i < MAX_FILES; i++) {
-    if (get_filename(filename, sizeof(filename), i, player_table[pfilepos].name))
-      unlink(filename);
+    if (get_filename(filename, sizeof(filename), i, player_table[pfilepos].name)) {
+      if (storage_is_sql())
+        storage_sql_delete_path(filename);
+      else
+        unlink(filename);
+    }
   }
 
   strftime(timestr, sizeof(timestr), "%c", localtime(&(player_table[pfilepos].last)));

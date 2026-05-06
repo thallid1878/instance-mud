@@ -14,6 +14,7 @@
 #include "handler.h"
 #include "genolc.h"
 #include "genmob.h"
+#include "storage.h"
 #include "genzon.h"
 #include "dg_olc.h"
 #include "spells.h"
@@ -299,8 +300,10 @@ int save_mobiles(zone_rnum rznum)
   }
 
   vznum = zone_table[rznum].number;
-  snprintf(mobfname, sizeof(mobfname), "%s%d.new", MOB_PREFIX, vznum);
-  if ((mobfd = fopen(mobfname, "w")) == NULL) {
+  snprintf(usedfname, sizeof(usedfname), "%s%d.mob", MOB_PREFIX, vznum);
+  snprintf(mobfname, sizeof(mobfname), storage_is_sql() ? "%s" : "%s%d.new",
+    storage_is_sql() ? usedfname : MOB_PREFIX, vznum);
+  if ((mobfd = storage_fopen_write(mobfname)) == NULL) {
     mudlog(BRF, LVL_GOD, TRUE, "SYSERR: GenOLC: Cannot open mob file for writing.");
     return FALSE;
   }
@@ -314,10 +317,11 @@ int save_mobiles(zone_rnum rznum)
   }
   fputs("$\n", mobfd);
   written = ftell(mobfd);
-  fclose(mobfd);
-  snprintf(usedfname, sizeof(usedfname), "%s%d.mob", MOB_PREFIX, vznum);
-  remove(usedfname);
-  rename(mobfname, usedfname);
+  storage_fclose_write(mobfd, mobfname);
+  if (!storage_is_sql()) {
+    remove(usedfname);
+    rename(mobfname, usedfname);
+  }
 
   if (in_save_list(vznum, SL_MOB))
     remove_from_save_list(vznum, SL_MOB);

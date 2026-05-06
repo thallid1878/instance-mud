@@ -16,6 +16,7 @@
 #include "sysdep.h"
 #include "structs.h"
 #include "dg_scripts.h"
+#include "storage.h"
 #include "utils.h"
 #include "comm.h"
 #include "interpreter.h"
@@ -2842,7 +2843,7 @@ void read_saved_vars(struct char_data *ch)
 
   /* find the file that holds the saved variables and open it*/
   get_filename(fn, sizeof(fn), SCRIPT_VARS_FILE, GET_NAME(ch));
-  file = fopen(fn,"r");
+  file = storage_fopen_read(fn);
 
   /* if we failed to open the file, return */
   if( !file ) {
@@ -2882,13 +2883,14 @@ void save_char_vars(struct char_data *ch)
   if (IS_NPC(ch)) return;
 
   get_filename(fn, sizeof(fn), SCRIPT_VARS_FILE, GET_NAME(ch));
-  unlink(fn);
+  if (!storage_is_sql())
+    unlink(fn);
 
   /* make sure this char has global variables to save */
   if (ch->script->global_vars == NULL) return;
   vars = ch->script->global_vars;
 
-  file = fopen(fn,"wt");
+  file = storage_fopen_write(fn);
   if (!file) {
     mudlog( NRM, LVL_GOD, TRUE,
             "SYSERR: Could not open player variable file %s for writing.:%s",
@@ -2903,7 +2905,7 @@ void save_char_vars(struct char_data *ch)
     vars = vars->next;
   }
 
-  fclose(file);
+  storage_fclose_write(file, fn);
 }
 
 /* load in a character's saved variables from an ASCII pfile*/

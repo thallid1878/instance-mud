@@ -1,0 +1,11 @@
+# SQL storage configuration.
+# Copy to sql.conf in this lib directory before starting with --usesql.
+# Leave table_prefix empty to use plrfiles, mob, obj, etc.
+# With table_prefix = tba, tables become tba_plrfiles, tba_mob, etc.
+
+host = 127.0.0.1
+port = 3306
+user = tbamud
+password = change_me
+database = tbamud
+table_prefix = tba

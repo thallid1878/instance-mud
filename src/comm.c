@@ -82,6 +82,7 @@
 #include "quest.h"
 #include "ibt.h" /* for free_ibt_lists */
 #include "mud_event.h"
+#include "storage.h"
 
 #ifndef INVALID_SOCKET
 #define INVALID_SOCKET (-1)
@@ -240,6 +241,12 @@ int main(int argc, char **argv)
   dir = CONFIG_DFLT_DIR;
 
   while ((pos < argc) && (*(argv[pos]) == '-')) {
+    if (!strcmp(argv[pos], "--usesql") || !strcmp(argv[pos], "--useslq")) {
+      storage_use_sql();
+      pos++;
+      continue;
+    }
+
     switch (*(argv[pos] + 1)) {
     case 'f':
       if (! *(argv[pos] + 2))
@@ -294,6 +301,7 @@ int main(int argc, char **argv)
       /* From: Anil Mahajan. Do NOT use -C, this is the copyover mode and
        * without the proper copyover.dat file, the game will go nuts! */
       printf("Usage: %s [-c] [-m] [-q] [-r] [-s] [-d pathname] [port #]\n"
+              "  --usesql       Use MySQL/MariaDB storage config from lib/sql.conf.\n"
               "  -c             Enable syntax check mode.\n"
               "  -d <directory> Specify library directory (defaults to 'lib').\n"
               "  -h             Print this command line argument help.\n"
@@ -303,6 +311,7 @@ int main(int argc, char **argv)
               "  -q             Quick boot (doesn't scan rent for object limits)\n"
               "  -r             Restrict MUD -- no new players allowed.\n"
               "  -s             Suppress special procedure assignments.\n"
+              "  --useslq       Alias for --usesql.\n"
               " Note:		These arguments are 'CaSe SeNsItIvE!!!'\n",
 		 argv[0]
       );
@@ -337,6 +346,15 @@ int main(int argc, char **argv)
     exit(1);
   }
   log("Using %s as data directory.", dir);
+  if (storage_is_sql()) {
+    storage_load_config_or_die(SQL_CONFIG_FILE);
+    storage_sql_connect_or_die();
+    log("Storage backend: sql (%s:%u/%s, prefix '%s').",
+      storage_sql_config()->host, storage_sql_config()->port,
+      storage_sql_config()->database, storage_sql_config()->table_prefix);
+    storage_sql_prepare_or_die();
+  } else
+    log("Storage backend: flatfiles.");
 
   if (scheck)
     boot_world();
@@ -367,6 +385,8 @@ int main(int argc, char **argv)
     free_list(world_events); /* free up our global lists */
     free_list(global_lists);
   }
+
+  storage_sql_close();
 
   if (last_act_message)
     free(last_act_message);

@@ -11,6 +11,7 @@
 #include "utils.h"
 #include "db.h"
 #include "shop.h"
+#include "storage.h"
 #include "genolc.h"
 #include "genshp.h"
 #include "genzon.h"
@@ -357,8 +358,10 @@ int save_shops(zone_rnum zone_num)
     return FALSE;
   }
 
-  snprintf(fname, sizeof(fname), "%s/%d.new", SHP_PREFIX, zone_table[zone_num].number);
-  if (!(shop_file = fopen(fname, "w"))) {
+  snprintf(oldname, sizeof(oldname), "%s/%d.shp", SHP_PREFIX, zone_table[zone_num].number);
+  snprintf(fname, sizeof(fname), storage_is_sql() ? "%s" : "%s/%d.new",
+    storage_is_sql() ? oldname : SHP_PREFIX, zone_table[zone_num].number);
+  if (!(shop_file = storage_fopen_write(fname))) {
     mudlog(BRF, LVL_GOD, TRUE, "SYSERR: OLC: Cannot open shop file!");
     return FALSE;
   } else if (fprintf(shop_file, "CircleMUD v3.0 Shop File~\n") < 0) {
@@ -430,10 +433,11 @@ int save_shops(zone_rnum zone_num)
     }
   }
   fprintf(shop_file, "$~\n");
-  fclose(shop_file);
-  snprintf(oldname, sizeof(oldname), "%s/%d.shp", SHP_PREFIX, zone_table[zone_num].number);
-  remove(oldname);
-  rename(fname, oldname);
+  storage_fclose_write(shop_file, fname);
+  if (!storage_is_sql()) {
+    remove(oldname);
+    rename(fname, oldname);
+  }
 
   if (num_shops > 0)
     create_world_index(zone_table[zone_num].number, "shp");

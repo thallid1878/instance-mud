@@ -14,6 +14,7 @@
 #include "constants.h"
 #include "genolc.h"
 #include "genobj.h"
+#include "storage.h"
 #include "genzon.h"
 #include "dg_olc.h"
 #include "handler.h"
@@ -196,8 +197,10 @@ int save_objects(zone_rnum zone_num)
     return FALSE;
   }
 
-  snprintf(filename, sizeof(filename), "%s/%d.new", OBJ_PREFIX, zone_table[zone_num].number);
-  if (!(fp = fopen(filename, "w+"))) {
+  snprintf(buf, sizeof(buf), "%s/%d.obj", OBJ_PREFIX, zone_table[zone_num].number);
+  snprintf(filename, sizeof(filename), storage_is_sql() ? "%s" : "%s/%d.new",
+    storage_is_sql() ? buf : OBJ_PREFIX, zone_table[zone_num].number);
+  if (!(fp = storage_fopen_write(filename))) {
     mudlog(BRF, LVL_IMMORT, TRUE, "SYSERR: OLC: Cannot open objects file %s!", filename);
     return FALSE;
   }
@@ -288,10 +291,11 @@ int save_objects(zone_rnum zone_num)
 
   /* Write the final line, close the file. */
   fprintf(fp, "$~\n");
-  fclose(fp);
-  snprintf(buf, sizeof(buf), "%s/%d.obj", OBJ_PREFIX, zone_table[zone_num].number);
-  remove(buf);
-  rename(filename, buf);
+  storage_fclose_write(fp, filename);
+  if (!storage_is_sql()) {
+    remove(buf);
+    rename(filename, buf);
+  }
 
   if (in_save_list(zone_table[zone_num].number, SL_OBJ))
     remove_from_save_list(zone_table[zone_num].number, SL_OBJ);

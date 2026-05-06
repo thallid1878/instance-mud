@@ -334,6 +334,7 @@ ACMD(do_send);
 ACMD(do_set);
 ACMD(do_show);
 ACMD(do_snoop);
+ACMD(do_sqlimport);
 ACMD(do_stat);
 ACMD(do_switch);
 ACMD(do_teleport);
