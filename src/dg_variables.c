@@ -546,23 +546,32 @@ void find_replacement(void *go, struct script_data *sc, trig_data *trig,
 
         else if (!str_cmp(field, "dir")) {
           room_rnum in_room = NOWHERE;
+          int instance_id = 0;
 
           switch (type) {
             case WLD_TRIGGER:
               in_room = real_room(((struct room_data *) go)->number);
+              room = (struct room_data *) go;
               break;
             case OBJ_TRIGGER:
               in_room = obj_room((struct obj_data *) go);
+              instance_id = GET_INSTANCE_ID((struct obj_data *) go);
               break;
             case MOB_TRIGGER:
               in_room = IN_ROOM((struct char_data *)go);
+              instance_id = GET_INSTANCE_ID((struct char_data *) go);
               break;
           }
           if (in_room == NOWHERE) {
             *str = '\0';
           } else {
             doors = 0;
-            room = ROOM_AT(in_room);
+            if (type != WLD_TRIGGER)
+              room = room_by_rnum_instance(in_room, instance_id);
+            if (!room) {
+              *str = '\0';
+              return;
+            }
             for (i = 0; i < DIR_COUNT; i++)
               if (R_EXIT(room, i))
                 doors++;
@@ -993,7 +1002,7 @@ void find_replacement(void *go, struct script_data *sc, trig_data *trig,
 /* see note in dg_scripts.h */
 #ifdef ACTOR_ROOM_IS_UID
             snprintf(str, slen, "%c%ld",UID_CHAR,
-               (IN_ROOM(c)!= NOWHERE) ? room_script_id(world + IN_ROOM(c)) : ROOM_ID_BASE);
+               (IN_ROOM(c)!= NOWHERE && GET_ROOM(c)) ? room_script_id(GET_ROOM(c)) : ROOM_ID_BASE);
 #else
             snprintf(str, slen, "%d", (IN_ROOM(c)!= NOWHERE) ? GET_ROOM(c)->number : 0);
 #endif
@@ -1246,8 +1255,8 @@ void find_replacement(void *go, struct script_data *sc, trig_data *trig,
             snprintf(str, slen, "%ld", obj_script_id(o));
 
           else if (!str_cmp(field, "is_inroom")) {
-            if (IN_ROOM(o) != NOWHERE)
-              snprintf(str, slen,"%c%ld",UID_CHAR, room_script_id(world + IN_ROOM(o)));
+            if (IN_ROOM(o) != NOWHERE && GET_ROOM(o))
+              snprintf(str, slen,"%c%ld",UID_CHAR, room_script_id(GET_ROOM(o)));
             else
               *str = '\0';
           }

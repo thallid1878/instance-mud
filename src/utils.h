@@ -34,6 +34,8 @@
 /** Standard line size, used for many string limits. */
 #define READ_SIZE	256
 
+struct room_data;
+
 /* Public functions made available from utils.c. Documentation for all functions
  * are made available with the function definition. */
 void basic_mud_log(const char *format, ...) __attribute__ ((format (printf, 1, 2)));
@@ -53,6 +55,7 @@ int num_pc_in_room(struct room_data *room);
 void core_dump_real(const char *who, int line);
 int count_color_chars(char *string);
 int room_is_dark(room_rnum room);
+int room_data_is_dark(struct room_data *room);
 int levenshtein_distance(const char *s1, const char *s2);
 struct time_info_data *real_time_passed(time_t t2, time_t t1);
 struct time_info_data *mud_time_passed(time_t t2, time_t t1);
@@ -78,6 +81,7 @@ void remove_from_string(char *string, const char *to_remove);
 struct zone_data;
 struct shop_data;
 struct room_data *room_by_rnum(room_rnum rnum);
+struct room_data *room_by_rnum_instance(room_rnum rnum, int instance_id);
 struct zone_data *zone_by_rnum(zone_rnum rnum);
 struct shop_data *shop_by_rnum(shop_rnum rnum);
 
@@ -383,6 +387,7 @@ do                                                              \
 #define ROOM_AT(loc)	(room_by_rnum((loc)))
 #define ZONE_AT(rnum)	(zone_by_rnum((rnum)))
 #define ROOM_FLAGS(loc)	(ROOM_AT(loc)->room_flags)
+#define ROOM_PTR_FLAGGED(room, flag) ((room) && IS_SET_AR((room)->room_flags, (flag)))
 /** Zone flags.
  * @param rnum The real zone number. */
 #define ZONE_FLAGS(rnum)       (ZONE_AT(rnum)->zone_flags)
@@ -459,6 +464,7 @@ do                                                              \
 #define IS_LIGHT(room)  (!IS_DARK(room))
 
 int valid_room_rnum(room_rnum rnum);
+int valid_room_rnum_instance(room_rnum rnum, int instance_id);
 
 /** 1 if this is a valid room number, 0 if not. */
 #define VALID_ROOM_RNUM(rnum)	valid_room_rnum((rnum))
@@ -472,11 +478,17 @@ int valid_room_rnum(room_rnum rnum);
 /* char utils */
 /** What room is PC/NPC in? */
 #define IN_ROOM(ch)	((ch)->in_room)
-#define GET_ROOM(ch)	(room_by_rnum(IN_ROOM(ch)))
 /** What room was PC/NPC previously in? */
 #define GET_WAS_IN(ch)	((ch)->was_in_room)
 /** Runtime dungeon instance id for PC/NPC, or 0. */
 #define GET_INSTANCE_ID(ch) ((ch)->instance_id)
+#define GET_ROOM(ch)	(room_by_rnum_instance(IN_ROOM(ch), GET_INSTANCE_ID(ch)))
+#define IN_ROOM_VNUM(ch) ((GET_ROOM(ch)) ? GET_ROOM(ch)->number : NOWHERE)
+#define IN_ROOM_ZONE(ch) ((GET_ROOM(ch)) ? GET_ROOM(ch)->zone : NOWHERE)
+#define IN_ROOM_FLAGGED(ch, flag) (ROOM_PTR_FLAGGED(GET_ROOM(ch), (flag)))
+#define SAME_ROOM(ch1, ch2) \
+	((ch1) && (ch2) && IN_ROOM(ch1) != NOWHERE && IN_ROOM(ch1) == IN_ROOM(ch2) && \
+	 GET_INSTANCE_ID(ch1) == GET_INSTANCE_ID(ch2))
 /** How old is PC/NPC, at last recorded time? */
 #define GET_AGE(ch)     (age(ch)->year)
 
@@ -779,7 +791,7 @@ int valid_room_rnum(room_rnum rnum);
 
 /** Defines if there is enough light for sub to see in. */
 #define LIGHT_OK(sub)	(!AFF_FLAGGED(sub, AFF_BLIND) && \
-   (IS_LIGHT(IN_ROOM(sub)) || AFF_FLAGGED((sub), AFF_INFRAVISION) || \
+   (!room_data_is_dark(GET_ROOM(sub)) || AFF_FLAGGED((sub), AFF_INFRAVISION) || \
    GET_LEVEL(sub) >= LVL_IMMORT))
 
 /** Defines if sub character can see the invisible obj character. */
@@ -879,7 +891,7 @@ int valid_room_rnum(room_rnum rnum);
 #define IS_WARRIOR(ch)		FALSE
 
 /** Defines if ch is outdoors or not. */
-#define OUTSIDE(ch) (!ROOM_FLAGGED(IN_ROOM(ch), ROOM_INDOORS))
+#define OUTSIDE(ch) (!IN_ROOM_FLAGGED(ch, ROOM_INDOORS))
 
 /* Group related defines */
 #define GROUP(ch)            (ch->group)

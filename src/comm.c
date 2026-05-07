@@ -2421,11 +2421,39 @@ void send_to_room(room_rnum room, const char *messg, ...)
 {
   struct char_data *i;
   va_list args;
+  struct room_data *target_room;
 
   if (messg == NULL)
     return;
 
-  for (i = ROOM_AT(room)->people; i; i = i->next_in_room) {
+  target_room = ROOM_AT(room);
+  if (!target_room)
+    return;
+
+  for (i = target_room->people; i; i = i->next_in_room) {
+    if (!i->desc)
+      continue;
+
+    va_start(args, messg);
+    vwrite_to_output(i->desc, messg, args);
+    va_end(args);
+  }
+}
+
+void send_to_room_instance(int instance_id, room_rnum room, const char *messg, ...)
+{
+  struct char_data *i;
+  va_list args;
+  struct room_data *target_room;
+
+  if (messg == NULL)
+    return;
+
+  target_room = room_by_rnum_instance(room, instance_id);
+  if (!target_room)
+    return;
+
+  for (i = target_room->people; i; i = i->next_in_room) {
     if (!i->desc)
       continue;
 
@@ -2668,7 +2696,7 @@ char *act(const char *str, int hide_invisible, struct char_data *ch,
       if (!i->connected && i->character &&
           !PRF_FLAGGED(i->character, PRF_NOGOSS) &&
           !PLR_FLAGGED(i->character, PLR_WRITING) &&
-          !ROOM_FLAGGED(IN_ROOM(i->character), ROOM_SOUNDPROOF)) {
+          !IN_ROOM_FLAGGED(i->character, ROOM_SOUNDPROOF)) {
 
         sprintf(buf, "%s%s%s", CCYEL(i->character, C_NRM), str, CCNRM(i->character, C_NRM));
         perform_act(buf, ch, obj, vict_obj, i->character);

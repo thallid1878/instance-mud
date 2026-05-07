@@ -301,7 +301,7 @@ void hcontrol_list_houses(struct char_data *ch, char *arg)
 		room_vnum toshow;
 
 		if (*arg == '.')
-			toshow = GET_ROOM_VNUM(IN_ROOM(ch));
+			toshow = IN_ROOM_VNUM(ch);
 		else
 			toshow = atoi(arg);
 
@@ -520,9 +520,9 @@ ACMD(do_house)
 
   one_argument(argument, arg);
 
-  if (!ROOM_FLAGGED(IN_ROOM(ch), ROOM_HOUSE))
+  if (!IN_ROOM_FLAGGED(ch, ROOM_HOUSE))
     send_to_char(ch, "You must be in your house to set guests.\r\n");
-  else if ((i = find_house(GET_ROOM_VNUM(IN_ROOM(ch)))) == NOWHERE)
+  else if ((i = find_house(IN_ROOM_VNUM(ch))) == NOWHERE)
     send_to_char(ch, "Um.. this house seems to be screwed up.\r\n");
   else if (GET_IDNUM(ch) != house_control[i].owner)
     send_to_char(ch, "Only the primary owner can set guests.\r\n");

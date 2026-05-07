@@ -60,14 +60,15 @@ ASPELL(spell_recall)
   if (victim == NULL || IS_NPC(victim))
     return;
 
-  if (ZONE_FLAGGED(GET_ROOM_ZONE(IN_ROOM(victim)), ZONE_NOASTRAL) ||
-      instance_room_is_template(IN_ROOM(victim))) {
+  if (ZONE_FLAGGED(IN_ROOM_ZONE(victim), ZONE_NOASTRAL) ||
+      (!GET_INSTANCE_ID(victim) && instance_room_is_template(IN_ROOM(victim)))) {
     send_to_char(ch, "A bright flash prevents your spell from working!");
     return;
   }
 
   act("$n disappears.", TRUE, victim, 0, 0, TO_ROOM);
   char_from_room(victim);
+  victim->instance_id = 0;
   char_to_room(victim, r_mortal_start_room);
   act("$n appears in the middle of the room.", TRUE, victim, 0, 0, TO_ROOM);
   look_at_room(victim, 0);
@@ -83,8 +84,8 @@ ASPELL(spell_teleport)
   if (victim == NULL || IS_NPC(victim))
     return;
 
-  if (ZONE_FLAGGED(GET_ROOM_ZONE(IN_ROOM(victim)), ZONE_NOASTRAL) ||
-      instance_room_is_template(IN_ROOM(victim))) {
+  if (ZONE_FLAGGED(IN_ROOM_ZONE(victim), ZONE_NOASTRAL) ||
+      (!GET_INSTANCE_ID(victim) && instance_room_is_template(IN_ROOM(victim)))) {
     send_to_char(ch, "A bright flash prevents your spell from working!");
     return;
   }
@@ -98,6 +99,7 @@ ASPELL(spell_teleport)
   act("$n slowly fades out of existence and is gone.",
       FALSE, victim, 0, 0, TO_ROOM);
   char_from_room(victim);
+  victim->instance_id = 0;
   char_to_room(victim, to_room);
   act("$n slowly fades into existence.", FALSE, victim, 0, 0, TO_ROOM);
   look_at_room(victim, 0);
@@ -117,9 +119,10 @@ ASPELL(spell_summon)
     return;
   }
 
-  if (ZONE_FLAGGED(GET_ROOM_ZONE(IN_ROOM(victim)), ZONE_NOASTRAL) ||
-      ZONE_FLAGGED(GET_ROOM_ZONE(IN_ROOM(ch)), ZONE_NOASTRAL) ||
-      instance_room_is_template(IN_ROOM(victim)) || instance_room_is_template(IN_ROOM(ch))) {
+  if (ZONE_FLAGGED(IN_ROOM_ZONE(victim), ZONE_NOASTRAL) ||
+      ZONE_FLAGGED(IN_ROOM_ZONE(ch), ZONE_NOASTRAL) ||
+      (!GET_INSTANCE_ID(victim) && instance_room_is_template(IN_ROOM(victim))) ||
+      (!GET_INSTANCE_ID(ch) && instance_room_is_template(IN_ROOM(ch)))) {
     send_to_char(ch, "A bright flash prevents your spell from working!");
     return;
   }
@@ -155,6 +158,7 @@ ASPELL(spell_summon)
   act("$n disappears suddenly.", TRUE, victim, 0, 0, TO_ROOM);
 
   char_from_room(victim);
+  victim->instance_id = GET_INSTANCE_ID(ch);
   char_to_room(victim, IN_ROOM(ch));
 
   act("$n arrives suddenly.", TRUE, victim, 0, 0, TO_ROOM);

@@ -136,8 +136,11 @@ int do_simple_move(struct char_data *ch, int dir, int need_specials_check)
   char spec_proc_args[MAX_INPUT_LENGTH] = "";
   /* The room the character is currently in and will move from... */
   room_rnum was_in = IN_ROOM(ch);
+  int was_instance = GET_INSTANCE_ID(ch);
+  struct room_data *from_room = GET_ROOM(ch);
   /* ... and the room the character will move into. */
   room_rnum going_to = EXIT(ch, dir)->to_room;
+  struct room_data *to_room = room_by_rnum_instance(going_to, was_instance);
   /* How many movement points are required to travel from was_in to going_to.
    * We redefine this later when we need it. */
   int need_movement = 0;
@@ -155,19 +158,22 @@ int do_simple_move(struct char_data *ch, int dir, int need_specials_check)
    * in the "command" equivalent of the direction (ie. North is '1' in the
    * command list, but NORTH is defined as '0').
    * Note -- only check if following; this avoids 'double spec-proc' bug */
+  if (!from_room || !to_room)
+    return 0;
+
   if (need_specials_check && special(ch, dir + 1, spec_proc_args))
     return 0;
 
   /* Leave Trigger Checks: Does a leave trigger block exit from the room? */
-  if (!leave_mtrigger(ch, dir) || IN_ROOM(ch) != was_in) /* prevent teleport crashes */
+  if (!leave_mtrigger(ch, dir) || IN_ROOM(ch) != was_in || GET_INSTANCE_ID(ch) != was_instance) /* prevent teleport crashes */
     return 0;
-  if (!leave_wtrigger(GET_ROOM(ch), ch, dir) || IN_ROOM(ch) != was_in) /* prevent teleport crashes */
+  if (!leave_wtrigger(GET_ROOM(ch), ch, dir) || IN_ROOM(ch) != was_in || GET_INSTANCE_ID(ch) != was_instance) /* prevent teleport crashes */
     return 0;
-  if (!leave_otrigger(GET_ROOM(ch), ch, dir) || IN_ROOM(ch) != was_in) /* prevent teleport crashes */
+  if (!leave_otrigger(GET_ROOM(ch), ch, dir) || IN_ROOM(ch) != was_in || GET_INSTANCE_ID(ch) != was_instance) /* prevent teleport crashes */
     return 0;
 
   /* Charm effect: Does it override the movement? */
-  if (AFF_FLAGGED(ch, AFF_CHARM) && ch->master && was_in == IN_ROOM(ch->master))
+  if (AFF_FLAGGED(ch, AFF_CHARM) && ch->master && SAME_ROOM(ch, ch->master))
   {
     send_to_char(ch, "The thought of leaving your master makes you weep.\r\n");
     act("$n bursts into tears.", FALSE, ch, 0, 0, TO_ROOM);
@@ -175,8 +181,8 @@ int do_simple_move(struct char_data *ch, int dir, int need_specials_check)
   }
 
   /* Water, No Swimming Rooms: Does the deep water prevent movement? */
-  if ((SECT(was_in) == SECT_WATER_NOSWIM) ||
-      (SECT(going_to) == SECT_WATER_NOSWIM))
+  if ((from_room->sector_type == SECT_WATER_NOSWIM) ||
+      (to_room->sector_type == SECT_WATER_NOSWIM))
   {
     if (!has_boat(ch))
     {
@@ -186,7 +192,7 @@ int do_simple_move(struct char_data *ch, int dir, int need_specials_check)
   }
 
   /* Flying Required: Does lack of flying prevent movement? */
-  if ((SECT(was_in) == SECT_FLYING) || (SECT(going_to) == SECT_FLYING))
+  if ((from_room->sector_type == SECT_FLYING) || (to_room->sector_type == SECT_FLYING))
   {
     if (!has_flight(ch))
     {
@@ -196,7 +202,7 @@ int do_simple_move(struct char_data *ch, int dir, int need_specials_check)
   }
 
   /* Underwater Room: Does lack of underwater breathing prevent movement? */
-  if ((SECT(was_in) == SECT_UNDERWATER) || (SECT(going_to) == SECT_UNDERWATER))
+  if ((from_room->sector_type == SECT_UNDERWATER) || (to_room->sector_type == SECT_UNDERWATER))
   {
     if (!has_scuba(ch) && !IS_NPC(ch) && !PRF_FLAGGED(ch, PRF_NOHASSLE)) {
       send_to_char(ch, "You need to be able to breathe water to go there!\r\n");
@@ -205,9 +211,9 @@ int do_simple_move(struct char_data *ch, int dir, int need_specials_check)
   }
 
   /* Houses: Can the player walk into the house? */
-  if (ROOM_FLAGGED(was_in, ROOM_ATRIUM))
+  if (ROOM_PTR_FLAGGED(from_room, ROOM_ATRIUM))
   {
-    if (!House_can_enter(ch, GET_ROOM_VNUM(going_to)))
+    if (!House_can_enter(ch, to_room->number))
     {
       send_to_char(ch, "That's private property -- no trespassing!\r\n");
       return (0);
@@ -215,27 +221,27 @@ int do_simple_move(struct char_data *ch, int dir, int need_specials_check)
   }
 
   /* Check zone level recommendations */
-  if ((ZONE_MINLVL(GET_ROOM_ZONE(going_to)) != -1) && ZONE_MINLVL(GET_ROOM_ZONE(going_to)) > GET_LEVEL(ch)) {
+  if ((ZONE_MINLVL(to_room->zone) != -1) && ZONE_MINLVL(to_room->zone) > GET_LEVEL(ch)) {
     send_to_char(ch, "This zone is above your recommended level.\r\n");
   }
 
   /* Check zone flag restrictions */
-  if (ZONE_FLAGGED(GET_ROOM_ZONE(going_to), ZONE_CLOSED)) {
+  if (ZONE_FLAGGED(to_room->zone, ZONE_CLOSED)) {
     send_to_char(ch, "A mysterious barrier forces you back! That area is off-limits.\r\n");
     return (0);
   }
-  if (instance_room_is_template(going_to)) {
+  if (was_instance == 0 && instance_room_is_template(going_to)) {
     send_to_char(ch, "A shimmering barrier holds the dungeon template out of phase.\r\n");
     return (0);
   }
-  if (ZONE_FLAGGED(GET_ROOM_ZONE(going_to), ZONE_NOIMMORT) && (GET_LEVEL(ch) >= LVL_IMMORT) && (GET_LEVEL(ch) < LVL_GRGOD)) {
+  if (ZONE_FLAGGED(to_room->zone, ZONE_NOIMMORT) && (GET_LEVEL(ch) >= LVL_IMMORT) && (GET_LEVEL(ch) < LVL_GRGOD)) {
     send_to_char(ch, "A mysterious barrier forces you back! That area is off-limits.\r\n");
     return (0);
   }
 
   /* Room Size Capacity: Is the room full of people already? */
-  if (ROOM_FLAGGED(going_to, ROOM_TUNNEL) &&
-      num_pc_in_room(ROOM_AT(going_to)) >= CONFIG_TUNNEL_SIZE)
+  if (ROOM_PTR_FLAGGED(to_room, ROOM_TUNNEL) &&
+      num_pc_in_room(to_room) >= CONFIG_TUNNEL_SIZE)
   {
     if (CONFIG_TUNNEL_SIZE > 1)
       send_to_char(ch, "There isn't enough room for you to go there!\r\n");
@@ -245,7 +251,7 @@ int do_simple_move(struct char_data *ch, int dir, int need_specials_check)
   }
 
   /* Room Level Requirements: Is ch privileged enough to enter the room? */
-  if (ROOM_FLAGGED(going_to, ROOM_GODROOM) && GET_LEVEL(ch) < LVL_GOD)
+  if (ROOM_PTR_FLAGGED(to_room, ROOM_GODROOM) && GET_LEVEL(ch) < LVL_GOD)
   {
     send_to_char(ch, "You aren't godly enough to use that room!\r\n");
     return (0);
@@ -254,8 +260,8 @@ int do_simple_move(struct char_data *ch, int dir, int need_specials_check)
   /* All checks passed, nothing will prevent movement now other than lack of
    * move points. */
   /* move points needed is avg. move loss for src and destination sect type */
-  need_movement = (movement_loss[SECT(was_in)] +
-		   movement_loss[SECT(going_to)]) / 2;
+  need_movement = (movement_loss[from_room->sector_type] +
+		   movement_loss[to_room->sector_type]) / 2;
 
   /* Move Point Requirement Check */
   if (GET_MOVE(ch) < need_movement && !IS_NPC(ch))
@@ -297,7 +303,7 @@ int do_simple_move(struct char_data *ch, int dir, int need_specials_check)
    * Assumptions: The character has already truly left the was_in room. If
    * the entry trigger "prevents" movement into the room, it is the triggers
    * job to provide a message to the original was_in room. */
-  if (!entry_mtrigger(ch) || !enter_wtrigger(ROOM_AT(going_to), ch, dir)) {
+  if (!entry_mtrigger(ch) || !enter_wtrigger(GET_ROOM(ch), ch, dir)) {
     char_from_room(ch);
     char_to_room(ch, was_in);
     return 0;
@@ -312,9 +318,9 @@ int do_simple_move(struct char_data *ch, int dir, int need_specials_check)
     look_at_room(ch, 0);
 
   /* ... and Kill the player if the room is a death trap. */
-  if (ROOM_FLAGGED(going_to, ROOM_DEATH) && GET_LEVEL(ch) < LVL_IMMORT)
+  if (IN_ROOM_FLAGGED(ch, ROOM_DEATH) && GET_LEVEL(ch) < LVL_IMMORT)
   {
-    mudlog(BRF, LVL_IMMORT, TRUE, "%s hit death trap #%d (%s)", GET_NAME(ch), GET_ROOM_VNUM(going_to), ROOM_AT(going_to)->name);
+    mudlog(BRF, LVL_IMMORT, TRUE, "%s hit death trap #%d (%s)", GET_NAME(ch), IN_ROOM_VNUM(ch), GET_ROOM(ch)->name);
     death_cry(ch);
     extract_char(ch);
     return (0);
@@ -345,6 +351,7 @@ int do_simple_move(struct char_data *ch, int dir, int need_specials_check)
 int perform_move(struct char_data *ch, int dir, int need_specials_check)
 {
   room_rnum was_in;
+  int was_instance;
   struct follow_type *k, *next;
 
   if (ch == NULL || dir < 0 || dir >= NUM_OF_DIRS || FIGHTING(ch))
@@ -363,12 +370,14 @@ int perform_move(struct char_data *ch, int dir, int need_specials_check)
       return (do_simple_move(ch, dir, need_specials_check));
 
     was_in = IN_ROOM(ch);
+    was_instance = GET_INSTANCE_ID(ch);
     if (!do_simple_move(ch, dir, need_specials_check))
       return (0);
 
     for (k = ch->followers; k; k = next) {
       next = k->next;
       if ((IN_ROOM(k->follower) == was_in) &&
+          (GET_INSTANCE_ID(k->follower) == was_instance) &&
 	  (GET_POS(k->follower) >= POS_STANDING)) {
 	act("You follow $N.\r\n", FALSE, k->follower, 0, ch, TO_CHAR);
 	perform_move(k->follower, dir, 1);
@@ -504,7 +513,7 @@ static const int flags_door[] =
   NEED_CLOSED | NEED_LOCKED
 };
 
-#define EXITN(room, door)		(W_EXIT(room, door))
+#define EXITN(room, door)		(room_by_rnum_instance((room), GET_INSTANCE_ID(ch))->dir_option[(door)])
 #define OPEN_DOOR(room, obj, door)	((obj) ?\
 		(REMOVE_BIT(GET_OBJ_VAL(obj, 1), CONT_CLOSED)) :\
 		(REMOVE_BIT(EXITN(room, door)->exit_info, EX_CLOSED)))
@@ -526,6 +535,7 @@ static void do_doorcmd(struct char_data *ch, struct obj_data *obj, int door, int
   char buf[MAX_STRING_LENGTH];
   size_t len;
   room_rnum other_room = NOWHERE;
+  struct room_data *other_room_ptr = NULL;
   struct room_direction_data *back = NULL;
 
   if (!door_mtrigger(ch, scmd, door))
@@ -536,7 +546,8 @@ static void do_doorcmd(struct char_data *ch, struct obj_data *obj, int door, int
 
   len = snprintf(buf, sizeof(buf), "$n %ss ", cmd_door[scmd]);
   if (!obj && ((other_room = EXIT(ch, door)->to_room) != NOWHERE))
-    if ((back = W_EXIT(other_room, rev_dir[door])) != NULL)
+    if ((other_room_ptr = room_by_rnum_instance(other_room, GET_INSTANCE_ID(ch))) != NULL &&
+        (back = R_EXIT(other_room_ptr, rev_dir[door])) != NULL)
       if (back->to_room != IN_ROOM(ch))
         back = NULL;
 
@@ -587,7 +598,8 @@ static void do_doorcmd(struct char_data *ch, struct obj_data *obj, int door, int
 
   /* Notify the other room */
   if (back && (scmd == SCMD_OPEN || scmd == SCMD_CLOSE))
-      send_to_room(EXIT(ch, door)->to_room, "The %s is %s%s from the other side.\r\n",
+      send_to_room_instance(GET_INSTANCE_ID(ch), EXIT(ch, door)->to_room,
+        "The %s is %s%s from the other side.\r\n",
         back->keyword ? fname(back->keyword) : "door", cmd_door[scmd],
         scmd == SCMD_CLOSE ? "d" : "ed");
 }
@@ -698,7 +710,7 @@ ACMD(do_enter)
             return;
           }
     send_to_char(ch, "There is no %s here.\r\n", buf);
-  } else if (ROOM_FLAGGED(IN_ROOM(ch), ROOM_INDOORS))
+  } else if (IN_ROOM_FLAGGED(ch, ROOM_INDOORS))
     send_to_char(ch, "You are already indoors.\r\n");
   else {
     /* try to locate an entrance */
@@ -706,7 +718,7 @@ ACMD(do_enter)
       if (EXIT(ch, door))
 	if (EXIT(ch, door)->to_room != NOWHERE)
 	  if (!EXIT_FLAGGED(EXIT(ch, door), EX_CLOSED) &&
-	      ROOM_FLAGGED(EXIT(ch, door)->to_room, ROOM_INDOORS)) {
+	      ROOM_PTR_FLAGGED(room_by_rnum_instance(EXIT(ch, door)->to_room, GET_INSTANCE_ID(ch)), ROOM_INDOORS)) {
 	    perform_move(ch, door, 1);
 	    return;
 	  }
@@ -725,7 +737,7 @@ ACMD(do_leave)
       if (EXIT(ch, door))
 	if (EXIT(ch, door)->to_room != NOWHERE)
 	  if (!EXIT_FLAGGED(EXIT(ch, door), EX_CLOSED) &&
-	    !ROOM_FLAGGED(EXIT(ch, door)->to_room, ROOM_INDOORS)) {
+	    !ROOM_PTR_FLAGGED(room_by_rnum_instance(EXIT(ch, door)->to_room, GET_INSTANCE_ID(ch)), ROOM_INDOORS)) {
 	    perform_move(ch, door, 1);
 	    return;
 	  }

@@ -261,6 +261,7 @@ static void make_corpse(struct char_data *ch)
   GET_OBJ_VAL(corpse, 3) = 1;	/* corpse identifier */
   GET_OBJ_WEIGHT(corpse) = GET_WEIGHT(ch) + IS_CARRYING_W(ch);
   GET_OBJ_RENT(corpse) = 100000;
+  corpse->instance_id = GET_INSTANCE_ID(ch);
   if (IS_NPC(ch))
     GET_OBJ_TIMER(corpse) = CONFIG_MAX_NPC_CORPSE_TIME;
   else
@@ -315,7 +316,8 @@ void death_cry(struct char_data *ch)
 
   for (door = 0; door < DIR_COUNT; door++)
     if (CAN_GO(ch, door))
-      send_to_room(GET_ROOM(ch)->dir_option[door]->to_room, "Your blood freezes as you hear someone's death cry.\r\n");
+      send_to_room_instance(GET_INSTANCE_ID(ch), GET_ROOM(ch)->dir_option[door]->to_room,
+        "Your blood freezes as you hear someone's death cry.\r\n");
 }
 
 void raw_kill(struct char_data * ch, struct char_data * killer)
@@ -340,7 +342,7 @@ struct char_data *i;
   if (killer) {
     if (killer->group) {
       while ((i = (struct char_data *) simple_list(killer->group->members)) != NULL)
-        if(IN_ROOM(i) == IN_ROOM(ch)  || (GET_ROOM(i)->zone == GET_ROOM(ch)->zone))
+        if(SAME_ROOM(i, ch) || (GET_ROOM(i)->zone == GET_ROOM(ch)->zone))
           autoquest_trigger_check(i, ch, NULL, AQ_MOB_KILL);      
     } else
         autoquest_trigger_check(killer, ch, NULL, AQ_MOB_KILL);
@@ -399,7 +401,7 @@ static void group_gain(struct char_data *ch, struct char_data *victim)
   struct char_data *k;
   
   while ((k = (struct char_data *) simple_list(GROUP(ch)->members)) != NULL)
-    if (IN_ROOM(ch) == IN_ROOM(k))
+    if (SAME_ROOM(ch, k))
       tot_members++;
 
   /* round up to the nearest tot_members */
@@ -415,7 +417,7 @@ static void group_gain(struct char_data *ch, struct char_data *victim)
     base = 0;
 
   while ((k = (struct char_data *) simple_list(GROUP(ch)->members)) != NULL)
-    if (IN_ROOM(k) == IN_ROOM(ch))
+    if (SAME_ROOM(k, ch))
       perform_group_gain(k, base, victim);
 }
 
@@ -667,7 +669,7 @@ int damage(struct char_data *ch, struct char_data *victim, int dam, int attackty
       return (-1);
 
     log("SYSERR: Attempt to damage corpse '%s' in room #%d by '%s'.",
-        GET_NAME(victim), GET_ROOM_VNUM(IN_ROOM(victim)), GET_NAME(ch));
+        GET_NAME(victim), IN_ROOM_VNUM(victim), GET_NAME(ch));
     die(victim, ch);
     return (-1);			/* -je, 7/7/92 */
   }
@@ -680,7 +682,7 @@ int damage(struct char_data *ch, struct char_data *victim, int dam, int attackty
 
   /* peaceful rooms */
   if (ch->nr != real_mobile(DG_CASTER_PROXY) &&
-      ch != victim && ROOM_FLAGGED(IN_ROOM(ch), ROOM_PEACEFUL)) {
+      ch != victim && IN_ROOM_FLAGGED(ch, ROOM_PEACEFUL)) {
     send_to_char(ch, "This room just has such a peaceful, easy feeling...\r\n");
     return (0);
   }
@@ -885,7 +887,7 @@ void hit(struct char_data *ch, struct char_data *victim, int type)
   fight_mtrigger(ch);
 
   /* Do some sanity checking, in case someone flees, etc. */
-  if (IN_ROOM(ch) != IN_ROOM(victim)) {
+  if (!SAME_ROOM(ch, victim)) {
     if (FIGHTING(ch) && FIGHTING(ch) == victim)
       stop_fighting(ch);
     return;
@@ -965,7 +967,7 @@ void perform_violence(void)
   for (ch = combat_list; ch; ch = next_combat_list) {
     next_combat_list = ch->next_fighting;
 
-    if (FIGHTING(ch) == NULL || IN_ROOM(ch) != IN_ROOM(FIGHTING(ch))) {
+    if (FIGHTING(ch) == NULL || !SAME_ROOM(ch, FIGHTING(ch))) {
       stop_fighting(ch);
       continue;
     }
@@ -996,7 +998,7 @@ void perform_violence(void)
           continue;
         if (!IS_NPC(tch) && !PRF_FLAGGED(tch, PRF_AUTOASSIST))
           continue;
-        if (IN_ROOM(ch) != IN_ROOM(tch))
+        if (!SAME_ROOM(ch, tch))
           continue;
         if (FIGHTING(tch))
           continue;

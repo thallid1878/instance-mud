@@ -865,6 +865,26 @@ int count_non_protocol_chars(char * str)
  * night.
  * @todo Make the return value a bool.
  * @param room The real room to test for. */
+int room_data_is_dark(struct room_data *room)
+{
+  if (!room)
+    return (FALSE);
+
+  if (room->light)
+    return (FALSE);
+
+  if (ROOM_PTR_FLAGGED(room, ROOM_DARK))
+    return (TRUE);
+
+  if (room->sector_type == SECT_INSIDE || room->sector_type == SECT_CITY)
+    return (FALSE);
+
+  if (weather_info.sunlight == SUN_SET || weather_info.sunlight == SUN_DARK)
+    return (TRUE);
+
+  return (FALSE);
+}
+
 int room_is_dark(room_rnum room)
 {
   if (!VALID_ROOM_RNUM(room)) {
@@ -872,19 +892,7 @@ int room_is_dark(room_rnum room)
     return (FALSE);
   }
 
-  if (ROOM_AT(room)->light)
-    return (FALSE);
-
-  if (ROOM_FLAGGED(room, ROOM_DARK))
-    return (TRUE);
-
-  if (SECT(room) == SECT_INSIDE || SECT(room) == SECT_CITY)
-    return (FALSE);
-
-  if (weather_info.sunlight == SUN_SET || weather_info.sunlight == SUN_DARK)
-    return (TRUE);
-
-  return (FALSE);
+  return room_data_is_dark(ROOM_AT(room));
 }
 
 /** Calculates the Levenshtein distance between two strings. Currently used

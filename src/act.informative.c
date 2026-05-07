@@ -378,7 +378,7 @@ static void list_one_char(struct char_data *i, struct char_data *ch)
       if (FIGHTING(i) == ch)
         send_to_char(ch, "YOU!");
       else {
-        if (IN_ROOM(i) == IN_ROOM(FIGHTING(i)))
+        if (SAME_ROOM(i, FIGHTING(i)))
           send_to_char(ch, "%s!", PERS(FIGHTING(i), ch));
         else
           send_to_char(ch,  "someone who has already left!");
@@ -412,7 +412,7 @@ static void list_char_to_char(struct char_data *list, struct char_data *ch)
       send_to_char(ch, "%s", CCYEL(ch, C_NRM));
       if (CAN_SEE(ch, i))
         list_one_char(i, ch);
-      else if (IS_DARK(IN_ROOM(ch)) && !CAN_SEE_IN_DARK(ch) &&
+      else if (room_data_is_dark(GET_ROOM(ch)) && !CAN_SEE_IN_DARK(ch) &&
            AFF_FLAGGED(i, AFF_INFRAVISION))
         send_to_char(ch, "You see a pair of glowing red eyes looking your way.\r\n");
       send_to_char(ch, "%s", CCNRM(ch, C_NRM));
@@ -469,8 +469,10 @@ ACMD(do_exits)
 
     if (!IS_NPC(ch) && PRF_FLAGGED(ch, PRF_SHOWVNUMS) && !EXIT_FLAGGED(EXIT(ch, door), EX_CLOSED))
     {
-      send_to_char(ch, "%-5s -[%5d]%s %s\r\n", dirs[door], GET_ROOM_VNUM(EXIT(ch, door)->to_room),
-        EXIT_FLAGGED(EXIT(ch, door), EX_HIDDEN) ? "[HIDDEN]" : "", ROOM_AT(EXIT(ch, door)->to_room)->name);
+      struct room_data *to_room = room_by_rnum_instance(EXIT(ch, door)->to_room, GET_INSTANCE_ID(ch));
+
+      send_to_char(ch, "%-5s -[%5d]%s %s\r\n", dirs[door], to_room ? to_room->number : NOWHERE,
+        EXIT_FLAGGED(EXIT(ch, door), EX_HIDDEN) ? "[HIDDEN]" : "", to_room ? to_room->name : "Nowhere");
     }
     else if (CONFIG_DISP_CLOSED_DOORS && EXIT_FLAGGED(EXIT(ch, door), EX_CLOSED))
     {
@@ -481,8 +483,10 @@ ACMD(do_exits)
     }
     else
     {
-      send_to_char(ch, "%-5s - %s\r\n", dirs[door], IS_DARK(EXIT(ch, door)->to_room) &&
-        !CAN_SEE_IN_DARK(ch) ? "Too dark to tell." : ROOM_AT(EXIT(ch, door)->to_room)->name);
+      struct room_data *to_room = room_by_rnum_instance(EXIT(ch, door)->to_room, GET_INSTANCE_ID(ch));
+
+      send_to_char(ch, "%-5s - %s\r\n", dirs[door], room_data_is_dark(to_room) &&
+        !CAN_SEE_IN_DARK(ch) ? "Too dark to tell." : to_room ? to_room->name : "Nowhere");
     }
   }
     if (!len)
@@ -500,7 +504,7 @@ void look_at_room(struct char_data *ch, int ignore_brief)
   if (!ch->desc)
     return;
 
-  if (IS_DARK(IN_ROOM(ch)) && !CAN_SEE_IN_DARK(ch)){
+  if (room_data_is_dark(rm) && !CAN_SEE_IN_DARK(ch)){
     send_to_char(ch, "It is pitch black...\r\n");
     return;
   }
@@ -513,11 +517,11 @@ void look_at_room(struct char_data *ch, int ignore_brief)
   if (!IS_NPC(ch) && PRF_FLAGGED(ch, PRF_SHOWVNUMS)) {
     char buf[MAX_STRING_LENGTH];
 
-    sprintbitarray(ROOM_FLAGS(IN_ROOM(ch)), room_bits, RF_ARRAY_MAX, buf);
+    sprintbitarray(rm->room_flags, room_bits, RF_ARRAY_MAX, buf);
     if (GET_INSTANCE_ID(ch) > 0)
-      send_to_char(ch, "[%5d r%d i%d] ", GET_ROOM_VNUM(IN_ROOM(ch)), IN_ROOM(ch), GET_INSTANCE_ID(ch));
+      send_to_char(ch, "[%5d r%d i%d] ", rm->number, IN_ROOM(ch), GET_INSTANCE_ID(ch));
     else
-      send_to_char(ch, "[%5d] ", GET_ROOM_VNUM(IN_ROOM(ch)));
+      send_to_char(ch, "[%5d] ", rm->number);
     send_to_char(ch, "%s[ %s][ %s ]", rm->name, buf, sector_types[rm->sector_type]);
 
     if (SCRIPT(rm)) {
@@ -533,9 +537,9 @@ void look_at_room(struct char_data *ch, int ignore_brief)
   send_to_char(ch, "%s\r\n", CCNRM(ch, C_NRM));
 
   if ((!IS_NPC(ch) && !PRF_FLAGGED(ch, PRF_BRIEF)) || ignore_brief ||
-    ROOM_FLAGGED(IN_ROOM(ch), ROOM_DEATH)) {
+    ROOM_PTR_FLAGGED(rm, ROOM_DEATH)) {
     if (!IS_NPC(ch) && PRF_FLAGGED(ch, PRF_AUTOMAP) && can_see_map(ch))
-      str_and_map(ROOM_AT(target_room)->description, ch, target_room);
+      str_and_map(rm->description, ch, target_room);
     else
        send_to_char(ch, "%s", rm->description);
   }
@@ -731,7 +735,7 @@ ACMD(do_look)
     send_to_char(ch, "You can't see anything but stars!\r\n");
   else if (AFF_FLAGGED(ch, AFF_BLIND) && GET_LEVEL(ch) < LVL_IMMORT)
     send_to_char(ch, "You can't see a damned thing, you're blind!\r\n");
-  else if (IS_DARK(IN_ROOM(ch)) && !CAN_SEE_IN_DARK(ch)) {
+  else if (room_data_is_dark(GET_ROOM(ch)) && !CAN_SEE_IN_DARK(ch)) {
     send_to_char(ch, "It is pitch black...\r\n");
     list_char_to_char(GET_ROOM(ch)->people, ch);    /* glowing red eyes */
   } else {
@@ -1321,9 +1325,9 @@ ACMD(do_who)
         continue;
       if (questwho && !PRF_FLAGGED(tch, PRF_QUEST))
         continue;
-      if (localwho && GET_ROOM_ZONE(IN_ROOM(ch)) != GET_ROOM_ZONE(IN_ROOM(tch)))
+      if (localwho && IN_ROOM_ZONE(ch) != IN_ROOM_ZONE(tch))
         continue;
-      if (who_room && (IN_ROOM(tch) != IN_ROOM(ch)))
+      if (who_room && !SAME_ROOM(tch, ch))
         continue;
       if (showclass && !(showclass & (1 << GET_CLASS(tch))))
         continue;
@@ -1365,9 +1369,9 @@ ACMD(do_who)
         continue;
       if (questwho && !PRF_FLAGGED(tch, PRF_QUEST))
         continue;
-      if (localwho && GET_ROOM_ZONE(IN_ROOM(ch)) != GET_ROOM_ZONE(IN_ROOM(tch)))
+      if (localwho && IN_ROOM_ZONE(ch) != IN_ROOM_ZONE(tch))
         continue;
-      if (who_room && (IN_ROOM(tch) != IN_ROOM(ch)))
+      if (who_room && !SAME_ROOM(tch, ch))
         continue;
       if (showclass && !(showclass & (1 << GET_CLASS(tch))))
         continue;
@@ -1674,7 +1678,7 @@ static void perform_mortal_where(struct char_data *ch, char *arg)
   int j;
 
   if (!*arg) {
-    j = GET_ROOM_ZONE(IN_ROOM(ch));
+    j = IN_ROOM_ZONE(ch);
     send_to_char(ch, "Players in %s\tn.\r\n--------------------\r\n", ZONE_AT(j)->name);
     for (d = descriptor_list; d; d = d->next) {
       if (STATE(d) != CON_PLAYING || d->character == ch)
@@ -1683,7 +1687,7 @@ static void perform_mortal_where(struct char_data *ch, char *arg)
     continue;
       if (IN_ROOM(i) == NOWHERE || !CAN_SEE(ch, i))
     continue;
-      if (GET_ROOM_ZONE(IN_ROOM(ch)) != GET_ROOM_ZONE(IN_ROOM(i)))
+      if (IN_ROOM_ZONE(ch) != IN_ROOM_ZONE(i))
     continue;
       send_to_char(ch, "%-20s%s - %s%s\r\n", GET_NAME(i), QNRM, GET_ROOM(i)->name, QNRM);
     }
@@ -1691,7 +1695,7 @@ static void perform_mortal_where(struct char_data *ch, char *arg)
     for (i = character_list; i; i = i->next) {
       if (IN_ROOM(i) == NOWHERE || i == ch)
     continue;
-      if (!CAN_SEE(ch, i) || GET_ROOM_ZONE(IN_ROOM(i)) != GET_ROOM_ZONE(IN_ROOM(ch)))
+      if (!CAN_SEE(ch, i) || IN_ROOM_ZONE(i) != IN_ROOM_ZONE(ch))
     continue;
       if (!isname(arg, i->player.name))
     continue;
@@ -1729,21 +1733,21 @@ static size_t print_object_location(const int num, const obj_data *obj, const ch
     return len; // let the caller know we overflowed
 
   if (IN_ROOM(obj) != NOWHERE)
-    nlen = snprintf(buf + len, buf_size - len, "[%5d] %s%s\r\n", GET_ROOM_VNUM(IN_ROOM(obj)), ROOM_AT(IN_ROOM(obj))->name, QNRM);
+    nlen = snprintf(buf + len, buf_size - len, "[%5d] %s%s\r\n", IN_ROOM_VNUM(obj), GET_ROOM(obj) ? GET_ROOM(obj)->name : "Nowhere", QNRM);
   else if (obj->carried_by) {
     if (PRF_FLAGGED(ch, PRF_SHOWVNUMS))
       nlen = snprintf(buf + len, buf_size - len, "carried by [%5d] %s%s\r\n", GET_MOB_VNUM(obj->carried_by), PERS(obj->carried_by, ch), QNRM);
     else
       nlen = snprintf(buf + len, buf_size - len, "carried by %s%s\r\n", PERS(obj->carried_by, ch), QNRM);
     if (PRF_FLAGGED(ch, PRF_VERBOSE) && IN_ROOM(obj->carried_by) != NOWHERE && len + nlen < buf_size)
-      nlen += snprintf(buf + len + nlen, buf_size - len - nlen, "%37sin [%5d] %s%s\r\n", " - ", GET_ROOM_VNUM(IN_ROOM(obj->carried_by)), GET_ROOM(obj->carried_by)->name, QNRM);
+      nlen += snprintf(buf + len + nlen, buf_size - len - nlen, "%37sin [%5d] %s%s\r\n", " - ", IN_ROOM_VNUM(obj->carried_by), GET_ROOM(obj->carried_by)->name, QNRM);
   } else if (obj->worn_by) {
     if (PRF_FLAGGED(ch, PRF_SHOWVNUMS))
       nlen = snprintf(buf + len, buf_size - len, "worn by [%5d] %s%s\r\n", GET_MOB_VNUM(obj->worn_by), PERS(obj->worn_by, ch), QNRM);
     else
       nlen = snprintf(buf + len, buf_size - len, "worn by %s%s\r\n", PERS(obj->worn_by, ch), QNRM);
     if (PRF_FLAGGED(ch, PRF_VERBOSE) && IN_ROOM(obj->worn_by) != NOWHERE && len + nlen < buf_size)
-      nlen += snprintf(buf + len + nlen, buf_size - len - nlen, "%37sin [%5d] %s%s\r\n", " - ", GET_ROOM_VNUM(IN_ROOM(obj->worn_by)), GET_ROOM(obj->worn_by)->name, QNRM);
+      nlen += snprintf(buf + len + nlen, buf_size - len - nlen, "%37sin [%5d] %s%s\r\n", " - ", IN_ROOM_VNUM(obj->worn_by), GET_ROOM(obj->worn_by)->name, QNRM);
   } else if (obj->in_obj) {
     nlen = snprintf(buf + len, buf_size - len, "inside %s%s%s\r\n", obj->in_obj->short_description, QNRM, (recur ? ", which is" : " "));
     if (recur && nlen + len < buf_size) {
@@ -1777,13 +1781,13 @@ static void perform_immort_where(char_data *ch, const char *arg)
         if (i && CAN_SEE(ch, i) && (IN_ROOM(i) != NOWHERE)) {
           if (d->original)
             send_to_char(ch, "%-8s%s - [%5d] %s%s (in %s%s)\r\n",
-              GET_NAME(i), QNRM, GET_ROOM_VNUM(IN_ROOM(d->character)),
+              GET_NAME(i), QNRM, IN_ROOM_VNUM(d->character),
               GET_ROOM(d->character)->name, QNRM, GET_NAME(d->character), QNRM);
           else
             send_to_char(ch, "%-8s%s %s[%s%5d%s]%s %-*s%s %s%s\r\n", GET_NAME(i), QNRM,
-              QCYN, QYEL, GET_ROOM_VNUM(IN_ROOM(i)), QCYN, QNRM,
+              QCYN, QYEL, IN_ROOM_VNUM(i), QCYN, QNRM,
               30+count_color_chars(GET_ROOM(i)->name), GET_ROOM(i)->name, QNRM,
-              ZONE_AT(GET_ROOM_ZONE(IN_ROOM(i)))->name, QNRM);
+              ZONE_AT(IN_ROOM_ZONE(i))->name, QNRM);
         }
       }
   } else {
@@ -1794,7 +1798,7 @@ static void perform_immort_where(char_data *ch, const char *arg)
       if (CAN_SEE(ch, i) && IN_ROOM(i) != NOWHERE && isname(arg, i->player.name)) {
         found = 1;
         nlen = snprintf(buf + len, buf_size - len, "M%4d. %-25s%s - [%5d] %-25s%s", ++num, GET_NAME(i), QNRM,
-               GET_ROOM_VNUM(IN_ROOM(i)), GET_ROOM(i)->name, QNRM);
+               IN_ROOM_VNUM(i), GET_ROOM(i)->name, QNRM);
         if (len + nlen >= buf_size) {
           len += snprintf(buf + len, buf_size - len, "%s", error_message);
           break;
@@ -2795,6 +2799,7 @@ ACMD(do_scan)
   int maxrange = 3;
 
   room_rnum scanned_room = IN_ROOM(ch);
+  struct room_data *scan_room = GET_ROOM(ch);
 
   if (IS_AFFECTED(ch, AFF_BLIND)) {
     send_to_char(ch, "You can't see a damned thing, you're blind!\r\n");
@@ -2803,19 +2808,20 @@ ACMD(do_scan)
 
   for (door = 0; door < DIR_COUNT; door++) {
     for (range = 1; range<= maxrange; range++) {
-      if (W_EXIT(scanned_room, door) && W_EXIT(scanned_room, door)->to_room != NOWHERE &&
-       !IS_SET(W_EXIT(scanned_room, door)->exit_info, EX_CLOSED) &&
-       !IS_SET(W_EXIT(scanned_room, door)->exit_info, EX_HIDDEN)) {
-        scanned_room = W_EXIT(scanned_room, door)->to_room;
-        if (IS_DARK(scanned_room) && !CAN_SEE_IN_DARK(ch)) {
-          if (ROOM_AT(scanned_room)->people)
+      if (scan_room && R_EXIT(scan_room, door) && R_EXIT(scan_room, door)->to_room != NOWHERE &&
+       !IS_SET(R_EXIT(scan_room, door)->exit_info, EX_CLOSED) &&
+       !IS_SET(R_EXIT(scan_room, door)->exit_info, EX_HIDDEN)) {
+        scanned_room = R_EXIT(scan_room, door)->to_room;
+        scan_room = room_by_rnum_instance(scanned_room, GET_INSTANCE_ID(ch));
+        if (room_data_is_dark(scan_room) && !CAN_SEE_IN_DARK(ch)) {
+          if (scan_room && scan_room->people)
             send_to_char(ch, "%s: It's too dark to see, but you can hear shuffling.\r\n", dirs[door]);
           else
             send_to_char(ch, "%s: It is too dark to see anything.\r\n", dirs[door]);
           found=TRUE;
         } else {
-          if (ROOM_AT(scanned_room)->people) {
-            list_scanned_chars(ROOM_AT(scanned_room)->people, ch, range - 1, door);
+          if (scan_room && scan_room->people) {
+            list_scanned_chars(scan_room->people, ch, range - 1, door);
             found=TRUE;
           }
         }
@@ -2824,6 +2830,7 @@ ACMD(do_scan)
         break;
     }                    // end of range
     scanned_room = IN_ROOM(ch);
+    scan_room = GET_ROOM(ch);
   }                      // end of directions
   if (!found) {
     send_to_char(ch, "You don't see anything nearby!\r\n");

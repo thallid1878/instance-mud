@@ -388,19 +388,33 @@ void char_from_room(struct char_data *ch)
 void char_to_room(struct char_data *ch, room_rnum room)
 {
   struct room_data *to_room;
+  int target_instance = ch ? GET_INSTANCE_ID(ch) : 0;
 
-  if (ch == NULL || !valid_room_rnum(room))
+  if (ch == NULL)
     log("SYSERR: Illegal value(s) passed to char_to_room. (Room: %d/%d Ch: %p",
 		room, top_of_world, (void *)ch);
   else {
-    if (instance_room_is_template(room))
-      room = valid_room_rnum(r_mortal_start_room) ? r_mortal_start_room : 0;
+    to_room = room_by_rnum_instance(room, target_instance);
+    if (!to_room) {
+      target_instance = 0;
+      to_room = ROOM_AT(room);
+    }
 
-    to_room = ROOM_AT(room);
+    if (!to_room) {
+      log("SYSERR: Illegal value(s) passed to char_to_room. (Room: %d/%d Ch: %p",
+          room, top_of_world, (void *)ch);
+      return;
+    }
+
+    if (target_instance == 0 && instance_room_is_template(room)) {
+      room = valid_room_rnum(r_mortal_start_room) ? r_mortal_start_room : 0;
+      to_room = ROOM_AT(room);
+    }
+
     ch->next_in_room = to_room->people;
     to_room->people = ch;
     IN_ROOM(ch) = room;
-    ch->instance_id = instance_room_id(room);
+    ch->instance_id = target_instance;
 
     autoquest_trigger_check(ch, 0, 0, AQ_ROOM_FIND);
     autoquest_trigger_check(ch, 0, 0, AQ_MOB_FIND);
@@ -411,7 +425,7 @@ void char_to_room(struct char_data *ch, room_rnum room)
 	  to_room->light++;
 
     /* Stop fighting now, if we left. */
-    if (FIGHTING(ch) && IN_ROOM(ch) != IN_ROOM(FIGHTING(ch))) {
+    if (FIGHTING(ch) && !SAME_ROOM(ch, FIGHTING(ch))) {
       stop_fighting(FIGHTING(ch));
       stop_fighting(ch);
     }
@@ -458,7 +472,6 @@ void obj_from_char(struct obj_data *object)
   IS_CARRYING_N(object->carried_by)--;
   object->carried_by = NULL;
   object->next_content = NULL;
-  object->instance_id = 0;
 }
 
 /* Return the effect of a piece of armor in position eq_pos */
@@ -680,16 +693,30 @@ struct char_data *get_char_num(mob_rnum nr)
 void obj_to_room(struct obj_data *object, room_rnum room)
 {
   struct room_data *to_room;
+  int target_instance = object ? GET_INSTANCE_ID(object) : 0;
 
-  if (!object || !valid_room_rnum(room)){
+  if (!object){
     log("SYSERR: Illegal value(s) passed to obj_to_room. (Room #%d/%d, obj %p)",
 	room, top_of_world, (void *)object);
   }
   else {
-    if (instance_room_is_template(room))
-      room = valid_room_rnum(r_mortal_start_room) ? r_mortal_start_room : 0;
+    to_room = room_by_rnum_instance(room, target_instance);
+    if (!to_room) {
+      target_instance = 0;
+      to_room = ROOM_AT(room);
+    }
 
-    to_room = ROOM_AT(room);
+    if (!to_room) {
+      log("SYSERR: Illegal value(s) passed to obj_to_room. (Room #%d/%d, obj %p)",
+          room, top_of_world, (void *)object);
+      return;
+    }
+
+    if (target_instance == 0 && instance_room_is_template(room)) {
+      room = valid_room_rnum(r_mortal_start_room) ? r_mortal_start_room : 0;
+      to_room = ROOM_AT(room);
+    }
+
     if (to_room->contents == NULL){  // if list is empty
       to_room->contents = object; // add object to list
     }
@@ -700,10 +727,10 @@ void obj_to_room(struct obj_data *object, room_rnum room)
     }
     object->next_content = NULL; // mostly for sanity. should do nothing.
     IN_ROOM(object) = room;
-    object->instance_id = instance_room_id(room);
+    object->instance_id = target_instance;
     object->carried_by = NULL;
-    if (ROOM_FLAGGED(room, ROOM_HOUSE))
-      SET_BIT_AR(ROOM_FLAGS(room), ROOM_HOUSE_CRASH);
+    if (target_instance == 0 && ROOM_FLAGGED(room, ROOM_HOUSE))
+      SET_BIT_AR(to_room->room_flags, ROOM_HOUSE_CRASH);
   }
 }
 
@@ -729,7 +756,7 @@ void obj_from_room(struct obj_data *object)
     }
   }
 
-  room = ROOM_AT(IN_ROOM(object));
+  room = GET_ROOM(object);
   if (!room) {
     log("SYSERR: Invalid room %d for object in obj_from_room.", IN_ROOM(object));
     return;
@@ -737,10 +764,11 @@ void obj_from_room(struct obj_data *object)
 
   REMOVE_FROM_LIST(object, room->contents, next_content);
 
-  if (ROOM_FLAGGED(IN_ROOM(object), ROOM_HOUSE))
-    SET_BIT_AR(ROOM_FLAGS(IN_ROOM(object)), ROOM_HOUSE_CRASH);
+  if (!GET_INSTANCE_ID(object) && ROOM_PTR_FLAGGED(room, ROOM_HOUSE))
+    SET_BIT_AR(room->room_flags, ROOM_HOUSE_CRASH);
   IN_ROOM(object) = NOWHERE;
   object->next_content = NULL;
+  object->instance_id = 0;
 }
 
 /* put an object in an object (quaint)  */
@@ -757,6 +785,7 @@ void obj_to_obj(struct obj_data *obj, struct obj_data *obj_to)
   obj->next_content = obj_to->contains;
   obj_to->contains = obj;
   obj->in_obj = obj_to;
+  obj->instance_id = obj_to->instance_id;
 
   /* Add weight to container, unless unlimited. */
   if (GET_OBJ_VAL(obj->in_obj, 0) > 0) {
@@ -803,6 +832,8 @@ void object_list_new_owner(struct obj_data *list, struct char_data *ch)
     object_list_new_owner(list->contains, ch);
     object_list_new_owner(list->next_content, ch);
     list->carried_by = ch;
+    if (ch)
+      list->instance_id = GET_INSTANCE_ID(ch);
   }
 }
 
@@ -1092,7 +1123,7 @@ struct char_data *get_player_vis(struct char_data *ch, char *name, int *number, 
   for (i = character_list; i; i = i->next) {
     if (IS_NPC(i))
       continue;
-    if (inroom == FIND_CHAR_ROOM && IN_ROOM(i) != IN_ROOM(ch))
+    if (inroom == FIND_CHAR_ROOM && !SAME_ROOM(i, ch))
       continue;
     if (str_cmp(i->player.name, name)) /* If not same, continue */
       continue;
@@ -1150,7 +1181,7 @@ struct char_data *get_char_world_vis(struct char_data *ch, char *name, int *numb
     return get_player_vis(ch, name, NULL, 0);
 
   for (i = character_list; i && *number; i = i->next) {
-    if (IN_ROOM(ch) == IN_ROOM(i))
+    if (SAME_ROOM(ch, i))
       continue;
     if (!isname(name, i->player.name))
       continue;

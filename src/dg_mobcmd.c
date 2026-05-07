@@ -376,6 +376,8 @@ ACMD(do_mload)
         mob_log(ch, "mload: bad mob vnum");
         return;
       }
+      if (!target || !*target)
+        mob->instance_id = GET_INSTANCE_ID(ch);
       char_to_room(mob, rnum);
       if (SCRIPT(ch)) { /* It _should_ have, but it might be detached. */
         char buf[MAX_INPUT_LENGTH];
@@ -400,6 +402,7 @@ ACMD(do_mload)
         if (CAN_WEAR(object, ITEM_WEAR_TAKE)) {
             obj_to_char(object, ch);
         } else {
+            object->instance_id = GET_INSTANCE_ID(ch);
             obj_to_room(object, IN_ROOM(ch));
         }
         load_otrigger(object);
@@ -410,6 +413,7 @@ ACMD(do_mload)
       if (tch) {
         if (*arg2 && (pos = find_eq_pos_script(arg2)) >= 0 &&
             !GET_EQ(tch, pos) && can_wear_on_pos(object, pos)) {
+          object->instance_id = GET_INSTANCE_ID(tch);
           equip_char(tch, object, pos);
           load_otrigger(object);
           return;
@@ -425,6 +429,7 @@ ACMD(do_mload)
       	return;
       }
       /* neither char nor container found - just dump it in room */
+      object->instance_id = GET_INSTANCE_ID(ch);
       obj_to_room(object, IN_ROOM(ch));
       load_otrigger(object);
       return;
@@ -704,7 +709,7 @@ ACMD(do_mforce)
 
         for (i = descriptor_list; i ; i = i->next) {
             if ((i->character != ch) && !i->connected &&
-                (IN_ROOM(i->character) == IN_ROOM(ch))) {
+                SAME_ROOM(i->character, ch)) {
                 vch = i->character;
                 if (GET_LEVEL(vch) < GET_LEVEL(ch) && CAN_SEE(ch, vch) &&
                     valid_dg_target(vch, 0)) {
@@ -933,6 +938,7 @@ ACMD(do_mtransform)
     }
 
     /* put the mob in the same room as ch so extract will work */
+    m->instance_id = GET_INSTANCE_ID(ch);
     char_to_room(m, IN_ROOM(ch));
 
     memcpy(&tmpmob, m, sizeof(*m));

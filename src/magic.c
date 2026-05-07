@@ -611,7 +611,7 @@ void mag_groups(int level, struct char_data *ch, int spellnum, int savetype)
     return;
     
   while ((tch = (struct char_data *) simple_list(GROUP(ch)->members)) != NULL) {
-    if (IN_ROOM(tch) != IN_ROOM(ch))
+    if (!SAME_ROOM(tch, ch))
       continue;
     if (tch == ch)
       continue;
@@ -806,6 +806,7 @@ void mag_summons(int level, struct char_data *ch, struct obj_data *obj,
       send_to_char(ch, "You don't quite remember how to make that creature.\r\n");
       return;
     }
+    mob->instance_id = GET_INSTANCE_ID(ch);
     char_to_room(mob, IN_ROOM(ch));
     IS_CARRYING_W(mob) = 0;
     IS_CARRYING_N(mob) = 0;

@@ -667,7 +667,7 @@ ACMD(do_ibt)
 
     string_write(ch->desc, &(ibtData->body),MAX_IBT_LENGTH, 0, NULL);
 
-    ibtData->room   = GET_ROOM_VNUM(IN_ROOM(ch));
+    ibtData->room   = IN_ROOM_VNUM(ch);
     ibtData->level  = GET_LEVEL(ch);
     ibtData->text   = STRALLOC(arg_text);
     ibtData->name   = STRALLOC(GET_NAME(ch));

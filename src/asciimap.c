@@ -227,9 +227,15 @@ bool can_see_map(struct char_data *ch) {
 static void MapArea(room_rnum room, struct char_data *ch, int x, int y, int min, int max, sh_int xpos, sh_int ypos, bool worldmap)
 {
   room_rnum prospect_room;
+  struct room_data *room_ptr, *prospect_ptr;
   struct room_direction_data *pexit;
+  struct room_direction_data *back;
   int door, ew_size=0, ns_size=0, x_exit_pos=0, y_exit_pos=0;
   sh_int prospect_xpos, prospect_ypos;
+
+  room_ptr = room_by_rnum_instance(room, GET_INSTANCE_ID(ch));
+  if (!room_ptr)
+    return;
 
   if (map[x][y] < 0)
     return; /* this is a door */
@@ -238,7 +244,7 @@ static void MapArea(room_rnum room, struct char_data *ch, int x, int y, int min,
   if(room == IN_ROOM(ch))
     map[x][y] = SECT_HERE;
   else
-    map[x][y] = SECT(room);
+    map[x][y] = room_ptr->sector_type;
 
   if ( (x < min) || ( y < min) || ( x > max ) || ( y > max) ) return;
 
@@ -258,8 +264,8 @@ static void MapArea(room_rnum room, struct char_data *ch, int x, int y, int min,
       continue;
     }
 
-    if ( (pexit = W_EXIT(room, door)) != NULL  &&
-         (pexit->to_room > 0 ) && (pexit->to_room != NOWHERE) &&
+    if ( (pexit = R_EXIT(room_ptr, door)) != NULL  &&
+         (pexit->to_room != NOWHERE) &&
          (!IS_SET(pexit->exit_info, EX_CLOSED)) &&
          (!IS_SET(pexit->exit_info, EX_HIDDEN) || PRF_FLAGGED(ch, PRF_HOLYLIGHT)) )
     { /* A real exit */
@@ -295,10 +301,11 @@ static void MapArea(room_rnum room, struct char_data *ch, int x, int y, int min,
 
  /*     if ( (x < min) || ( y < min) || ( x > max ) || ( y > max) ) return;*/
       prospect_room = pexit->to_room;
+      prospect_ptr = room_by_rnum_instance(prospect_room, GET_INSTANCE_ID(ch));
+      back = prospect_ptr ? R_EXIT(prospect_ptr, rev_dir[door]) : NULL;
 
         /* one way into area OR maze */
-        if ( W_EXIT(prospect_room, rev_dir[door]) &&
-             W_EXIT(prospect_room, rev_dir[door])->to_room != room) {
+        if ( back && back->to_room != room) {
           map[x][y] = SECT_STRANGE;
         return;
         }
@@ -324,19 +331,19 @@ static void MapArea(room_rnum room, struct char_data *ch, int x, int y, int min,
       case NORTH:
         prospect_xpos = ns_size;
       case SOUTH:
-        prospect_ypos = W_EXIT(prospect_room, rev_dir[door]) ? y_exit_pos : ew_size/2;
+        prospect_ypos = back ? y_exit_pos : ew_size/2;
       break;
       case WEST:
         prospect_ypos = ew_size;
       case EAST:
-        prospect_xpos = W_EXIT(prospect_room, rev_dir[door]) ? x_exit_pos : ns_size/2;
+        prospect_xpos = back ? x_exit_pos : ns_size/2;
         break;
       case NORTHEAST:
       case NORTHWEST:
       case SOUTHEAST:
       case SOUTHWEST:
-        prospect_xpos = W_EXIT(prospect_room, rev_dir[door]) ? x_exit_pos : ns_size/2;
-        prospect_ypos = W_EXIT(prospect_room, rev_dir[door]) ? y_exit_pos : ew_size/2;
+        prospect_xpos = back ? x_exit_pos : ns_size/2;
+        prospect_ypos = back ? y_exit_pos : ew_size/2;
         break;
       }
 
@@ -592,11 +599,11 @@ MapArea(target_room, ch, centre, centre, min, max, ns_size/2, ew_size/2, worldma
 }
 
 static bool show_worldmap(struct char_data *ch) {
-  room_rnum rm = IN_ROOM(ch);
-  zone_rnum zn = GET_ROOM_ZONE(rm);
+  struct room_data *rm = GET_ROOM(ch);
+  zone_rnum zn = rm ? rm->zone : NOWHERE;
 
-  if (ROOM_FLAGGED(rm, ROOM_WORLDMAP)) return TRUE;
-  if (ZONE_FLAGGED(zn, ZONE_WORLDMAP)) return TRUE;
+  if (ROOM_PTR_FLAGGED(rm, ROOM_WORLDMAP)) return TRUE;
+  if (zn != NOWHERE && ZONE_FLAGGED(zn, ZONE_WORLDMAP)) return TRUE;
 
   return FALSE;
 }
@@ -606,7 +613,7 @@ ACMD(do_map) {
     send_to_char(ch, "Sorry, the map is disabled!\r\n");
     return;
   }
-  if (IS_DARK(IN_ROOM(ch)) && !CAN_SEE_IN_DARK(ch)) {
+  if (room_data_is_dark(GET_ROOM(ch)) && !CAN_SEE_IN_DARK(ch)) {
     send_to_char(ch, "It is too dark to see the map.\r\n");
     return;
   } else if (AFF_FLAGGED(ch, AFF_BLIND) && GET_LEVEL(ch) < LVL_IMMORT) {

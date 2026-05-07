@@ -982,7 +982,7 @@ SPECIAL(shop_keeper)
   if (GET_INSTANCE_ID(ch) != GET_INSTANCE_ID(keeper))
     return (0);
 
-  if (!ok_shop_room(shop_nr, GET_ROOM_VNUM(IN_ROOM(ch))))
+  if (!ok_shop_room(shop_nr, IN_ROOM_VNUM(ch)))
     return (0);
 
   if (!AWAKE(keeper))
@@ -1518,7 +1518,7 @@ void show_shops(struct char_data *ch, char *arg)
   else {
     if (!str_cmp(arg, ".")) {
       for (shop_nr = 0; shop_nr <= top_shop; shop_nr++)
-	if (ok_shop_room(shop_nr, GET_ROOM_VNUM(IN_ROOM(ch))))
+	if (ok_shop_room(shop_nr, IN_ROOM_VNUM(ch)))
 	  break;
 
       if (shop_nr > top_shop) {

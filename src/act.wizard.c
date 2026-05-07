@@ -279,6 +279,7 @@ ACMD(do_at)
 {
   char command[MAX_INPUT_LENGTH], buf[MAX_INPUT_LENGTH];
   room_rnum location, original_loc;
+  int original_instance;
 
   half_chop(argument, buf, command);
   if (!*buf) {
@@ -296,13 +297,16 @@ ACMD(do_at)
 
   /* a location has been found. */
   original_loc = IN_ROOM(ch);
+  original_instance = GET_INSTANCE_ID(ch);
   char_from_room(ch);
+  ch->instance_id = 0;
   char_to_room(ch, location);
   command_interpreter(ch, command);
 
   /* check if the char is still there */
-  if (IN_ROOM(ch) == location) {
+  if (IN_ROOM(ch) == location && GET_INSTANCE_ID(ch) == 0) {
     char_from_room(ch);
+    ch->instance_id = original_instance;
     char_to_room(ch, original_loc);
   }
 }
@@ -324,6 +328,8 @@ ACMD(do_goto)
   act(buf, TRUE, ch, 0, 0, TO_ROOM);
 
   char_from_room(ch);
+  ch->instance_id = 0;
+  ch->instance_return_room = NOWHERE;
   char_to_room(ch, location);
 
   snprintf(buf, sizeof(buf), "$n %s", POOFIN(ch) ? POOFIN(ch) : "appears with an ear-splitting bang.");
@@ -354,6 +360,7 @@ ACMD(do_trans)
       }
       act("$n disappears in a mushroom cloud.", FALSE, victim, 0, 0, TO_ROOM);
       char_from_room(victim);
+      victim->instance_id = GET_INSTANCE_ID(ch);
       char_to_room(victim, IN_ROOM(ch));
       act("$n arrives from a puff of smoke.", FALSE, victim, 0, 0, TO_ROOM);
       act("$n has transferred you!", FALSE, ch, 0, victim, TO_VICT);
@@ -374,6 +381,7 @@ ACMD(do_trans)
 	  continue;
 	act("$n disappears in a mushroom cloud.", FALSE, victim, 0, 0, TO_ROOM);
 	char_from_room(victim);
+	victim->instance_id = GET_INSTANCE_ID(ch);
 	char_to_room(victim, IN_ROOM(ch));
 	act("$n arrives from a puff of smoke.", FALSE, victim, 0, 0, TO_ROOM);
 	act("$n has transferred you!", FALSE, ch, 0, victim, TO_VICT);
@@ -406,6 +414,8 @@ ACMD(do_teleport)
     send_to_char(ch, "%s", CONFIG_OK);
     act("$n disappears in a puff of smoke.", FALSE, victim, 0, 0, TO_ROOM);
     char_from_room(victim);
+    victim->instance_id = 0;
+    victim->instance_return_room = NOWHERE;
     char_to_room(victim, target);
     act("$n arrives from a puff of smoke.", FALSE, victim, 0, 0, TO_ROOM);
     act("$n has teleported you!", FALSE, ch, 0, (char *) victim, TO_VICT);
@@ -700,8 +710,8 @@ static void do_stat_object(struct char_data *ch, struct obj_data *j)
   send_to_char(ch, "Weight: %d, Value: %d, Cost/day: %d, Timer: %d, Min level: %d\r\n",
      GET_OBJ_WEIGHT(j), GET_OBJ_COST(j), GET_OBJ_RENT(j), GET_OBJ_TIMER(j), GET_OBJ_LEVEL(j));
 
-  send_to_char(ch, "In room: %d (%s), ", GET_ROOM_VNUM(IN_ROOM(j)),
-	IN_ROOM(j) == NOWHERE ? "Nowhere" : ROOM_AT(IN_ROOM(j))->name);
+  send_to_char(ch, "In room: %d (%s), ", IN_ROOM_VNUM(j),
+	IN_ROOM(j) == NOWHERE || !GET_ROOM(j) ? "Nowhere" : GET_ROOM(j)->name);
 
   /* In order to make it this far, we must already be able to see the character
    * holding the object. Therefore, we do not need CAN_SEE(). */
@@ -816,7 +826,7 @@ static void do_stat_character(struct char_data *ch, struct char_data *k)
   sprinttype(GET_SEX(k), genders, buf, sizeof(buf));
   send_to_char(ch, "%s %s '%s'  IDNum: [%5ld], In room [%5d], Loadroom : [%5d]\r\n",
 	  buf, (!IS_NPC(k) ? "PC" : (!IS_MOB(k) ? "NPC" : "MOB")),
-	  GET_NAME(k), IS_NPC(k) ? char_script_id(k) : GET_IDNUM(k), GET_ROOM_VNUM(IN_ROOM(k)), IS_NPC(k) ? NOWHERE : GET_LOADROOM(k));
+	  GET_NAME(k), IS_NPC(k) ? char_script_id(k) : GET_IDNUM(k), IN_ROOM_VNUM(k), IS_NPC(k) ? NOWHERE : GET_LOADROOM(k));
 
   if (IS_MOB(k)) {
     send_to_char(ch, "Keyword: %s, VNum: [%5d], RNum: [%5d]\r\n", k->player.name, GET_MOB_VNUM(k), GET_MOB_RNUM(k));
@@ -1101,7 +1111,7 @@ ACMD(do_stat)
     }
   } else if (is_abbrev(buf1, "zone")) {
     if (!*buf2) {
-      print_zone(ch, ZONE_AT(GET_ROOM_ZONE(IN_ROOM(ch)))->number);
+      print_zone(ch, ZONE_AT(IN_ROOM_ZONE(ch))->number);
       return;
     } else {
       print_zone(ch, atoi(buf2));
@@ -1264,10 +1274,10 @@ ACMD(do_switch)
     send_to_char(ch, "You can't do that, the body is already in use!\r\n");
   else if ((GET_LEVEL(ch) < LVL_IMPL) && !IS_NPC(victim))
     send_to_char(ch, "You are not holy enough to use their body.\r\n");
-  else if (GET_LEVEL(ch) < LVL_GRGOD && ROOM_FLAGGED(IN_ROOM(victim), ROOM_GODROOM))
+  else if (GET_LEVEL(ch) < LVL_GRGOD && IN_ROOM_FLAGGED(victim, ROOM_GODROOM))
     send_to_char(ch, "You are not godly enough to use that room!\r\n");
-  else if (GET_LEVEL(ch) < LVL_GRGOD && ROOM_FLAGGED(IN_ROOM(victim), ROOM_HOUSE)
-		&& !House_can_enter(ch, GET_ROOM_VNUM(IN_ROOM(victim))))
+  else if (GET_LEVEL(ch) < LVL_GRGOD && IN_ROOM_FLAGGED(victim, ROOM_HOUSE)
+		&& !House_can_enter(ch, IN_ROOM_VNUM(victim)))
     send_to_char(ch, "That's private property -- no trespassing!\r\n");
   else {
     send_to_char(ch, "%s", CONFIG_OK);
@@ -1358,7 +1368,7 @@ ACMD(do_load)
     struct char_data *mob=NULL;
     mob_rnum r_num;
 
-	if (GET_LEVEL(ch) < LVL_GRGOD && !can_edit_zone(ch, GET_ROOM_ZONE(IN_ROOM(ch)))) {
+	if (GET_LEVEL(ch) < LVL_GRGOD && !can_edit_zone(ch, IN_ROOM_ZONE(ch))) {
 	  send_to_char(ch, "Sorry, you can't load mobs here.\r\n");
 	  return;
 	}
@@ -1369,6 +1379,7 @@ ACMD(do_load)
     }
     for (i=0; i < n; i++) {
       mob = read_mobile(r_num, REAL);
+      mob->instance_id = GET_INSTANCE_ID(ch);
       char_to_room(mob, IN_ROOM(ch));
 
       act("$n makes a quaint, magical gesture with one hand.", TRUE, ch, 0, 0, TO_ROOM);
@@ -1380,7 +1391,7 @@ ACMD(do_load)
     struct obj_data *obj;
     obj_rnum r_num;
 
-	if (GET_LEVEL(ch) < LVL_GRGOD && !can_edit_zone(ch, GET_ROOM_ZONE(IN_ROOM(ch)))) {
+	if (GET_LEVEL(ch) < LVL_GRGOD && !can_edit_zone(ch, IN_ROOM_ZONE(ch))) {
 	  send_to_char(ch, "Sorry, you can't load objects here.\r\n");
 	  return;
 	}
@@ -1393,8 +1404,10 @@ ACMD(do_load)
       obj = read_object(r_num, REAL);
       if (CONFIG_LOAD_INVENTORY)
         obj_to_char(obj, ch);
-      else
+      else {
+        obj->instance_id = GET_INSTANCE_ID(ch);
         obj_to_room(obj, IN_ROOM(ch));
+      }
       act("$n makes a strange magical gesture.", TRUE, ch, 0, 0, TO_ROOM);
       act("$n has created $p!", FALSE, ch, obj, 0, TO_ROOM);
       act("You create $p.", FALSE, ch, obj, 0, TO_CHAR);
@@ -1477,7 +1490,7 @@ ACMD(do_purge)
 
   one_argument(argument, buf);
 
-  if (GET_LEVEL(ch) < LVL_GRGOD && !can_edit_zone(ch, GET_ROOM_ZONE(IN_ROOM(ch)))) {
+  if (GET_LEVEL(ch) < LVL_GRGOD && !can_edit_zone(ch, IN_ROOM_ZONE(ch))) {
 	send_to_char(ch, "Sorry, you can't purge anything here.\r\n");
 	return;
   }
@@ -1514,7 +1527,7 @@ ACMD(do_purge)
   } else {			/* no argument. clean out the room */
     act("$n gestures... You are surrounded by scorching flames!",
 	FALSE, ch, 0, 0, TO_ROOM);
-    send_to_room(IN_ROOM(ch), "The world seems a little cleaner.\r\n");
+    send_to_room_instance(GET_INSTANCE_ID(ch), IN_ROOM(ch), "The world seems a little cleaner.\r\n");
     purge_room(IN_ROOM(ch));
   }
 }
@@ -2263,7 +2276,7 @@ ACMD(do_force)
   } else if (!str_cmp("room", arg)) {
     send_to_char(ch, "%s", CONFIG_OK);
     mudlog(NRM, MAX(LVL_GOD, GET_INVIS_LEV(ch)), TRUE, "(GC) %s forced room %d to %s",
-		GET_NAME(ch), GET_ROOM_VNUM(IN_ROOM(ch)), to_force);
+		GET_NAME(ch), IN_ROOM_VNUM(ch), to_force);
 
     for (vict = GET_ROOM(ch)->people; vict; vict = next_force) {
       next_force = vict->next_in_room;
@@ -2395,7 +2408,7 @@ ACMD(do_zreset)
     mudlog(NRM, MAX(LVL_GOD, GET_INVIS_LEV(ch)), TRUE, "(GC) %s reset entire world.", GET_NAME(ch));
     return; }
   } else if (*arg == '.' || !*arg)
-    i = GET_ROOM_ZONE(IN_ROOM(ch));
+    i = IN_ROOM_ZONE(ch);
   else {
     j = atoi(arg);
     for (i = 0; i <= top_of_zone_table; i++)
@@ -2651,7 +2664,7 @@ ACMD(do_show)
   case 1:
     /* tightened up by JE 4/6/93 */
     if (self)
-      print_zone_to_buf(buf, sizeof(buf), GET_ROOM_ZONE(IN_ROOM(ch)), 1);
+      print_zone_to_buf(buf, sizeof(buf), IN_ROOM_ZONE(ch), 1);
     else if (*value && is_number(value)) {
       for (zvn = atoi(value), zrn = 0; zone_table[zrn].number != zvn && zrn <= top_of_zone_table; zrn++);
       if (zrn <= top_of_zone_table)
@@ -3303,6 +3316,8 @@ static int perform_set(struct char_data *ch, struct char_data *vict, int mode, c
       }
       if (IN_ROOM(vict) != NOWHERE)
         char_from_room(vict);
+      vict->instance_id = 0;
+      vict->instance_return_room = NOWHERE;
       char_to_room(vict, rnum);
       break;
     case 44: /* screenwidth */
@@ -3529,7 +3544,7 @@ ACMD(do_links)
   one_argument(argument, arg);
 
   if (!is_number(arg)) {
-    zrnum = GET_ROOM_ZONE(IN_ROOM(ch));
+    zrnum = IN_ROOM_ZONE(ch);
     zvnum = zone_table[zrnum].number;
   } else {
     zvnum = atoi(arg);
@@ -3662,7 +3677,7 @@ ACMD (do_zcheck)
   one_argument(argument, buf);
 
   if (!is_number(buf) || !strcmp(buf, "."))
-    zrnum = GET_ROOM_ZONE(IN_ROOM(ch));
+    zrnum = IN_ROOM_ZONE(ch);
   else
     zrnum = real_zone(atoi(buf));
 
@@ -4272,7 +4287,7 @@ ACMD(do_copyover)
    } else {
       fprintf (fp, "%d %ld %s %s %s\n", d->descriptor, GET_PREF(och), GET_NAME(och), d->host, CopyoverGet(d));
       /* save och */
-      GET_LOADROOM(och) = GET_ROOM_VNUM(IN_ROOM(och));
+      GET_LOADROOM(och) = IN_ROOM_VNUM(och);
       Crash_rentsave(och,0);
       save_char(och);
       write_to_descriptor (d->descriptor, buf);
@@ -4309,7 +4324,7 @@ ACMD(do_peace)
 
   act ("As $n makes a strange arcane gesture, a golden light descends\r\n"
        "from the heavens stopping all the fighting.\r\n",FALSE, ch, 0, 0, TO_ROOM);
-  send_to_room(IN_ROOM(ch), "Everything is quite peaceful now.\r\n");
+  send_to_room_instance(GET_INSTANCE_ID(ch), IN_ROOM(ch), "Everything is quite peaceful now.\r\n");
   for(vict=GET_ROOM(ch)->people; vict; vict=next_v) {
     next_v = vict->next_in_room;
     if (FIGHTING(vict))
@@ -4326,7 +4341,7 @@ ACMD(do_zpurge)
   int purge_all = FALSE;
   one_argument(argument, arg);
   if (*arg == '.' || !*arg) {
-    zone = GET_ROOM_ZONE(IN_ROOM(ch));
+    zone = IN_ROOM_ZONE(ch);
   }
   else if (is_number(arg)) {
     zone = real_zone(atoi(arg));

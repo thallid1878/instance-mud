@@ -1004,8 +1004,8 @@ int special(struct char_data *ch, int cmd, char *arg)
   int j;
 
   /* special in room? */
-  if (GET_ROOM_SPEC(IN_ROOM(ch)) != NULL)
-    if (GET_ROOM_SPEC(IN_ROOM(ch)) (ch, world + IN_ROOM(ch), cmd, arg))
+  if (GET_ROOM(ch) && GET_ROOM(ch)->func != NULL)
+    if (GET_ROOM(ch)->func(ch, GET_ROOM(ch), cmd, arg))
       return (1);
 
   /* special in equipment list? */

@@ -100,13 +100,13 @@ static void say_spell(struct char_data *ch, int spellnum, struct char_data *tch,
 
   struct char_data *i;
 
-  if (tch != NULL && IN_ROOM(tch) == IN_ROOM(ch)) {
+  if (tch != NULL && SAME_ROOM(tch, ch)) {
     if (tch == ch)
       format = "$n closes $s eyes and utters the words, '%s'.";
     else
       format = "$n stares at $N and utters the words, '%s'.";
   } else if (tobj != NULL
-      && ((IN_ROOM(tobj) == IN_ROOM(ch)) || (tobj->carried_by == ch)))
+      && ((GET_INSTANCE_ID(tobj) == GET_INSTANCE_ID(ch) && IN_ROOM(tobj) == IN_ROOM(ch)) || (tobj->carried_by == ch)))
     format = "$n stares at $p and utters the words, '%s'.";
   else
     format = "$n utters the words, '%s'.";
@@ -123,7 +123,7 @@ static void say_spell(struct char_data *ch, int spellnum, struct char_data *tch,
       perform_act(act_buf_obfuscated, ch, tobj, tch, i);
   }
 
-  if (tch != NULL && tch != ch && IN_ROOM(tch) == IN_ROOM(ch)) {
+  if (tch != NULL && tch != ch && SAME_ROOM(tch, ch)) {
     snprintf(act_buf_original, sizeof(act_buf_original), "$n stares at you and utters the words, '%s'.",
     GET_CLASS(ch) == GET_CLASS(tch) ? spell : obfuscated);
     act(act_buf_original, FALSE, ch, NULL, tch, TO_VICT);
@@ -188,12 +188,12 @@ int call_magic(struct char_data *caster, struct char_data *cvict,
   if (!cast_mtrigger(caster, cvict, spellnum))
     return 0;
 
-  if (ROOM_FLAGGED(IN_ROOM(caster), ROOM_NOMAGIC)) {
+  if (IN_ROOM_FLAGGED(caster, ROOM_NOMAGIC)) {
     send_to_char(caster, "Your magic fizzles out and dies.\r\n");
     act("$n's magic fizzles out and dies.", FALSE, caster, 0, 0, TO_ROOM);
     return (0);
   }
-  if (ROOM_FLAGGED(IN_ROOM(caster), ROOM_PEACEFUL) && (SINFO.violent || IS_SET(SINFO.routines, MAG_DAMAGE))) {
+  if (IN_ROOM_FLAGGED(caster, ROOM_PEACEFUL) && (SINFO.violent || IS_SET(SINFO.routines, MAG_DAMAGE))) {
     send_to_char(caster, "A flash of white light fills the room, dispelling your violent magic!\r\n");
     act("White light from no particular source suddenly fills the room, then vanishes.", FALSE, caster, 0, 0, TO_ROOM);
     return (0);

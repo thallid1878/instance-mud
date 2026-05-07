@@ -2717,6 +2717,7 @@ void reset_zone(zone_rnum zone)
 	} else {
 	  obj = read_object(ZCMD.arg1, REAL);
           IN_ROOM(obj) = IN_ROOM(mob);
+          obj->instance_id = GET_INSTANCE_ID(mob);
           load_otrigger(obj);
           if (wear_otrigger(obj, mob, ZCMD.arg3)) {
             IN_ROOM(obj) = NOWHERE;

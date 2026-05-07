@@ -217,7 +217,7 @@ ACMD(do_order)
       act(buf, FALSE, ch, 0, 0, TO_ROOM);
 
       for (k = ch->followers; k; k = k->next) {
-        if (IN_ROOM(ch) == IN_ROOM(k->follower))
+        if (SAME_ROOM(ch, k->follower))
           if (AFF_FLAGGED(k->follower, AFF_CHARM)) {
             found = TRUE;
             command_interpreter(k->follower, message);
@@ -244,7 +244,7 @@ ACMD(do_flee)
   for (i = 0; i < 6; i++) {
     attempt = rand_number(0, DIR_COUNT - 1); /* Select a random direction */
     if (CAN_GO(ch, attempt) &&
-	!ROOM_FLAGGED(EXIT(ch, attempt)->to_room, ROOM_DEATH)) {
+	!ROOM_PTR_FLAGGED(room_by_rnum_instance(EXIT(ch, attempt)->to_room, GET_INSTANCE_ID(ch)), ROOM_DEATH)) {
       act("$n panics, and attempts to flee!", TRUE, ch, 0, 0, TO_ROOM);
       was_fighting = FIGHTING(ch);
       if (do_simple_move(ch, attempt, TRUE)) {
@@ -279,7 +279,7 @@ ACMD(do_bash)
     send_to_char(ch, "You have no idea how.\r\n");
     return;
   }
-  if (ROOM_FLAGGED(IN_ROOM(ch), ROOM_PEACEFUL)) {
+  if (IN_ROOM_FLAGGED(ch, ROOM_PEACEFUL)) {
     send_to_char(ch, "This room just has such a peaceful, easy feeling...\r\n");
     return;
   }
@@ -288,7 +288,7 @@ ACMD(do_bash)
     return;
   }
   if (!(vict = get_char_vis(ch, arg, NULL, FIND_CHAR_ROOM))) {
-    if (FIGHTING(ch) && IN_ROOM(ch) == IN_ROOM(FIGHTING(ch))) {
+    if (FIGHTING(ch) && SAME_ROOM(ch, FIGHTING(ch))) {
       vict = FIGHTING(ch);
     } else {
       send_to_char(ch, "Bash who?\r\n");
@@ -322,7 +322,7 @@ ACMD(do_bash)
      */
     if (damage(ch, vict, 1, SKILL_BASH) > 0) {	/* -1 = dead, 0 = miss */
       WAIT_STATE(vict, PULSE_VIOLENCE);
-      if (IN_ROOM(ch) == IN_ROOM(vict))
+      if (SAME_ROOM(ch, vict))
         GET_POS(vict) = POS_SITTING;
     }
   }
@@ -460,7 +460,7 @@ ACMD(do_whirlwind)
     return;
   }
   
-  if ROOM_FLAGGED(IN_ROOM(ch), ROOM_PEACEFUL) {
+  if (IN_ROOM_FLAGGED(ch, ROOM_PEACEFUL)) {
     send_to_char(ch, "This room just has such a peaceful, easy feeling...\r\n");
     return;
   }
@@ -504,7 +504,7 @@ ACMD(do_kick)
   one_argument(argument, arg);
 
   if (!(vict = get_char_vis(ch, arg, NULL, FIND_CHAR_ROOM))) {
-    if (FIGHTING(ch) && IN_ROOM(ch) == IN_ROOM(FIGHTING(ch))) {
+    if (FIGHTING(ch) && SAME_ROOM(ch, FIGHTING(ch))) {
       vict = FIGHTING(ch);
     } else {
       send_to_char(ch, "Kick who?\r\n");

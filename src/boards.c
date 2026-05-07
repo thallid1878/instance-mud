@@ -313,7 +313,7 @@ int board_display_msg(int board_type, struct char_data *ch, char *arg, struct ob
   if (MSG_SLOTNUM(board_type, ind) < 0 ||
       MSG_SLOTNUM(board_type, ind) >= INDEX_SIZE) {
     send_to_char(ch, "Sorry, the board is not working.\r\n");
-    log("SYSERR: Board is screwed up. (Room #%d)", GET_ROOM_VNUM(IN_ROOM(ch)));
+    log("SYSERR: Board is screwed up. (Room #%d)", IN_ROOM_VNUM(ch));
     return (1);
   }
   if (!(MSG_HEADING(board_type, ind))) {
@@ -376,7 +376,7 @@ int board_remove_msg(int board_type, struct char_data *ch, char *arg, struct obj
   slot_num = MSG_SLOTNUM(board_type, ind);
   if (slot_num < 0 || slot_num >= INDEX_SIZE) {
     send_to_char(ch, "That message is majorly screwed up.\r\n");
-    log("SYSERR: The board is seriously screwed up. (Room #%d)", GET_ROOM_VNUM(IN_ROOM(ch)));
+    log("SYSERR: The board is seriously screwed up. (Room #%d)", IN_ROOM_VNUM(ch));
     return (1);
   }
   for (d = descriptor_list; d; d = d->next)

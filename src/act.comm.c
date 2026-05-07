@@ -125,13 +125,13 @@ static int is_tell_ok(struct char_data *ch, struct char_data *vict)
     send_to_char(ch, "You try to tell yourself something.\r\n");
   else if (!IS_NPC(ch) && PRF_FLAGGED(ch, PRF_NOTELL))
     send_to_char(ch, "You can't tell other people while you have notell on.\r\n");
-  else if (ROOM_FLAGGED(IN_ROOM(ch), ROOM_SOUNDPROOF) && (GET_LEVEL(ch) < LVL_GOD))
+  else if (IN_ROOM_FLAGGED(ch, ROOM_SOUNDPROOF) && (GET_LEVEL(ch) < LVL_GOD))
     send_to_char(ch, "The walls seem to absorb your words.\r\n");
   else if (!IS_NPC(vict) && !vict->desc)        /* linkless */
     act("$E's linkless at the moment.", FALSE, ch, 0, vict, TO_CHAR | TO_SLEEP);
   else if (PLR_FLAGGED(vict, PLR_WRITING))
     act("$E's writing a message right now; try again later.", FALSE, ch, 0, vict, TO_CHAR | TO_SLEEP);
-  else if ((!IS_NPC(vict) && PRF_FLAGGED(vict, PRF_NOTELL)) || (ROOM_FLAGGED(IN_ROOM(vict), ROOM_SOUNDPROOF) && (GET_LEVEL(ch) < LVL_GOD)))
+  else if ((!IS_NPC(vict) && PRF_FLAGGED(vict, PRF_NOTELL)) || (IN_ROOM_FLAGGED(vict, ROOM_SOUNDPROOF) && (GET_LEVEL(ch) < LVL_GOD)))
     act("$E can't hear you.", FALSE, ch, 0, vict, TO_CHAR | TO_SLEEP);
   else
     return (TRUE);
@@ -427,7 +427,7 @@ ACMD(do_gen_comm)
     send_to_char(ch, "%s", com_msgs[subcmd][0]);
     return;
   }
-  if (ROOM_FLAGGED(IN_ROOM(ch), ROOM_SOUNDPROOF) && (GET_LEVEL(ch) < LVL_GOD)) {
+  if (IN_ROOM_FLAGGED(ch, ROOM_SOUNDPROOF) && (GET_LEVEL(ch) < LVL_GOD)) {
     send_to_char(ch, "The walls seem to absorb your words.\r\n");
     return;
   }
@@ -493,10 +493,10 @@ ACMD(do_gen_comm)
     if (!IS_NPC(ch) && (PRF_FLAGGED(i->character, channels[subcmd]) || PLR_FLAGGED(i->character, PLR_WRITING)))
       continue;
 
-    if (ROOM_FLAGGED(IN_ROOM(i->character), ROOM_SOUNDPROOF) && (GET_LEVEL(ch) < LVL_GOD))
+    if (IN_ROOM_FLAGGED(i->character, ROOM_SOUNDPROOF) && (GET_LEVEL(ch) < LVL_GOD))
       continue;
 
-    if (subcmd == SCMD_SHOUT && ((GET_ROOM_ZONE(IN_ROOM(ch)) != GET_ROOM_ZONE(IN_ROOM(i->character))) ||
+    if (subcmd == SCMD_SHOUT && ((IN_ROOM_ZONE(ch) != IN_ROOM_ZONE(i->character)) ||
          !AWAKE(i->character)))
       continue;
 

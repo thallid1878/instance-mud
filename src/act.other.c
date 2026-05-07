@@ -64,7 +64,7 @@ ACMD(do_quit)
     if (GET_INSTANCE_ID(ch) > 0)
       GET_LOADROOM(ch) = instance_safe_load_room_vnum(ch);
     else
-      GET_LOADROOM(ch) = GET_ROOM_VNUM(IN_ROOM(ch));
+      GET_LOADROOM(ch) = IN_ROOM_VNUM(ch);
 
     if (CONFIG_FREE_RENT)
       Crash_rentsave(ch, 0);
@@ -89,11 +89,11 @@ ACMD(do_save)
   if (GET_INSTANCE_ID(ch) > 0)
     GET_LOADROOM(ch) = instance_safe_load_room_vnum(ch);
   else
-    GET_LOADROOM(ch) = GET_ROOM_VNUM(IN_ROOM(ch));
+    GET_LOADROOM(ch) = IN_ROOM_VNUM(ch);
   save_char(ch);
   Crash_crashsave(ch);
-  if (ROOM_FLAGGED(IN_ROOM(ch), ROOM_HOUSE_CRASH))
-    House_crashsave(GET_ROOM_VNUM(IN_ROOM(ch)));
+  if (!GET_INSTANCE_ID(ch) && IN_ROOM_FLAGGED(ch, ROOM_HOUSE_CRASH))
+    House_crashsave(IN_ROOM_VNUM(ch));
 }
 
 /* Generic function for commands which are normally overridden by special
@@ -162,7 +162,7 @@ ACMD(do_steal)
     return;
   }
 
-  if (ROOM_FLAGGED(IN_ROOM(ch), ROOM_PEACEFUL)) {
+  if (IN_ROOM_FLAGGED(ch, ROOM_PEACEFUL)) {
     send_to_char(ch, "This room just has such a peaceful, easy feeling...\r\n");
     return;
   }
@@ -369,7 +369,7 @@ static void display_group_list(struct char_data * ch)
         send_to_char(ch, "%-2d) %s%-12s     %-2d              %s%s\r\n", 
           ++count,
           IS_SET(GROUP_FLAGS(group), GROUP_OPEN) ? CCGRN(ch, C_NRM) : CCRED(ch, C_NRM), 
-          GET_NAME(GROUP_LEADER(group)), group->members->iSize, ZONE_AT(GET_ROOM_ZONE(IN_ROOM(GROUP_LEADER(group))))->name,
+          GET_NAME(GROUP_LEADER(group)), group->members->iSize, ZONE_AT(IN_ROOM_ZONE(GROUP_LEADER(group)))->name,
           CCNRM(ch, C_NRM));
       else
         send_to_char(ch, "%-2d) Hidden\r\n", ++count);
@@ -534,7 +534,7 @@ ACMD(do_split)
     
     if (GROUP(ch))
       while ((k = (struct char_data *) simple_list(GROUP(ch)->members)) != NULL)
-        if (IN_ROOM(ch) == IN_ROOM(k) && !IS_NPC(k))
+        if (SAME_ROOM(ch, k) && !IS_NPC(k))
           num++;
 
     if (num && GROUP(ch)) {
@@ -557,7 +557,7 @@ ACMD(do_split)
     }
 
     while ((k = (struct char_data *) simple_list(GROUP(ch)->members)) != NULL)
-      if (k != ch && IN_ROOM(ch) == IN_ROOM(k) && !IS_NPC(k)) {
+      if (k != ch && SAME_ROOM(ch, k) && !IS_NPC(k)) {
 	      increase_gold(k, share);
 	      send_to_char(k, "%s", buf);
 			}

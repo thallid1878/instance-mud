@@ -433,7 +433,7 @@ SPECIAL(snake)
   if (cmd || GET_POS(ch) != POS_FIGHTING || !FIGHTING(ch))
     return (FALSE);
 
-  if (IN_ROOM(FIGHTING(ch)) != IN_ROOM(ch) || rand_number(0, GET_LEVEL(ch)) != 0)
+  if (!SAME_ROOM(FIGHTING(ch), ch) || rand_number(0, GET_LEVEL(ch)) != 0)
     return (FALSE);
 
   act("$n bites $N!", 1, ch, 0, FIGHTING(ch), TO_NOTVICT);
@@ -471,7 +471,7 @@ SPECIAL(magic_user)
       break;
 
   /* if I didn't pick any of those, then just slam the guy I'm fighting */
-  if (vict == NULL && IN_ROOM(FIGHTING(ch)) == IN_ROOM(ch))
+  if (vict == NULL && SAME_ROOM(FIGHTING(ch), ch))
     vict = FIGHTING(ch);
 
   /* Hm...didn't pick anyone...I'll wait a round. */
@@ -552,7 +552,7 @@ SPECIAL(guild_guard)
 
   for (i = 0; guild_info[i].guild_room != NOWHERE; i++) { 
     /* Wrong guild. */ 
-    if (GET_ROOM_VNUM(IN_ROOM(ch)) != guild_info[i].guild_room) 
+    if (IN_ROOM_VNUM(ch) != guild_info[i].guild_room)
       continue; 
 
     /* Wrong direction. */ 
@@ -747,6 +747,7 @@ SPECIAL(pet_shops)
       /* free(pet->player.description); don't free the prototype! */
       pet->player.description = strdup(buf);
     }
+    pet->instance_id = GET_INSTANCE_ID(ch);
     char_to_room(pet, IN_ROOM(ch));
     add_follower(pet, ch);
 

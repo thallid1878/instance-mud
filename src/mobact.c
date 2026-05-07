@@ -79,10 +79,11 @@ void mobile_activity(void)
     /* Mob Movement */
     if (!MOB_FLAGGED(ch, MOB_SENTINEL) && (GET_POS(ch) == POS_STANDING) &&
        ((door = rand_number(0, 18)) < DIR_COUNT) && CAN_GO(ch, door) &&
-       !ROOM_FLAGGED(EXIT(ch, door)->to_room, ROOM_NOMOB) &&
-       !ROOM_FLAGGED(EXIT(ch, door)->to_room, ROOM_DEATH) &&
+       !ROOM_PTR_FLAGGED(room_by_rnum_instance(EXIT(ch, door)->to_room, GET_INSTANCE_ID(ch)), ROOM_NOMOB) &&
+       !ROOM_PTR_FLAGGED(room_by_rnum_instance(EXIT(ch, door)->to_room, GET_INSTANCE_ID(ch)), ROOM_DEATH) &&
        (!MOB_FLAGGED(ch, MOB_STAY_ZONE) ||
-           (GET_ROOM_ZONE(EXIT(ch, door)->to_room) == GET_ROOM(ch)->zone))) 
+           (room_by_rnum_instance(EXIT(ch, door)->to_room, GET_INSTANCE_ID(ch)) &&
+            room_by_rnum_instance(EXIT(ch, door)->to_room, GET_INSTANCE_ID(ch))->zone == GET_ROOM(ch)->zone)))
     {
       /* If the mob is charmed, do not move the mob. */
       if (ch->master == NULL)

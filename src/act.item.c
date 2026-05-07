@@ -413,6 +413,7 @@ static void perform_drop_gold(struct char_data *ch, int amount, byte mode, room_
 	      send_to_char(ch, "You throw some gold into the air where it disappears in a puff of smoke!\r\n");
 	      act("$n throws some gold into the air where it disappears in a puff of smoke!",
 	          FALSE, ch, 0, 0, TO_ROOM);
+        obj->instance_id = 0;
 	      obj_to_room(obj, RDR);
 	      act("$p suddenly appears in a puff of orange smoke!", 0, 0, obj, 0, TO_ROOM);
       } else {
@@ -487,6 +488,7 @@ static int perform_drop(struct char_data *ch, struct obj_data *obj,
     obj_to_room(obj, IN_ROOM(ch));
     return (0);
   case SCMD_DONATE:
+    obj->instance_id = 0;
     obj_to_room(obj, RDR);
     act("$p suddenly appears in a puff a smoke!", FALSE, 0, obj, 0, TO_ROOM);
     return (0);
@@ -837,7 +839,7 @@ ACMD(do_drink)
 
   if (!*arg) {
     char buf[MAX_STRING_LENGTH];
-    switch (SECT(IN_ROOM(ch))) {
+    switch (GET_ROOM(ch) ? GET_ROOM(ch)->sector_type : SECT_INSIDE) {
       case SECT_WATER_SWIM:
       case SECT_WATER_NOSWIM:
       case SECT_UNDERWATER:
