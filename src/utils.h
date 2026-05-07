@@ -75,6 +75,12 @@ int count_non_protocol_chars(char * str);
 char *right_trim_whitespace(const char *string);
 void remove_from_string(char *string, const char *to_remove);
 
+struct zone_data;
+struct shop_data;
+struct room_data *room_by_rnum(room_rnum rnum);
+struct zone_data *zone_by_rnum(zone_rnum rnum);
+struct shop_data *shop_by_rnum(shop_rnum rnum);
+
 /* Public functions made available form weather.c */
 void weather_and_time(int mode);
 
@@ -374,16 +380,18 @@ do                                                              \
 #define AFF_FLAGS(ch)	((ch)->char_specials.saved.affected_by)
 /** Room flags.
  * @param loc The real room number. */
-#define ROOM_FLAGS(loc)	(world[(loc)].room_flags)
+#define ROOM_AT(loc)	(room_by_rnum((loc)))
+#define ZONE_AT(rnum)	(zone_by_rnum((rnum)))
+#define ROOM_FLAGS(loc)	(ROOM_AT(loc)->room_flags)
 /** Zone flags.
  * @param rnum The real zone number. */
-#define ZONE_FLAGS(rnum)       (zone_table[(rnum)].zone_flags)
+#define ZONE_FLAGS(rnum)       (ZONE_AT(rnum)->zone_flags)
 /** Zone minimum level restriction.
  * @param rnum The real zone number. */
-#define ZONE_MINLVL(rnum)      (zone_table[(rnum)].min_level)
+#define ZONE_MINLVL(rnum)      (ZONE_AT(rnum)->min_level)
 /** Zone maximum level restriction.
  * @param rnum The real zone number. */
-#define ZONE_MAXLVL(rnum)      (zone_table[(rnum)].max_level)
+#define ZONE_MAXLVL(rnum)      (ZONE_AT(rnum)->max_level)
 
 /** References the routine element for a spell. Currently unused. */
 #define SPELL_ROUTINES(spl)	(spell_info[spl].routines)
@@ -409,7 +417,7 @@ do                                                              \
 /** 1 if flag is set in the room of loc, 0 if not. */
 #define ROOM_FLAGGED(loc, flag) (IS_SET_AR(ROOM_FLAGS(loc), (flag)))
 /** 1 if flag is set in the zone of rnum, 0 if not. */
-#define ZONE_FLAGGED(rnum, flag)   (IS_SET_AR(zone_table[(rnum)].zone_flags, (flag)))
+#define ZONE_FLAGGED(rnum, flag)   (IS_SET_AR(ZONE_FLAGS(rnum), (flag)))
 /** 1 if flag is set in the exit, 0 if not. */
 #define EXIT_FLAGGED(exit, flag) (IS_SET((exit)->exit_info, (flag)))
 /** 1 if flag is set in the affects bitarray of obj, 0 if not. */
@@ -440,10 +448,10 @@ do                                                              \
 /** Return the sector type for the room. If there is no sector type, return
  * SECT_INSIDE. */
 #define SECT(room)	(VALID_ROOM_RNUM(room) ? \
-				world[(room)].sector_type : SECT_INSIDE)
+				ROOM_AT(room)->sector_type : SECT_INSIDE)
 
 /** Return the zone number for this room */
-#define GET_ROOM_ZONE(room)	(VALID_ROOM_RNUM(room) ? world[(room)].zone : NOWHERE)
+#define GET_ROOM_ZONE(room)	(VALID_ROOM_RNUM(room) ? ROOM_AT(room)->zone : NOWHERE)
 
 /** TRUE if the room has no light, FALSE if not. */
 #define IS_DARK(room)	room_is_dark((room))
@@ -456,14 +464,15 @@ int valid_room_rnum(room_rnum rnum);
 #define VALID_ROOM_RNUM(rnum)	valid_room_rnum((rnum))
 /** The room number if this is a valid room, NOWHERE if it is not */
 #define GET_ROOM_VNUM(rnum) \
-	((room_vnum)(VALID_ROOM_RNUM(rnum) ? world[(rnum)].number : NOWHERE))
+	((room_vnum)(VALID_ROOM_RNUM(rnum) ? ROOM_AT(rnum)->number : NOWHERE))
 /** Pointer to the room function, NULL if there is not one. */
 #define GET_ROOM_SPEC(room) \
-	(VALID_ROOM_RNUM(room) ? world[(room)].func : NULL)
+	(VALID_ROOM_RNUM(room) ? ROOM_AT(room)->func : NULL)
 
 /* char utils */
 /** What room is PC/NPC in? */
 #define IN_ROOM(ch)	((ch)->in_room)
+#define GET_ROOM(ch)	(room_by_rnum(IN_ROOM(ch)))
 /** What room was PC/NPC previously in? */
 #define GET_WAS_IN(ch)	((ch)->was_in_room)
 /** Runtime dungeon instance id for PC/NPC, or 0. */
@@ -836,14 +845,14 @@ int valid_room_rnum(room_rnum rnum);
 	fname((obj)->name) : "something")
 
 /** Does direction door exist in the same room as ch? */
-#define EXIT(ch, door)  (world[IN_ROOM(ch)].dir_option[door])
+#define EXIT(ch, door)  (GET_ROOM(ch)->dir_option[door])
 /** Does room number have direction num? */
-#define W_EXIT(room, num)     (world[(room)].dir_option[(num)])
+#define W_EXIT(room, num)     (ROOM_AT(room)->dir_option[(num)])
 /** Does room pointer have direction option num? */
 #define R_EXIT(room, num)     ((room)->dir_option[(num)])
 
-#define _2ND_EXIT(ch, door) (world[EXIT(ch, door)->to_room].dir_option[door])
-#define _3RD_EXIT(ch, door) (world[_2ND_EXIT(ch, door)->to_room].dir_option[door])
+#define _2ND_EXIT(ch, door) (ROOM_AT(EXIT(ch, door)->to_room)->dir_option[door])
+#define _3RD_EXIT(ch, door) (ROOM_AT(_2ND_EXIT(ch, door)->to_room)->dir_option[door])
 
 /** Can ch walk through direction door. */
 #define CAN_GO(ch, door) (EXIT(ch,door) && \

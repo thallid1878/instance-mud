@@ -45,7 +45,7 @@ ACMD(do_assist)
     if (FIGHTING(helpee))
       opponent = FIGHTING(helpee);
     else
-      for (opponent = world[IN_ROOM(ch)].people;
+      for (opponent = GET_ROOM(ch)->people;
 	   opponent && (FIGHTING(opponent) != helpee);
 	   opponent = opponent->next_in_room);
 
@@ -354,7 +354,7 @@ ACMD(do_rescue)
     send_to_char(ch, "How can you rescue someone you are trying to kill?\r\n");
     return;
   }
-  for (tmp_ch = world[IN_ROOM(ch)].people; tmp_ch &&
+  for (tmp_ch = GET_ROOM(ch)->people; tmp_ch &&
        (FIGHTING(tmp_ch) != vict); tmp_ch = tmp_ch->next_in_room);
 
   if ((FIGHTING(vict) != NULL) && (FIGHTING(ch) == FIGHTING(vict)) && (tmp_ch == NULL)) {
@@ -415,7 +415,7 @@ EVENTFUNC(event_whirlwind)
   
   /* We search through the "next_in_room", and grab all NPCs and add them
    * to our list */
-  for (tch = world[IN_ROOM(ch)].people; tch; tch = tch->next_in_room)  
+  for (tch = GET_ROOM(ch)->people; tch; tch = tch->next_in_room)  
     if (IS_NPC(tch))
       add_to_list(tch, room_list);
       

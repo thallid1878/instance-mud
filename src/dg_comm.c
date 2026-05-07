@@ -144,7 +144,7 @@ void sub_write(char *arg, char_data *ch, byte find_invis, int targets)
         *s = '\0';
         p = any_one_name(++p, name);
         otokens[i] =
-        find_invis ? (void *)get_char_in_room(&world[IN_ROOM(ch)], name) : (void *)get_char_room_vis(ch, name, NULL);
+        find_invis ? (void *)get_char_in_room(GET_ROOM(ch), name) : (void *)get_char_room_vis(ch, name, NULL);
         tokens[++i] = ++s;
       break;
 
@@ -154,8 +154,8 @@ void sub_write(char *arg, char_data *ch, byte find_invis, int targets)
         *s = '\0';
         p = any_one_name(++p, name);
 
-        if (find_invis) obj = get_obj_in_room(&world[IN_ROOM(ch)], name);
-        else if (!(obj = get_obj_in_list_vis(ch, name, NULL, world[IN_ROOM(ch)].contents))) ;
+        if (find_invis) obj = get_obj_in_room(GET_ROOM(ch), name);
+        else if (!(obj = get_obj_in_list_vis(ch, name, NULL, GET_ROOM(ch)->contents))) ;
         else if (!(obj = get_obj_in_equip_vis(ch, name, &tmp, ch->equipment))) ;
         else obj = get_obj_in_list_vis(ch, name, NULL, ch->carrying);
 
@@ -180,7 +180,7 @@ void sub_write(char *arg, char_data *ch, byte find_invis, int targets)
     sub_write_to_char(ch, tokens, otokens, type);
 
   if (IS_SET(targets, TO_ROOM))
-    for (to = world[IN_ROOM(ch)].people;
+    for (to = GET_ROOM(ch)->people;
       to; to = to->next_in_room)
     if (to != ch && SENDOK(to))
       sub_write_to_char(to, tokens, otokens, type);
@@ -196,7 +196,7 @@ void send_to_zone(char *messg, zone_rnum zone)
   for (i = descriptor_list; i; i = i->next)
     if (!i->connected && i->character && AWAKE(i->character) &&
         (IN_ROOM(i->character) != NOWHERE) &&
-        (world[IN_ROOM(i->character)].zone == zone))
+        (GET_ROOM(i->character)->zone == zone))
       write_to_output(i, "%s", messg);
 }
 

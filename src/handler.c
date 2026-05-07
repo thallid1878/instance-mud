@@ -356,9 +356,16 @@ void affect_join(struct char_data *ch, struct affected_type *af,
 void char_from_room(struct char_data *ch)
 {
   struct char_data *temp;
+  struct room_data *room;
 
   if (ch == NULL || IN_ROOM(ch) == NOWHERE) {
     log("SYSERR: NULL character or NOWHERE in %s, char_from_room", __FILE__);
+    exit(1);
+  }
+
+  room = GET_ROOM(ch);
+  if (!room) {
+    log("SYSERR: Invalid room %d for %s in char_from_room.", IN_ROOM(ch), GET_NAME(ch));
     exit(1);
   }
 
@@ -370,9 +377,9 @@ void char_from_room(struct char_data *ch)
   if (GET_EQ(ch, WEAR_LIGHT) != NULL)
     if (GET_OBJ_TYPE(GET_EQ(ch, WEAR_LIGHT)) == ITEM_LIGHT)
       if (GET_OBJ_VAL(GET_EQ(ch, WEAR_LIGHT), 2))	/* Light is ON */
-	world[IN_ROOM(ch)].light--;
+	room->light--;
 
-  REMOVE_FROM_LIST(ch, world[IN_ROOM(ch)].people, next_in_room);
+  REMOVE_FROM_LIST(ch, room->people, next_in_room);
   IN_ROOM(ch) = NOWHERE;
   ch->next_in_room = NULL;
 }
@@ -380,6 +387,8 @@ void char_from_room(struct char_data *ch)
 /* place a character in a room */
 void char_to_room(struct char_data *ch, room_rnum room)
 {
+  struct room_data *to_room;
+
   if (ch == NULL || !valid_room_rnum(room))
     log("SYSERR: Illegal value(s) passed to char_to_room. (Room: %d/%d Ch: %p",
 		room, top_of_world, (void *)ch);
@@ -387,8 +396,9 @@ void char_to_room(struct char_data *ch, room_rnum room)
     if (instance_room_is_template(room))
       room = valid_room_rnum(r_mortal_start_room) ? r_mortal_start_room : 0;
 
-    ch->next_in_room = world[room].people;
-    world[room].people = ch;
+    to_room = ROOM_AT(room);
+    ch->next_in_room = to_room->people;
+    to_room->people = ch;
     IN_ROOM(ch) = room;
     ch->instance_id = instance_room_id(room);
 
@@ -398,7 +408,7 @@ void char_to_room(struct char_data *ch, room_rnum room)
     if (GET_EQ(ch, WEAR_LIGHT))
       if (GET_OBJ_TYPE(GET_EQ(ch, WEAR_LIGHT)) == ITEM_LIGHT)
 	if (GET_OBJ_VAL(GET_EQ(ch, WEAR_LIGHT), 2))	/* Light ON */
-	  world[room].light++;
+	  to_room->light++;
 
     /* Stop fighting now, if we left. */
     if (FIGHTING(ch) && IN_ROOM(ch) != IN_ROOM(FIGHTING(ch))) {
@@ -534,7 +544,7 @@ void equip_char(struct char_data *ch, struct obj_data *obj, int pos)
   if (IN_ROOM(ch) != NOWHERE) {
     if (pos == WEAR_LIGHT && GET_OBJ_TYPE(obj) == ITEM_LIGHT)
       if (GET_OBJ_VAL(obj, 2))	/* if light is ON */
-	world[IN_ROOM(ch)].light++;
+	GET_ROOM(ch)->light++;
   } else
     log("SYSERR: IN_ROOM(ch) = NOWHERE when equipping char %s.", GET_NAME(ch));
 
@@ -566,7 +576,7 @@ struct obj_data *unequip_char(struct char_data *ch, int pos)
   if (IN_ROOM(ch) != NOWHERE) {
     if (pos == WEAR_LIGHT && GET_OBJ_TYPE(obj) == ITEM_LIGHT)
       if (GET_OBJ_VAL(obj, 2))	/* if light is ON */
-	world[IN_ROOM(ch)].light--;
+	GET_ROOM(ch)->light--;
   } else
     log("SYSERR: IN_ROOM(ch) = NOWHERE when unequipping char %s.", GET_NAME(ch));
 
@@ -632,6 +642,7 @@ struct obj_data *get_obj_num(obj_rnum nr)
 struct char_data *get_char_room(char *name, int *number, room_rnum room)
 {
   struct char_data *i;
+  struct room_data *r = ROOM_AT(room);
   int num;
 
   if (!number) {
@@ -642,7 +653,10 @@ struct char_data *get_char_room(char *name, int *number, room_rnum room)
   if (*number == 0)
     return (NULL);
 
-  for (i = world[room].people; i && *number; i = i->next_in_room)
+  if (!r)
+    return (NULL);
+
+  for (i = r->people; i && *number; i = i->next_in_room)
     if (isname(name, i->player.name))
       if (--(*number) == 0)
 	return (i);
@@ -665,6 +679,8 @@ struct char_data *get_char_num(mob_rnum nr)
 /* put an object in a room */
 void obj_to_room(struct obj_data *object, room_rnum room)
 {
+  struct room_data *to_room;
+
   if (!object || !valid_room_rnum(room)){
     log("SYSERR: Illegal value(s) passed to obj_to_room. (Room #%d/%d, obj %p)",
 	room, top_of_world, (void *)object);
@@ -673,11 +689,12 @@ void obj_to_room(struct obj_data *object, room_rnum room)
     if (instance_room_is_template(room))
       room = valid_room_rnum(r_mortal_start_room) ? r_mortal_start_room : 0;
 
-    if (world[room].contents == NULL){  // if list is empty
-      world[room].contents = object; // add object to list
+    to_room = ROOM_AT(room);
+    if (to_room->contents == NULL){  // if list is empty
+      to_room->contents = object; // add object to list
     }
     else {
-      struct obj_data *i = world[room].contents; // define a temporary pointer
+      struct obj_data *i = to_room->contents; // define a temporary pointer
       while (i->next_content != NULL) i = i->next_content; // find the first without a next_content
         i->next_content = object; // add object at the end
     }
@@ -695,6 +712,7 @@ void obj_from_room(struct obj_data *object)
 {
   struct obj_data *temp;
   struct char_data *t, *tempch;
+  struct room_data *room;
 
   if (!object || IN_ROOM(object) == NOWHERE) {
     log("SYSERR: NULL object (%p) or obj not in a room (%d) passed to obj_from_room",
@@ -711,7 +729,13 @@ void obj_from_room(struct obj_data *object)
     }
   }
 
-  REMOVE_FROM_LIST(object, world[IN_ROOM(object)].contents, next_content);
+  room = ROOM_AT(IN_ROOM(object));
+  if (!room) {
+    log("SYSERR: Invalid room %d for object in obj_from_room.", IN_ROOM(object));
+    return;
+  }
+
+  REMOVE_FROM_LIST(object, room->contents, next_content);
 
   if (ROOM_FLAGGED(IN_ROOM(object), ROOM_HOUSE))
     SET_BIT_AR(ROOM_FLAGS(IN_ROOM(object)), ROOM_HOUSE_CRASH);
@@ -863,7 +887,7 @@ void update_char_objects(struct char_data *ch)
 	} else if (i == 0) {
 	  send_to_char(ch, "Your light sputters out and dies.\r\n");
 	  act("$n's light sputters out and dies.", FALSE, ch, 0, 0, TO_ROOM);
-	  world[IN_ROOM(ch)].light--;
+	  GET_ROOM(ch)->light--;
 	}
       }
 
@@ -1100,7 +1124,7 @@ struct char_data *get_char_room_vis(struct char_data *ch, char *name, int *numbe
   if (*number == 0)
     return (get_player_vis(ch, name, NULL, FIND_CHAR_ROOM));
 
-  for (i = world[IN_ROOM(ch)].people; i && *number; i = i->next_in_room)
+  for (i = GET_ROOM(ch)->people; i && *number; i = i->next_in_room)
     if (isname(name, i->player.name))
       if (CAN_SEE(ch, i))
 	if (--(*number) == 0)
@@ -1191,7 +1215,7 @@ struct obj_data *get_obj_vis(struct char_data *ch, char *name, int *number)
     return (i);
 
   /* scan room */
-  if ((i = get_obj_in_list_vis(ch, name, number, world[IN_ROOM(ch)].contents)) != NULL)
+  if ((i = get_obj_in_list_vis(ch, name, number, GET_ROOM(ch)->contents)) != NULL)
     return (i);
 
   /* ok.. no luck yet. scan the entire obj list   */
@@ -1391,7 +1415,7 @@ int generic_find(char *arg, bitvector_t bitvector, struct char_data *ch,
   }
 
   if (IS_SET(bitvector, FIND_OBJ_ROOM)) {
-    if ((*tar_obj = get_obj_in_list_vis(ch, name, &number, world[IN_ROOM(ch)].contents)) != NULL)
+    if ((*tar_obj = get_obj_in_list_vis(ch, name, &number, GET_ROOM(ch)->contents)) != NULL)
       return (FIND_OBJ_ROOM);
   }
 

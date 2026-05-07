@@ -258,7 +258,7 @@ static void MapArea(room_rnum room, struct char_data *ch, int x, int y, int min,
       continue;
     }
 
-    if ( (pexit = world[room].dir_option[door]) != NULL  &&
+    if ( (pexit = W_EXIT(room, door)) != NULL  &&
          (pexit->to_room > 0 ) && (pexit->to_room != NOWHERE) &&
          (!IS_SET(pexit->exit_info, EX_CLOSED)) &&
          (!IS_SET(pexit->exit_info, EX_HIDDEN) || PRF_FLAGGED(ch, PRF_HOLYLIGHT)) )
@@ -297,8 +297,8 @@ static void MapArea(room_rnum room, struct char_data *ch, int x, int y, int min,
       prospect_room = pexit->to_room;
 
         /* one way into area OR maze */
-        if ( world[prospect_room].dir_option[rev_dir[door]] &&
-             world[prospect_room].dir_option[rev_dir[door]]->to_room != room) {
+        if ( W_EXIT(prospect_room, rev_dir[door]) &&
+             W_EXIT(prospect_room, rev_dir[door])->to_room != room) {
           map[x][y] = SECT_STRANGE;
         return;
         }
@@ -324,19 +324,19 @@ static void MapArea(room_rnum room, struct char_data *ch, int x, int y, int min,
       case NORTH:
         prospect_xpos = ns_size;
       case SOUTH:
-        prospect_ypos = world[prospect_room].dir_option[rev_dir[door]] ? y_exit_pos : ew_size/2;
+        prospect_ypos = W_EXIT(prospect_room, rev_dir[door]) ? y_exit_pos : ew_size/2;
       break;
       case WEST:
         prospect_ypos = ew_size;
       case EAST:
-        prospect_xpos = world[prospect_room].dir_option[rev_dir[door]] ? x_exit_pos : ns_size/2;
+        prospect_xpos = W_EXIT(prospect_room, rev_dir[door]) ? x_exit_pos : ns_size/2;
         break;
       case NORTHEAST:
       case NORTHWEST:
       case SOUTHEAST:
       case SOUTHWEST:
-        prospect_xpos = world[prospect_room].dir_option[rev_dir[door]] ? x_exit_pos : ns_size/2;
-        prospect_ypos = world[prospect_room].dir_option[rev_dir[door]] ? y_exit_pos : ew_size/2;
+        prospect_xpos = W_EXIT(prospect_room, rev_dir[door]) ? x_exit_pos : ns_size/2;
+        prospect_ypos = W_EXIT(prospect_room, rev_dir[door]) ? y_exit_pos : ew_size/2;
         break;
       }
 

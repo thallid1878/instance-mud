@@ -383,11 +383,11 @@ void autoquest_trigger_check(struct char_data *ch, struct char_data *vict,
         generic_complete_quest(ch);
       break;
     case AQ_ROOM_FIND:
-      if (QST_TARGET(rnum) == world[IN_ROOM(ch)].number)
+      if (QST_TARGET(rnum) == GET_ROOM(ch)->number)
         generic_complete_quest(ch);
       break;
     case AQ_MOB_FIND:
-      for (i=world[IN_ROOM(ch)].people; i; i = i->next_in_room)
+      for (i=GET_ROOM(ch)->people; i; i = i->next_in_room)
         if (IS_NPC(i))
           if (QST_TARGET(rnum) == GET_MOB_VNUM(i))
             generic_complete_quest(ch);
@@ -400,7 +400,7 @@ void autoquest_trigger_check(struct char_data *ch, struct char_data *vict,
     case AQ_MOB_SAVE:
        if (ch == vict)
         found = FALSE;
-      for (i = world[IN_ROOM(ch)].people; i && found; i = i->next_in_room)
+      for (i = GET_ROOM(ch)->people; i && found; i = i->next_in_room)
           if (i && IS_NPC(i) && !MOB_FLAGGED(i, MOB_NOTDEADYET))
             if ((GET_MOB_VNUM(i) != QST_TARGET(rnum)) &&
                 !AFF_FLAGGED(i, AFF_CHARM))
@@ -416,8 +416,8 @@ void autoquest_trigger_check(struct char_data *ch, struct char_data *vict,
         }
       break;
     case AQ_ROOM_CLEAR:
-      if (QST_TARGET(rnum) == world[IN_ROOM(ch)].number) {
-        for (i = world[IN_ROOM(ch)].people; i && found; i = i->next_in_room)
+      if (QST_TARGET(rnum) == GET_ROOM(ch)->number) {
+        for (i = GET_ROOM(ch)->people; i && found; i = i->next_in_room)
           if (i && IS_NPC(i) && !MOB_FLAGGED(i, MOB_NOTDEADYET))
             found = FALSE;
         if (found)
@@ -676,7 +676,7 @@ static void quest_stat(struct char_data *ch, char *argument)
         snprintf(targetname, sizeof(targetname), "%s",
           real_room(QST_TARGET(rnum)) == NOWHERE ?
                  "An unknown room" :
-    world[real_room(QST_TARGET(rnum))].name);
+    ROOM_AT(real_room(QST_TARGET(rnum)))->name);
         break;
       case AQ_MOB_FIND:
       case AQ_MOB_KILL:

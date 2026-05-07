@@ -369,7 +369,7 @@ static void display_group_list(struct char_data * ch)
         send_to_char(ch, "%-2d) %s%-12s     %-2d              %s%s\r\n", 
           ++count,
           IS_SET(GROUP_FLAGS(group), GROUP_OPEN) ? CCGRN(ch, C_NRM) : CCRED(ch, C_NRM), 
-          GET_NAME(GROUP_LEADER(group)), group->members->iSize, zone_table[world[IN_ROOM(GROUP_LEADER(group))].zone].name,
+          GET_NAME(GROUP_LEADER(group)), group->members->iSize, ZONE_AT(GET_ROOM_ZONE(IN_ROOM(GROUP_LEADER(group))))->name,
           CCNRM(ch, C_NRM));
       else
         send_to_char(ch, "%-2d) Hidden\r\n", ++count);

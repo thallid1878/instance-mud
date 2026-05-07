@@ -2425,7 +2425,7 @@ void send_to_room(room_rnum room, const char *messg, ...)
   if (messg == NULL)
     return;
 
-  for (i = world[room].people; i; i = i->next_in_room) {
+  for (i = ROOM_AT(room)->people; i; i = i->next_in_room) {
     if (!i->desc)
       continue;
 
@@ -2679,9 +2679,9 @@ char *act(const char *str, int hide_invisible, struct char_data *ch,
   /* ASSUMPTION: at this point we know type must be TO_NOTVICT or TO_ROOM */
 
   if (ch && IN_ROOM(ch) != NOWHERE)
-    to = world[IN_ROOM(ch)].people;
+    to = GET_ROOM(ch)->people;
   else if (obj && IN_ROOM(obj) != NOWHERE)
-    to = world[IN_ROOM(obj)].people;
+    to = GET_ROOM(obj)->people;
   else {
     log("SYSERR: no valid target to act()!");
     return NULL;

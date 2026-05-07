@@ -278,7 +278,7 @@ int can_edit_zone(struct char_data *ch, zone_rnum rnum)
 
   /* always access if a player helped build the zone in the first place */
   if (rnum != HEDIT_PERMISSION && rnum != AEDIT_PERMISSION)
-    if (is_name(GET_NAME(ch), zone_table[rnum].builders))
+    if (is_name(GET_NAME(ch), ZONE_AT(rnum)->builders))
       return (TRUE);
 
   /* no access if you haven't been assigned a zone */
@@ -310,4 +310,3 @@ void send_cannot_edit(struct char_data *ch, zone_vnum zone)
   }
   mudlog(BRF, LVL_IMPL, TRUE, "%s", buf);
 }
-

@@ -86,7 +86,7 @@ static int find_board(struct char_data *ch)
   struct obj_data *obj;
   int i;
 
-  for (obj = world[IN_ROOM(ch)].contents; obj; obj = obj->next_content)
+  for (obj = GET_ROOM(ch)->contents; obj; obj = obj->next_content)
     for (i = 0; i < NUM_OF_BOARDS; i++)
       if (BOARD_RNUM(i) == GET_OBJ_RNUM(obj))
 	return (i);

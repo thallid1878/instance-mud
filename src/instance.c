@@ -40,12 +40,18 @@ struct instance_data {
   struct instance_data *next;
 };
 
-room_rnum top_of_runtime_world = 0;
-zone_rnum top_of_runtime_zone_table = 0;
+struct room_data *iworld = NULL;
+struct zone_data *izone = NULL;
+struct shop_data *ishop_index = NULL;
+room_rnum top_of_runtime_world = NOWHERE;
+zone_rnum top_of_runtime_zone_table = NOWHERE;
 int top_of_runtime_shop = -1;
 
 static struct instance_data *instance_list = NULL;
 static int next_instance_id = 1;
+static room_rnum iworld_base = NOWHERE;
+static zone_rnum izone_base = NOWHERE;
+static int ishop_base = -1;
 
 static struct instance_data *instance_by_id(int id);
 static struct instance_data *instance_group_instance(struct char_data *ch, zone_rnum template_zone);
@@ -62,16 +68,90 @@ static void track_obj(struct instance_obj_ref **list, struct obj_data *obj);
 static struct obj_data *find_tracked_obj(struct instance_obj_ref *list, obj_rnum rnum);
 static void free_tracked_objs(struct instance_obj_ref *list);
 
+static int iworld_index(room_rnum rnum)
+{
+  if (iworld_base == NOWHERE || rnum < iworld_base || rnum > top_of_runtime_world)
+    return -1;
+  return rnum - iworld_base;
+}
+
+static int izone_index(zone_rnum rnum)
+{
+  if (izone_base == NOWHERE || rnum < izone_base || rnum > top_of_runtime_zone_table)
+    return -1;
+  return rnum - izone_base;
+}
+
+static int ishop_index_num(int shop)
+{
+  if (ishop_base < 0 || shop < ishop_base || shop > top_of_runtime_shop)
+    return -1;
+  return shop - ishop_base;
+}
+
+static struct room_data *iworld_slot(room_rnum rnum)
+{
+  int idx = iworld_index(rnum);
+
+  return (idx >= 0 && iworld) ? &iworld[idx] : NULL;
+}
+
+static struct zone_data *izone_slot(zone_rnum rnum)
+{
+  int idx = izone_index(rnum);
+
+  return (idx >= 0 && izone) ? &izone[idx] : NULL;
+}
+
+static struct shop_data *ishop_slot(int shop)
+{
+  int idx = ishop_index_num(shop);
+
+  return (idx >= 0 && ishop_index) ? &ishop_index[idx] : NULL;
+}
+
+struct room_data *room_by_rnum(room_rnum rnum)
+{
+  int idx;
+
+  if (rnum == NOWHERE)
+    return NULL;
+  if (rnum >= 0 && rnum <= top_of_world)
+    return &world[rnum];
+  if ((idx = iworld_index(rnum)) >= 0 && iworld && iworld[idx].instance_id > 0)
+    return &iworld[idx];
+  return NULL;
+}
+
+struct zone_data *zone_by_rnum(zone_rnum rnum)
+{
+  int idx;
+
+  if (rnum == NOWHERE)
+    return NULL;
+  if (rnum >= 0 && rnum <= top_of_zone_table)
+    return &zone_table[rnum];
+  if ((idx = izone_index(rnum)) >= 0 && izone && izone[idx].instance_id > 0)
+    return &izone[idx];
+  return NULL;
+}
+
+struct shop_data *shop_by_rnum(shop_rnum rnum)
+{
+  int idx;
+
+  if (rnum < 0)
+    return NULL;
+  if (rnum <= top_shop)
+    return &shop_index[rnum];
+  if ((idx = ishop_index_num(rnum)) >= 0 && ishop_index && ishop_index[idx].instance_id > 0)
+    return &ishop_index[idx];
+  return NULL;
+}
+
 int valid_room_rnum(room_rnum rnum)
 {
-  if (rnum == NOWHERE)
-    return FALSE;
-  if (rnum <= top_of_world)
-    return TRUE;
-  if (top_of_runtime_world > top_of_world && rnum <= top_of_runtime_world &&
-      world[rnum].instance_id > 0)
-    return TRUE;
-  return FALSE;
+  return room_by_rnum(rnum) != NULL;
 }
 
 int instance_shop_top(void)
@@ -81,34 +161,38 @@ int instance_shop_top(void)
 
 int instance_room_id(room_rnum room)
 {
-  if (!valid_room_rnum(room))
+  struct room_data *r = room_by_rnum(room);
+
+  if (!r)
     return 0;
-  return world[room].instance_id;
+  return r->instance_id;
 }
 
 int instance_zone_is_template(zone_rnum zone)
 {
-  zone_rnum top = MAX(top_of_zone_table, top_of_runtime_zone_table);
+  struct zone_data *z = zone_by_rnum(zone);
 
-  if (zone == NOWHERE || zone > top)
+  if (!z)
     return FALSE;
-  return ZONE_FLAGGED(zone, ZONE_DUNGEON);
+  return IS_SET_AR(z->zone_flags, ZONE_DUNGEON);
 }
 
 int instance_zone_is_runtime(zone_rnum zone)
 {
-  zone_rnum top = MAX(top_of_zone_table, top_of_runtime_zone_table);
+  struct zone_data *z = zone_by_rnum(zone);
 
-  if (zone == NOWHERE || zone > top)
+  if (!z)
     return FALSE;
-  return ZONE_FLAGGED(zone, ZONE_INSTANCE);
+  return IS_SET_AR(z->zone_flags, ZONE_INSTANCE);
 }
 
 int instance_room_is_template(room_rnum room)
 {
-  if (!valid_room_rnum(room))
+  struct room_data *r = room_by_rnum(room);
+
+  if (!r)
     return FALSE;
-  return instance_zone_is_template(world[room].zone) && world[room].instance_id == 0;
+  return instance_zone_is_template(r->zone) && r->instance_id == 0;
 }
 
 room_rnum instance_safe_return_room(struct char_data *ch)
@@ -197,8 +281,8 @@ static room_rnum instance_entry_room(struct instance_data *inst)
 
 static void clone_room_to_instance(struct instance_data *inst, int index)
 {
-  struct room_data *src = &world[inst->template_rooms[index]];
-  struct room_data *dst = &world[inst->rooms[index]];
+  struct room_data *src = ROOM_AT(inst->template_rooms[index]);
+  struct room_data *dst = iworld_slot(inst->rooms[index]);
   int dir;
 
   memset(dst, 0, sizeof(*dst));
@@ -228,7 +312,7 @@ static void remap_instance_exits(struct instance_data *inst)
   int i, dir;
 
   for (i = 0; i < inst->room_count; i++) {
-    struct room_data *room = &world[inst->rooms[i]];
+    struct room_data *room = ROOM_AT(inst->rooms[i]);
 
     for (dir = 0; dir < DIR_COUNT; dir++) {
       room_rnum mapped;
@@ -249,7 +333,7 @@ static int shop_has_room_in_zone(int shop, zone_rnum zone)
   for (i = 0; SHOP_ROOM(shop, i) != NOWHERE; i++) {
     room_rnum room = real_room(SHOP_ROOM(shop, i));
 
-    if (room != NOWHERE && world[room].zone == zone)
+    if (room != NOWHERE && GET_ROOM_ZONE(room) == zone)
       return TRUE;
   }
   return FALSE;
@@ -258,9 +342,12 @@ static int shop_has_room_in_zone(int shop, zone_rnum zone)
 static void clone_instance_shops(struct instance_data *inst)
 {
   int shop, new_shop;
+  struct shop_data *dst;
 
-  if (top_of_runtime_shop < top_shop)
-    top_of_runtime_shop = top_shop;
+  if (ishop_base < 0) {
+    ishop_base = top_shop + 1;
+    top_of_runtime_shop = ishop_base - 1;
+  }
 
   inst->shop_start = top_of_runtime_shop + 1;
   inst->shop_count = 0;
@@ -270,11 +357,12 @@ static void clone_instance_shops(struct instance_data *inst)
       continue;
 
     new_shop = ++top_of_runtime_shop;
-    RECREATE(shop_index, struct shop_data, top_of_runtime_shop + 1);
-    memset(&shop_index[new_shop], 0, sizeof(struct shop_data));
-    copy_shop(&shop_index[new_shop], &shop_index[shop], FALSE);
-    shop_index[new_shop].instance_id = inst->id;
-    shop_index[new_shop].template_shop = shop;
+    RECREATE(ishop_index, struct shop_data, top_of_runtime_shop - ishop_base + 1);
+    dst = ishop_slot(new_shop);
+    memset(dst, 0, sizeof(struct shop_data));
+    copy_shop(dst, SHOP_AT(shop), FALSE);
+    dst->instance_id = inst->id;
+    dst->template_shop = shop;
     SHOP_BANK(new_shop) = 0;
     SHOP_SORT(new_shop) = 0;
     inst->shop_count++;
@@ -315,7 +403,7 @@ static void free_tracked_objs(struct instance_obj_ref *list)
 
 static void reset_instance(struct instance_data *inst)
 {
-  struct reset_com *cmd = zone_table[inst->template_zone].cmd;
+  struct reset_com *cmd = ZONE_AT(inst->template_zone)->cmd;
   struct char_data *mob = NULL, *tmob = NULL;
   struct obj_data *obj = NULL, *tobj = NULL, *obj_to = NULL;
   struct instance_obj_ref *objects = NULL;
@@ -439,7 +527,7 @@ static void reset_instance(struct instance_data *inst)
     case 'R':
       room = instance_room_for_template(inst, cmd[cmd_no].arg1);
       if (room != NOWHERE &&
-          (obj = get_obj_in_list_num(cmd[cmd_no].arg2, world[room].contents)) != NULL)
+          (obj = get_obj_in_list_num(cmd[cmd_no].arg2, ROOM_AT(room)->contents)) != NULL)
         extract_obj(obj);
       tmob = NULL;
       tobj = NULL;
@@ -449,22 +537,22 @@ static void reset_instance(struct instance_data *inst)
     case 'D':
       room = instance_room_for_template(inst, cmd[cmd_no].arg1);
       if (room == NOWHERE || cmd[cmd_no].arg2 < 0 || cmd[cmd_no].arg2 >= DIR_COUNT ||
-          !world[room].dir_option[cmd[cmd_no].arg2]) {
+          !ROOM_AT(room)->dir_option[cmd[cmd_no].arg2]) {
         last_cmd = 0;
         break;
       }
       switch (cmd[cmd_no].arg3) {
       case 0:
-        REMOVE_BIT(world[room].dir_option[cmd[cmd_no].arg2]->exit_info, EX_LOCKED);
-        REMOVE_BIT(world[room].dir_option[cmd[cmd_no].arg2]->exit_info, EX_CLOSED);
+        REMOVE_BIT(ROOM_AT(room)->dir_option[cmd[cmd_no].arg2]->exit_info, EX_LOCKED);
+        REMOVE_BIT(ROOM_AT(room)->dir_option[cmd[cmd_no].arg2]->exit_info, EX_CLOSED);
         break;
       case 1:
-        SET_BIT(world[room].dir_option[cmd[cmd_no].arg2]->exit_info, EX_CLOSED);
-        REMOVE_BIT(world[room].dir_option[cmd[cmd_no].arg2]->exit_info, EX_LOCKED);
+        SET_BIT(ROOM_AT(room)->dir_option[cmd[cmd_no].arg2]->exit_info, EX_CLOSED);
+        REMOVE_BIT(ROOM_AT(room)->dir_option[cmd[cmd_no].arg2]->exit_info, EX_LOCKED);
         break;
       case 2:
-        SET_BIT(world[room].dir_option[cmd[cmd_no].arg2]->exit_info, EX_LOCKED);
-        SET_BIT(world[room].dir_option[cmd[cmd_no].arg2]->exit_info, EX_CLOSED);
+        SET_BIT(ROOM_AT(room)->dir_option[cmd[cmd_no].arg2]->exit_info, EX_LOCKED);
+        SET_BIT(ROOM_AT(room)->dir_option[cmd[cmd_no].arg2]->exit_info, EX_CLOSED);
         break;
       }
       tmob = NULL;
@@ -485,9 +573,9 @@ static void reset_instance(struct instance_data *inst)
         add_trigger(SCRIPT(tobj), read_trigger(cmd[cmd_no].arg2), -1);
         last_cmd = 1;
       } else if (cmd[cmd_no].arg1 == WLD_TRIGGER && room != NOWHERE) {
-        if (!world[room].script)
-          CREATE(world[room].script, struct script_data, 1);
-        add_trigger(world[room].script, read_trigger(cmd[cmd_no].arg2), -1);
+        if (!ROOM_AT(room)->script)
+          CREATE(ROOM_AT(room)->script, struct script_data, 1);
+        add_trigger(ROOM_AT(room)->script, read_trigger(cmd[cmd_no].arg2), -1);
         last_cmd = 1;
       } else
         last_cmd = 0;
@@ -503,8 +591,8 @@ static void reset_instance(struct instance_data *inst)
         add_var(&(SCRIPT(tobj)->global_vars), cmd[cmd_no].sarg1, cmd[cmd_no].sarg2,
           cmd[cmd_no].arg3);
         last_cmd = 1;
-      } else if (cmd[cmd_no].arg1 == WLD_TRIGGER && room != NOWHERE && world[room].script) {
-        add_var(&(world[room].script->global_vars), cmd[cmd_no].sarg1, cmd[cmd_no].sarg2,
+      } else if (cmd[cmd_no].arg1 == WLD_TRIGGER && room != NOWHERE && ROOM_AT(room)->script) {
+        add_var(&(ROOM_AT(room)->script->global_vars), cmd[cmd_no].sarg1, cmd[cmd_no].sarg2,
           cmd[cmd_no].arg2);
         last_cmd = 1;
       } else
@@ -520,12 +608,13 @@ static void reset_instance(struct instance_data *inst)
   free_tracked_objs(objects);
 
   for (cmd_no = 0; cmd_no < inst->room_count; cmd_no++)
-    reset_wtrigger(&world[inst->rooms[cmd_no]]);
+    reset_wtrigger(ROOM_AT(inst->rooms[cmd_no]));
 }
 
 int instance_create(zone_rnum template_zone, room_rnum return_room, room_rnum *entry_room)
 {
   struct instance_data *inst;
+  struct zone_data *src_zone, *dst_zone;
   int i, count = 0;
   room_rnum room, new_top;
   zone_rnum new_zone;
@@ -542,10 +631,14 @@ int instance_create(zone_rnum template_zone, room_rnum return_room, room_rnum *e
   if (count <= 0)
     return 0;
 
-  if (top_of_runtime_world < top_of_world)
-    top_of_runtime_world = top_of_world;
-  if (top_of_runtime_zone_table < top_of_zone_table)
-    top_of_runtime_zone_table = top_of_zone_table;
+  if (iworld_base == NOWHERE) {
+    iworld_base = top_of_world + 1;
+    top_of_runtime_world = iworld_base - 1;
+  }
+  if (izone_base == NOWHERE) {
+    izone_base = top_of_zone_table + 1;
+    top_of_runtime_zone_table = izone_base - 1;
+  }
 
   CREATE(inst, struct instance_data, 1);
   inst->id = next_instance_id++;
@@ -556,22 +649,24 @@ int instance_create(zone_rnum template_zone, room_rnum return_room, room_rnum *e
   CREATE(inst->rooms, room_rnum, count);
 
   new_zone = ++top_of_runtime_zone_table;
-  RECREATE(zone_table, struct zone_data, top_of_runtime_zone_table + 1);
-  memset(&zone_table[new_zone], 0, sizeof(struct zone_data));
-  zone_table[new_zone] = zone_table[template_zone];
-  zone_table[new_zone].name = str_udup(zone_table[template_zone].name);
-  zone_table[new_zone].builders = str_udup(zone_table[template_zone].builders);
-  zone_table[new_zone].cmd = NULL;
-  zone_table[new_zone].age = 0;
-  zone_table[new_zone].reset_mode = 0;
-  zone_table[new_zone].instance_id = inst->id;
-  zone_table[new_zone].template_zone = template_zone;
-  REMOVE_BIT_AR(zone_table[new_zone].zone_flags, ZONE_DUNGEON);
-  SET_BIT_AR(zone_table[new_zone].zone_flags, ZONE_INSTANCE);
+  RECREATE(izone, struct zone_data, top_of_runtime_zone_table - izone_base + 1);
+  dst_zone = izone_slot(new_zone);
+  src_zone = ZONE_AT(template_zone);
+  memset(dst_zone, 0, sizeof(struct zone_data));
+  *dst_zone = *src_zone;
+  dst_zone->name = str_udup(src_zone->name);
+  dst_zone->builders = str_udup(src_zone->builders);
+  dst_zone->cmd = NULL;
+  dst_zone->age = 0;
+  dst_zone->reset_mode = 0;
+  dst_zone->instance_id = inst->id;
+  dst_zone->template_zone = template_zone;
+  REMOVE_BIT_AR(dst_zone->zone_flags, ZONE_DUNGEON);
+  SET_BIT_AR(dst_zone->zone_flags, ZONE_INSTANCE);
   inst->zone = new_zone;
 
   new_top = top_of_runtime_world + count;
-  RECREATE(world, struct room_data, new_top + 1);
+  RECREATE(iworld, struct room_data, new_top - iworld_base + 1);
 
   i = 0;
   for (room = 0; room <= top_of_world; room++) {
@@ -598,7 +693,7 @@ int instance_create(zone_rnum template_zone, room_rnum return_room, room_rnum *e
     *entry_room = inst->rooms[0];
 
   mudlog(CMP, LVL_IMPL, TRUE, "Created dungeon instance %d from zone %d (%s).",
-    inst->id, zone_table[template_zone].number, zone_table[template_zone].name);
+    inst->id, src_zone->number, src_zone->name);
   return inst->id;
 }
 
@@ -681,44 +776,49 @@ void instance_update(void)
 
 static void free_instance_shop_slot(int shop)
 {
+  struct shop_data *s = SHOP_AT(shop);
   int i;
 
-  if (shop < 0 || shop > top_of_runtime_shop || !shop_index[shop].instance_id)
+  if (!s || !s->instance_id)
     return;
 
-  if (shop_index[shop].no_such_item1)
-    free(shop_index[shop].no_such_item1);
-  if (shop_index[shop].no_such_item2)
-    free(shop_index[shop].no_such_item2);
-  if (shop_index[shop].missing_cash1)
-    free(shop_index[shop].missing_cash1);
-  if (shop_index[shop].missing_cash2)
-    free(shop_index[shop].missing_cash2);
-  if (shop_index[shop].do_not_buy)
-    free(shop_index[shop].do_not_buy);
-  if (shop_index[shop].message_buy)
-    free(shop_index[shop].message_buy);
-  if (shop_index[shop].message_sell)
-    free(shop_index[shop].message_sell);
-  if (shop_index[shop].in_room)
-    free(shop_index[shop].in_room);
-  if (shop_index[shop].producing)
-    free(shop_index[shop].producing);
-  if (shop_index[shop].type) {
-    for (i = 0; BUY_TYPE(shop_index[shop].type[i]) != NOTHING; i++)
-      if (BUY_WORD(shop_index[shop].type[i]))
-        free(BUY_WORD(shop_index[shop].type[i]));
-    free(shop_index[shop].type);
+  if (s->no_such_item1)
+    free(s->no_such_item1);
+  if (s->no_such_item2)
+    free(s->no_such_item2);
+  if (s->missing_cash1)
+    free(s->missing_cash1);
+  if (s->missing_cash2)
+    free(s->missing_cash2);
+  if (s->do_not_buy)
+    free(s->do_not_buy);
+  if (s->message_buy)
+    free(s->message_buy);
+  if (s->message_sell)
+    free(s->message_sell);
+  if (s->in_room)
+    free(s->in_room);
+  if (s->producing)
+    free(s->producing);
+  if (s->type) {
+    for (i = 0; BUY_TYPE(s->type[i]) != NOTHING; i++)
+      if (BUY_WORD(s->type[i]))
+        free(BUY_WORD(s->type[i]));
+    free(s->type);
   }
 
-  memset(&shop_index[shop], 0, sizeof(struct shop_data));
+  memset(s, 0, sizeof(struct shop_data));
 }
 
 static void queue_instance_room_chars(room_rnum room)
 {
   struct char_data *ch, *next_ch;
+  struct room_data *r = ROOM_AT(room);
 
-  for (ch = world[room].people; ch; ch = next_ch) {
+  if (!r)
+    return;
+
+  for (ch = r->people; ch; ch = next_ch) {
     next_ch = ch->next_in_room;
 
     if (!IS_NPC(ch))
@@ -731,6 +831,7 @@ static void queue_instance_room_chars(room_rnum room)
 static void destroy_instance(struct instance_data *inst)
 {
   struct instance_data *cur, *prev = NULL;
+  struct zone_data *z;
   int i;
 
   for (i = 0; i < inst->room_count; i++)
@@ -739,29 +840,33 @@ static void destroy_instance(struct instance_data *inst)
 
   for (i = 0; i < inst->room_count; i++) {
     room_rnum room = inst->rooms[i];
+    struct room_data *r = ROOM_AT(room);
 
-    while (world[room].contents)
-      extract_obj(world[room].contents);
+    if (!r)
+      continue;
 
-    if (SCRIPT(&world[room]))
-      extract_script(&world[room], WLD_TRIGGER);
-    free_proto_script(&world[room], WLD_TRIGGER);
-    free_room_strings(&world[room]);
-    memset(&world[room], 0, sizeof(struct room_data));
-    world[room].number = NOWHERE;
-    world[room].zone = NOWHERE;
+    while (r->contents)
+      extract_obj(r->contents);
+
+    if (SCRIPT(r))
+      extract_script(r, WLD_TRIGGER);
+    free_proto_script(r, WLD_TRIGGER);
+    free_room_strings(r);
+    memset(r, 0, sizeof(struct room_data));
+    r->number = NOWHERE;
+    r->zone = NOWHERE;
   }
 
   for (i = 0; i < inst->shop_count; i++)
     free_instance_shop_slot(inst->shop_start + i);
 
-  if (inst->zone != NOWHERE && inst->zone <= top_of_runtime_zone_table &&
-      zone_table[inst->zone].instance_id == inst->id) {
-    if (zone_table[inst->zone].name)
-      free(zone_table[inst->zone].name);
-    if (zone_table[inst->zone].builders)
-      free(zone_table[inst->zone].builders);
-    memset(&zone_table[inst->zone], 0, sizeof(struct zone_data));
+  z = ZONE_AT(inst->zone);
+  if (z && z->instance_id == inst->id) {
+    if (z->name)
+      free(z->name);
+    if (z->builders)
+      free(z->builders);
+    memset(z, 0, sizeof(struct zone_data));
   }
 
   for (cur = instance_list; cur; cur = cur->next) {
@@ -793,10 +898,11 @@ void instance_list_to_char(struct char_data *ch)
   send_to_char(ch, "Active dungeon instances:\r\n");
   for (inst = instance_list; inst; inst = inst->next) {
     int players = instance_player_count(inst);
+    struct zone_data *z = ZONE_AT(inst->template_zone);
 
     send_to_char(ch, "  #%d zone %d (%s), rooms: %d, shops: %d, players: %d\r\n",
-      inst->id, zone_table[inst->template_zone].number,
-      zone_table[inst->template_zone].name, inst->room_count, inst->shop_count, players);
+      inst->id, z ? z->number : NOWHERE,
+      z ? z->name : "unknown", inst->room_count, inst->shop_count, players);
   }
 }
 

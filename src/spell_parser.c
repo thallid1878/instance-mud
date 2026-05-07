@@ -114,7 +114,7 @@ static void say_spell(struct char_data *ch, int spellnum, struct char_data *tch,
   snprintf(act_buf_original, sizeof(act_buf_original), format, spell);
   snprintf(act_buf_obfuscated, sizeof(act_buf_obfuscated), format, obfuscated);
 
-  for (i = world[IN_ROOM(ch)].people; i; i = i->next_in_room) {
+  for (i = GET_ROOM(ch)->people; i; i = i->next_in_room) {
     if (i == ch || i == tch || !i->desc || !AWAKE(i))
       continue;
     if (GET_CLASS(ch) == GET_CLASS(i))
@@ -342,13 +342,13 @@ void mag_objectmagic(struct char_data *ch, struct obj_data *obj, char *argument)
       /* Area/mass spells on staves can cause crashes. So we use special cases
        * for those spells spells here. */
       if (HAS_SPELL_ROUTINE(GET_OBJ_VAL(obj, 3), MAG_MASSES | MAG_AREAS)) {
-        for (i = 0, tch = world[IN_ROOM(ch)].people; tch;
+        for (i = 0, tch = GET_ROOM(ch)->people; tch;
             tch = tch->next_in_room)
           i++;
         while (i-- > 0)
           call_magic(ch, NULL, NULL, GET_OBJ_VAL(obj, 3), k, CAST_STAFF);
       } else {
-        for (tch = world[IN_ROOM(ch)].people; tch; tch = next_tch) {
+        for (tch = GET_ROOM(ch)->people; tch; tch = next_tch) {
           next_tch = tch->next_in_room;
           if (ch != tch)
             call_magic(ch, tch, NULL, GET_OBJ_VAL(obj, 3), k, CAST_STAFF);
@@ -586,7 +586,7 @@ ACMD(do_cast) {
     }
     if (!target && IS_SET(SINFO.targets, TAR_OBJ_ROOM))
       if ((tobj = get_obj_in_list_vis(ch, t, &number,
-          world[IN_ROOM(ch)].contents)) != NULL)
+          GET_ROOM(ch)->contents)) != NULL)
         target = TRUE;
 
     if (!target && IS_SET(SINFO.targets, TAR_OBJ_WORLD))

@@ -8,6 +8,9 @@
 extern room_rnum top_of_runtime_world;
 extern zone_rnum top_of_runtime_zone_table;
 extern int top_of_runtime_shop;
+extern struct room_data *iworld;
+extern struct zone_data *izone;
+extern struct shop_data *ishop_index;
 
 int instance_room_id(room_rnum room);
 int instance_room_is_template(room_rnum room);

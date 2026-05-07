@@ -365,8 +365,8 @@ void find_replacement(void *go, struct script_data *sc, trig_data *trig,
 
         if ((o = get_object_in_equip(ch, name)));
         else if ((o = get_obj_in_list(name, ch->carrying)));
-        else if (IN_ROOM(ch) != NOWHERE && (c = get_char_in_room(&world[IN_ROOM(ch)], name)));
-        else if ((o = get_obj_in_list(name,world[IN_ROOM(ch)].contents)));
+        else if (IN_ROOM(ch) != NOWHERE && (c = get_char_in_room(GET_ROOM(ch), name)));
+        else if ((o = get_obj_in_list(name,GET_ROOM(ch)->contents)));
         else if ((c = get_char(name)));
         else if ((o = get_obj(name)));
         else if ((r = get_room(name))) {}
@@ -476,7 +476,7 @@ void find_replacement(void *go, struct script_data *sc, trig_data *trig,
             script_log("findmob.vnum(ovnum): No room with vnum %d", atoi(field));
             strcpy(str, "0");
           } else {
-            for (i = 0, ch = world[rrnum].people; ch; ch = ch->next_in_room)
+            for (i = 0, ch = ROOM_AT(rrnum)->people; ch; ch = ch->next_in_room)
               if (GET_MOB_VNUM(ch) == mvnum)
                 i++;
 
@@ -497,7 +497,7 @@ void find_replacement(void *go, struct script_data *sc, trig_data *trig,
             strcpy(str, "0");
           } else {
             /* item_in_list looks within containers as well. */
-            snprintf(str, slen, "%d", item_in_list(subfield, world[rrnum].contents));
+            snprintf(str, slen, "%d", item_in_list(subfield, ROOM_AT(rrnum)->contents));
           }
         }
       }
@@ -508,7 +508,7 @@ void find_replacement(void *go, struct script_data *sc, trig_data *trig,
 
           if (type == MOB_TRIGGER) {
             ch = (char_data *) go;
-            for (c = world[IN_ROOM(ch)].people; c; c = c->next_in_room)
+            for (c = GET_ROOM(ch)->people; c; c = c->next_in_room)
               if ((c != ch) && valid_dg_target(c, DG_ALLOW_GODS) &&
                   CAN_SEE(ch, c)) {
                 if (!rand_number(0, count))
@@ -518,7 +518,7 @@ void find_replacement(void *go, struct script_data *sc, trig_data *trig,
           }
 
           else if (type == OBJ_TRIGGER) {
-            for (c = world[obj_room((obj_data *) go)].people; c;
+            for (c = ROOM_AT(obj_room((obj_data *) go))->people; c;
                  c = c->next_in_room)
               if (valid_dg_target(c, DG_ALLOW_GODS)) {
                 if (!rand_number(0, count))
@@ -562,7 +562,7 @@ void find_replacement(void *go, struct script_data *sc, trig_data *trig,
             *str = '\0';
           } else {
             doors = 0;
-            room = &world[in_room];
+            room = ROOM_AT(in_room);
             for (i = 0; i < DIR_COUNT; i++)
               if (R_EXIT(room, i))
                 doors++;
@@ -995,7 +995,7 @@ void find_replacement(void *go, struct script_data *sc, trig_data *trig,
             snprintf(str, slen, "%c%ld",UID_CHAR,
                (IN_ROOM(c)!= NOWHERE) ? room_script_id(world + IN_ROOM(c)) : ROOM_ID_BASE);
 #else
-            snprintf(str, slen, "%d", (IN_ROOM(c)!= NOWHERE) ? world[IN_ROOM(c)].number : 0);
+            snprintf(str, slen, "%d", (IN_ROOM(c)!= NOWHERE) ? GET_ROOM(c)->number : 0);
 #endif
           }
           break;
@@ -1449,9 +1449,9 @@ void find_replacement(void *go, struct script_data *sc, trig_data *trig,
         }
       }
       else if (!str_cmp(field, "zonenumber"))
-        snprintf(str, slen, "%d",  zone_table[r->zone].number);
+        snprintf(str, slen, "%d",  ZONE_AT(r->zone)->number);
       else if (!str_cmp(field, "zonename"))
-        snprintf(str, slen, "%s",  zone_table[r->zone].name);
+        snprintf(str, slen, "%s",  ZONE_AT(r->zone)->name);
       else if (!str_cmp(field, "roomflag")) {
         if (subfield && *subfield) {
           room_rnum thisroom = real_room(r->number);

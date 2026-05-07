@@ -176,7 +176,7 @@ ACMD(do_dig)
     rvnum = (room_vnum)rawvnum;
   rrnum = real_room(rvnum);
   dir = search_block(sdir, dirs, FALSE);
-  zone = world[IN_ROOM(ch)].zone;
+  zone = GET_ROOM(ch)->zone;
 
   if (dir < 0) {
     send_to_char(ch, "You cannot create an exit to the '%s'.\r\n", sdir);
@@ -203,7 +203,7 @@ ACMD(do_dig)
         free(W_EXIT(IN_ROOM(ch), dir)->keyword);
       free(W_EXIT(IN_ROOM(ch), dir));
       W_EXIT(IN_ROOM(ch), dir) = NULL;
-      add_to_save_list(zone_table[world[IN_ROOM(ch)].zone].number, SL_WLD);
+      add_to_save_list(ZONE_AT(GET_ROOM(ch)->zone)->number, SL_WLD);
       send_to_char(ch, "You remove the exit to the %s.\r\n", dirs[dir]);
       return;
     }
@@ -269,7 +269,7 @@ ACMD(do_dig)
   W_EXIT(IN_ROOM(ch), dir)->general_description = NULL;
   W_EXIT(IN_ROOM(ch), dir)->keyword = NULL;
   W_EXIT(IN_ROOM(ch), dir)->to_room = rrnum;
-  add_to_save_list(zone_table[world[IN_ROOM(ch)].zone].number, SL_WLD);
+  add_to_save_list(ZONE_AT(GET_ROOM(ch)->zone)->number, SL_WLD);
 
   send_to_char(ch, "You make an exit %s to room %d (%s).\r\n",
                    dirs[dir], rvnum, world[rrnum].name);
@@ -319,9 +319,9 @@ int buildwalk(struct char_data *ch, int dir)
 
     get_char_colors(ch);
 
-    if (!can_edit_zone(ch, world[IN_ROOM(ch)].zone)) {
+    if (!can_edit_zone(ch, GET_ROOM(ch)->zone)) {
       send_to_char(ch, "You do not have build permissions in this zone.\r\n");
-    } else if ((vnum = redit_find_new_vnum(world[IN_ROOM(ch)].zone)) == NOWHERE) {
+    } else if ((vnum = redit_find_new_vnum(GET_ROOM(ch)->zone)) == NOWHERE) {
       send_to_char(ch, "No free vnums are available in this zone!\r\n");
     } else {
       struct descriptor_data *d = ch->desc;
@@ -332,7 +332,7 @@ int buildwalk(struct char_data *ch, int dir)
         free(d->olc);
       }
       CREATE(d->olc, struct oasis_olc_data, 1);
-      OLC_ZNUM(d) = world[IN_ROOM(ch)].zone;
+      OLC_ZNUM(d) = GET_ROOM(ch)->zone;
       OLC_NUM(d) = vnum;
       CREATE(OLC_ROOM(d), struct room_data, 1);
 

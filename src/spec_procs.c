@@ -280,7 +280,7 @@ SPECIAL(dump)
   struct obj_data *k;
   int value = 0;
 
-  for (k = world[IN_ROOM(ch)].contents; k; k = world[IN_ROOM(ch)].contents) {
+  for (k = GET_ROOM(ch)->contents; k; k = GET_ROOM(ch)->contents) {
     act("$p vanishes in a puff of smoke!", FALSE, 0, k, 0, TO_ROOM);
     extract_obj(k);
   }
@@ -290,7 +290,7 @@ SPECIAL(dump)
 
   do_drop(ch, argument, cmd, SCMD_DROP);
 
-  for (k = world[IN_ROOM(ch)].contents; k; k = world[IN_ROOM(ch)].contents) {
+  for (k = GET_ROOM(ch)->contents; k; k = GET_ROOM(ch)->contents) {
     act("$p vanishes in a puff of smoke!", FALSE, 0, k, 0, TO_ROOM);
     value += MAX(1, MIN(50, GET_OBJ_COST(k) / 10));
     extract_obj(k);
@@ -449,7 +449,7 @@ SPECIAL(thief)
   if (cmd || GET_POS(ch) != POS_STANDING)
     return (FALSE);
 
-  for (cons = world[IN_ROOM(ch)].people; cons; cons = cons->next_in_room)
+  for (cons = GET_ROOM(ch)->people; cons; cons = cons->next_in_room)
     if (!IS_NPC(cons) && GET_LEVEL(cons) < LVL_IMMORT && !rand_number(0, 4)) {
       npc_steal(ch, cons);
       return (TRUE);
@@ -466,7 +466,7 @@ SPECIAL(magic_user)
     return (FALSE);
 
   /* pseudo-randomly choose someone in the room who is fighting me */
-  for (vict = world[IN_ROOM(ch)].people; vict; vict = vict->next_in_room)
+  for (vict = GET_ROOM(ch)->people; vict; vict = vict->next_in_room)
     if (FIGHTING(vict) == ch && !rand_number(0, 4))
       break;
 
@@ -602,7 +602,7 @@ SPECIAL(fido)
   if (cmd || !AWAKE(ch))
     return (FALSE);
 
-  for (i = world[IN_ROOM(ch)].contents; i; i = i->next_content) {
+  for (i = GET_ROOM(ch)->contents; i; i = i->next_content) {
     if (!IS_CORPSE(i))
       continue;
 
@@ -625,7 +625,7 @@ SPECIAL(janitor)
   if (cmd || !AWAKE(ch))
     return (FALSE);
 
-  for (i = world[IN_ROOM(ch)].contents; i; i = i->next_content) {
+  for (i = GET_ROOM(ch)->contents; i; i = i->next_content) {
     if (!CAN_WEAR(i, ITEM_WEAR_TAKE))
       continue;
     if (GET_OBJ_TYPE(i) != ITEM_DRINKCON && GET_OBJ_COST(i) >= 15)
@@ -650,7 +650,7 @@ SPECIAL(cityguard)
   min_cha = 6;
   spittle = evil = NULL;
 
-  for (tch = world[IN_ROOM(ch)].people; tch; tch = tch->next_in_room) {
+  for (tch = GET_ROOM(ch)->people; tch; tch = tch->next_in_room) {
     if (!CAN_SEE(ch, tch))
       continue;
     if (!IS_NPC(tch) && PLR_FLAGGED(tch, PLR_KILLER)) {
@@ -712,7 +712,7 @@ SPECIAL(pet_shops)
 
   if (CMD_IS("list")) {
     send_to_char(ch, "Available pets are:\r\n");
-    for (pet = world[pet_room].people; pet; pet = pet->next_in_room) {
+    for (pet = ROOM_AT(pet_room)->people; pet; pet = pet->next_in_room) {
       /* No, you can't have the Implementor as a pet if he's in there. */
       if (!IS_NPC(pet))
         continue;

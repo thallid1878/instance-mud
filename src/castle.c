@@ -183,7 +183,7 @@ static struct char_data *find_npc_by_name(struct char_data *chAtChar,
 {
   struct char_data *ch;
 
-  for (ch = world[IN_ROOM(chAtChar)].people; ch; ch = ch->next_in_room)
+  for (ch = GET_ROOM(chAtChar)->people; ch; ch = ch->next_in_room)
     if (IS_NPC(ch) && !strncmp(pszName, ch->player.short_descr, iLen))
       return (ch);
 
@@ -196,7 +196,7 @@ static struct char_data *find_guard(struct char_data *chAtChar)
 {
   struct char_data *ch;
 
-  for (ch = world[IN_ROOM(chAtChar)].people; ch; ch = ch->next_in_room)
+  for (ch = GET_ROOM(chAtChar)->people; ch; ch = ch->next_in_room)
     if (!FIGHTING(ch) && member_of_royal_guard(ch))
       return (ch);
 
@@ -211,7 +211,7 @@ static struct char_data *get_victim(struct char_data *chAtChar)
   struct char_data *ch;
   int iNum_bad_guys = 0, iVictim;
 
-  for (ch = world[IN_ROOM(chAtChar)].people; ch; ch = ch->next_in_room)
+  for (ch = GET_ROOM(chAtChar)->people; ch; ch = ch->next_in_room)
     if (FIGHTING(ch) && member_of_staff(FIGHTING(ch)))
       iNum_bad_guys++;
 
@@ -224,7 +224,7 @@ static struct char_data *get_victim(struct char_data *chAtChar)
 
   iNum_bad_guys = 0;
 
-  for (ch = world[IN_ROOM(chAtChar)].people; ch; ch = ch->next_in_room) {
+  for (ch = GET_ROOM(chAtChar)->people; ch; ch = ch->next_in_room) {
     if (FIGHTING(ch) == NULL)
       continue;
 
@@ -260,7 +260,7 @@ static int do_npc_rescue(struct char_data *ch_hero, struct char_data *ch_victim)
 {
   struct char_data *ch_bad_guy;
 
-  for (ch_bad_guy = world[IN_ROOM(ch_hero)].people;
+  for (ch_bad_guy = GET_ROOM(ch_hero)->people;
        ch_bad_guy && (FIGHTING(ch_bad_guy) != ch_victim);
        ch_bad_guy = ch_bad_guy->next_in_room);
 
@@ -621,7 +621,7 @@ static int castle_cleaner(struct char_data *ch, int cmd, int gripe)
   if (cmd || !AWAKE(ch) || GET_POS(ch) == POS_FIGHTING)
     return (FALSE);
 
-  for (i = world[IN_ROOM(ch)].contents; i; i = i->next_content) {
+  for (i = GET_ROOM(ch)->contents; i; i = i->next_content) {
     if (!is_trash(i))
       continue;
 

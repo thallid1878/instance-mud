@@ -99,8 +99,8 @@ WCMD(do_wasound)
         struct room_direction_data *newexit;
 
         if ((newexit = room->dir_option[door]) && (newexit->to_room != NOWHERE) &&
-            room != &world[newexit->to_room])
-            act_to_room(argument, &world[newexit->to_room]);
+            room != ROOM_AT(newexit->to_room))
+            act_to_room(argument, ROOM_AT(newexit->to_room));
     }
 }
 
@@ -332,7 +332,7 @@ WCMD(do_wteleport)
               continue;
             char_from_room(ch);
             char_to_room(ch, target);
-            enter_wtrigger(&world[IN_ROOM(ch)], ch, -1);
+            enter_wtrigger(GET_ROOM(ch), ch, -1);
         }
     }
 
@@ -342,7 +342,7 @@ WCMD(do_wteleport)
           if (valid_dg_target(ch, DG_ALLOW_GODS)) {
             char_from_room(ch);
             char_to_room(ch, target);
-            enter_wtrigger(&world[IN_ROOM(ch)], ch, -1);
+            enter_wtrigger(GET_ROOM(ch), ch, -1);
           }
         }
 
@@ -583,7 +583,7 @@ WCMD(do_wat)
     wld_log(room, "wat: location not found (%s)", arg);
     return;
   }
-  wld_command_interpreter(&world[loc], command);
+  wld_command_interpreter(ROOM_AT(loc), command);
 }
 
 WCMD(do_wmove)

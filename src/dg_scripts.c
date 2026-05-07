@@ -129,7 +129,7 @@ int trgvar_in_room(room_vnum vnum)
         return (-1);
     }
 
-    for (ch = world[rnum].people; ch !=NULL; ch = ch->next_in_room)
+    for (ch = ROOM_AT(rnum)->people; ch !=NULL; ch = ch->next_in_room)
         i++;
 
     return i;
@@ -325,7 +325,7 @@ static room_data *find_room(long n)
   rnum = real_room((room_vnum)n);
 
   if (rnum != NOWHERE)
-    return &world[rnum];
+    return ROOM_AT(rnum);
 
   return NULL;
 }
@@ -375,7 +375,7 @@ char_data *get_char_near_obj(obj_data *obj, char *name)
   } else {
     room_rnum num;
     if ((num = obj_room(obj)) != NOWHERE)
-      for (ch = world[num].people; ch; ch = ch->next_in_room)
+      for (ch = ROOM_AT(num)->people; ch; ch = ch->next_in_room)
         if (isname(name, ch->player.name) &&
             valid_dg_target(ch, DG_ALLOW_GODS))
           return ch;
@@ -453,11 +453,11 @@ obj_data *get_obj_near_obj(obj_data *obj, char *name)
     return i;
   else if ((rm = obj_room(obj)) != NOWHERE) {
     /* check the floor */
-    if ((i = get_obj_in_list(name, world[rm].contents)))
+    if ((i = get_obj_in_list(name, ROOM_AT(rm)->contents)))
       return i;
 
     /* check peoples' inventory */
-    for (ch = world[rm].people;ch ; ch = ch->next_in_room)
+    for (ch = ROOM_AT(rm)->people;ch ; ch = ch->next_in_room)
       if ((i = get_object_in_equip(ch, name)))
         return i;
   }
@@ -490,7 +490,7 @@ room_data *get_room(char *name)
   else if ((nr = real_room(atoi(name))) == NOWHERE)
     return NULL;
   else
-    return &world[nr];
+    return ROOM_AT(nr);
 }
 
 /* Returns a pointer to the first character in world by name name, or NULL if 
@@ -577,7 +577,7 @@ obj_data *get_obj_by_obj(obj_data *obj, char *name)
     return i;
 
   if (((rm = obj_room(obj)) != NOWHERE) &&
-      (i = get_obj_in_list(name, world[rm].contents)))
+      (i = get_obj_in_list(name, ROOM_AT(rm)->contents)))
     return i;
 
   return get_obj(name);
@@ -636,7 +636,7 @@ void script_trigger_check(void)
       sc = SCRIPT(ch);
 
       if (IS_SET(SCRIPT_TYPES(sc), WTRIG_RANDOM) &&
-          (!is_empty(world[IN_ROOM(ch)].zone) ||
+          (!is_empty(GET_ROOM(ch)->zone) ||
            IS_SET(SCRIPT_TYPES(sc), WTRIG_GLOBAL)))
         random_mtrigger(ch);
     }
@@ -677,7 +677,7 @@ void check_time_triggers(void)
       sc = SCRIPT(ch);
 
       if (IS_SET(SCRIPT_TYPES(sc), WTRIG_TIME) &&
-          (!is_empty(world[IN_ROOM(ch)].zone) ||
+          (!is_empty(GET_ROOM(ch)->zone) ||
            IS_SET(SCRIPT_TYPES(sc), WTRIG_GLOBAL)))
         time_mtrigger(ch);
     }
@@ -963,7 +963,7 @@ ACMD(do_attach)
   if (is_abbrev(arg, "mobile") || is_abbrev(arg, "mtr")) {
     victim = get_char_vis(ch, targ_name, NULL, FIND_CHAR_WORLD);
     if (!victim) { /* search room for one with this vnum */
-      for (victim = world[IN_ROOM(ch)].people;victim;victim=victim->next_in_room)
+      for (victim = GET_ROOM(ch)->people;victim;victim=victim->next_in_room)
         if (GET_MOB_VNUM(victim) == num_arg)
           break;
 
@@ -976,7 +976,7 @@ ACMD(do_attach)
       send_to_char(ch, "Players can't have scripts.\r\n");
       return;
     }
-    if (!can_edit_zone(ch, world[IN_ROOM(ch)].zone)) {
+    if (!can_edit_zone(ch, GET_ROOM(ch)->zone)) {
       send_to_char(ch, "You can only attach triggers in your own zone.\r\n");
       return;
     }
@@ -1002,7 +1002,7 @@ ACMD(do_attach)
   else if (is_abbrev(arg, "object") || is_abbrev(arg, "otr")) {
     object = get_obj_vis(ch, targ_name, NULL);
     if (!object) { /* search room for one with this vnum */
-      for (object = world[IN_ROOM(ch)].contents;object;object=object->next_content)
+      for (object = GET_ROOM(ch)->contents;object;object=object->next_content)
         if (GET_OBJ_VNUM(object) == num_arg)
           break;
 
@@ -1018,7 +1018,7 @@ ACMD(do_attach)
       }
     }
 
-    if (!can_edit_zone(ch, world[IN_ROOM(ch)].zone)) {
+    if (!can_edit_zone(ch, GET_ROOM(ch)->zone)) {
       send_to_char(ch, "You can only attach triggers in your own zone.\r\n");
       return;
     }
@@ -1053,7 +1053,7 @@ ACMD(do_attach)
       return;
     }
 
-    if (!can_edit_zone(ch, world[rnum].zone)) {
+    if (!can_edit_zone(ch, ROOM_AT(rnum)->zone)) {
       send_to_char(ch, "You can only attach triggers in your own zone.\r\n");
       return;
     }
@@ -1064,14 +1064,14 @@ ACMD(do_attach)
       return;
     }
 
-    room = &world[rnum];
+    room = ROOM_AT(rnum);
 
     if (!SCRIPT(room))
       CREATE(SCRIPT(room), struct script_data, 1);
     add_trigger(SCRIPT(room), trig, loc);
 
     send_to_char(ch, "Trigger %d (%s) attached to room %d.\r\n",
-                 tn, GET_TRIG_NAME(trig), world[rnum].number);
+                 tn, GET_TRIG_NAME(trig), ROOM_AT(rnum)->number);
   }
 
   else
@@ -1180,7 +1180,7 @@ ACMD(do_detach)
       return;
     }
 
-    room = &world[rnum]; 
+    room = ROOM_AT(rnum); 
     if (!can_edit_zone(ch, room->zone)) {
       send_to_char(ch, "You can only detach triggers in your own zone\r\n");
       return;
@@ -1189,7 +1189,7 @@ ACMD(do_detach)
       send_to_char(ch, "This room does not have any triggers.\r\n");
     else if (!str_cmp(arg2, "all") || !str_cmp(arg3, "all")) {
       extract_script(room, WLD_TRIGGER);
-      send_to_char(ch, "All triggers removed from room %d.\r\n", world[rnum].number);
+      send_to_char(ch, "All triggers removed from room %d.\r\n", ROOM_AT(rnum)->number);
     } else {
       if (*arg3)
         snum = arg3;
@@ -1197,7 +1197,7 @@ ACMD(do_detach)
         snum = arg2;
 
     if (remove_trigger(SCRIPT(room), snum)) {
-      send_to_char(ch, "Trigger %d (%s) removed from %d.\r\n", tn, GET_TRIG_NAME(trig), world[rnum].number);
+      send_to_char(ch, "Trigger %d (%s) removed from %d.\r\n", tn, GET_TRIG_NAME(trig), ROOM_AT(rnum)->number);
       
       if (!TRIGGERS(SCRIPT(room)))
         extract_script(room, WLD_TRIGGER);
@@ -1211,7 +1211,7 @@ ACMD(do_detach)
     if (is_abbrev(arg1, "mobile") || !str_cmp(arg1, "mtr")) {
       victim = get_char_vis(ch, arg2, NULL, FIND_CHAR_WORLD);
       if (!victim) { /* search room for one with this vnum */
-        for (victim = world[IN_ROOM(ch)].people;victim;victim=victim->next_in_room)
+        for (victim = GET_ROOM(ch)->people;victim;victim=victim->next_in_room)
           if (GET_MOB_VNUM(victim) == num_arg)
             break;
 
@@ -1230,7 +1230,7 @@ ACMD(do_detach)
     else if (is_abbrev(arg1, "object") || !str_cmp(arg1, "otr")) {
       object = get_obj_vis(ch, arg2, NULL);
       if (!object) { /* search room for one with this vnum */
-        for (object = world[IN_ROOM(ch)].contents;object;object=object->next_content)
+        for (object = GET_ROOM(ch)->contents;object;object=object->next_content)
           if (GET_OBJ_VNUM(object) == num_arg)
             break;
 
@@ -1256,7 +1256,7 @@ ACMD(do_detach)
       if ((object = get_obj_in_equip_vis(ch, arg1, NULL, ch->equipment)));
       else if ((object = get_obj_in_list_vis(ch, arg1, NULL, ch->carrying)));
       else if ((victim = get_char_room_vis(ch, arg1, NULL)));
-      else if ((object = get_obj_in_list_vis(ch, arg1, NULL, world[IN_ROOM(ch)].contents)));
+      else if ((object = get_obj_in_list_vis(ch, arg1, NULL, GET_ROOM(ch)->contents)));
       else if ((victim = get_char_vis(ch, arg1, NULL, FIND_CHAR_WORLD)));
       else if ((object = get_obj_vis(ch, arg1, NULL)));
       else
@@ -1956,9 +1956,9 @@ static void process_detach(void *go, struct script_data *sc, trig_data *trig,
 
 struct room_data *dg_room_of_obj(struct obj_data *obj)
 {
-  if (IN_ROOM(obj) != NOWHERE) return &world[IN_ROOM(obj)];
-  if (obj->carried_by)        return &world[IN_ROOM(obj->carried_by)];
-  if (obj->worn_by)           return &world[IN_ROOM(obj->worn_by)];
+  if (IN_ROOM(obj) != NOWHERE) return GET_ROOM(obj);
+  if (obj->carried_by)        return GET_ROOM(obj->carried_by);
+  if (obj->worn_by)           return GET_ROOM(obj->worn_by);
   if (obj->in_obj)            return (dg_room_of_obj(obj->in_obj));
   return NULL;
 }
@@ -2030,7 +2030,7 @@ static void makeuid_var(void *go, struct script_data *sc, trig_data *trig,
           if ((o = get_obj_in_list_vis((struct char_data *)go, name, NULL,
                     ((struct char_data *)go)->carrying)) == NULL)
             o = get_obj_in_list_vis((struct char_data *)go, name, NULL,
-                    world[IN_ROOM((struct char_data *)go)].contents);
+                    GET_ROOM((struct char_data *)go)->contents);
           break;
       }
       if (o)

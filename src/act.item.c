@@ -289,9 +289,9 @@ static void get_from_room(struct char_data *ch, char *arg, int howmany)
   dotmode = find_all_dots(arg);
 
   if (dotmode == FIND_INDIV) {
-    if (!(obj = get_obj_in_list_vis(ch, arg, NULL, world[IN_ROOM(ch)].contents))) {
+    if (!(obj = get_obj_in_list_vis(ch, arg, NULL, GET_ROOM(ch)->contents))) {
         /* Are they trying to take something in a room extra description? */
-        if (find_exdesc(arg, world[IN_ROOM(ch)].ex_description) != NULL) {
+        if (find_exdesc(arg, GET_ROOM(ch)->ex_description) != NULL) {
             send_to_char(ch, "You can't take %s %s.\r\n", AN(arg), arg);
             return;
         }
@@ -309,7 +309,7 @@ static void get_from_room(struct char_data *ch, char *arg, int howmany)
       send_to_char(ch, "Get all of what?\r\n");
       return;
     }
-    for (obj = world[IN_ROOM(ch)].contents; obj; obj = next_obj) {
+    for (obj = GET_ROOM(ch)->contents; obj; obj = next_obj) {
       next_obj = obj->next_content;
       if (CAN_SEE_OBJ(ch, obj) &&
 	  (dotmode == FIND_ALL || isname(arg, obj->name))) {
@@ -376,7 +376,7 @@ ACMD(do_get)
 	    act("$p is not a container.", FALSE, ch, cont, 0, TO_CHAR);
 	  }
 	}
-      for (cont = world[IN_ROOM(ch)].contents; cont; cont = cont->next_content)
+      for (cont = GET_ROOM(ch)->contents; cont; cont = cont->next_content)
 	if (CAN_SEE_OBJ(ch, cont) &&
 	    (cont_dotmode == FIND_ALL || isname(arg2, cont->name))) {
 	  if (GET_OBJ_TYPE(cont) == ITEM_CONTAINER) {
@@ -857,7 +857,7 @@ ACMD(do_drink)
     }
   }
   if (!(temp = get_obj_in_list_vis(ch, arg, NULL, ch->carrying))) {
-    if (!(temp = get_obj_in_list_vis(ch, arg, NULL, world[IN_ROOM(ch)].contents))) {
+    if (!(temp = get_obj_in_list_vis(ch, arg, NULL, GET_ROOM(ch)->contents))) {
       send_to_char(ch, "You can't find it!\r\n");
       return;
     } else
@@ -1070,7 +1070,7 @@ ACMD(do_pour)
       act("What do you want to fill $p from?", FALSE, ch, to_obj, 0, TO_CHAR);
       return;
     }
-    if (!(from_obj = get_obj_in_list_vis(ch, arg2, NULL, world[IN_ROOM(ch)].contents))) {
+    if (!(from_obj = get_obj_in_list_vis(ch, arg2, NULL, GET_ROOM(ch)->contents))) {
       send_to_char(ch, "There doesn't seem to be %s %s here.\r\n", AN(arg2), arg2);
       return;
     }
@@ -1538,7 +1538,7 @@ ACMD(do_sac)
     return;
   }
     
-  if (!(j = get_obj_in_list_vis(ch, arg, NULL, world[IN_ROOM(ch)].contents)) && (!(j = get_obj_in_list_vis(ch, arg, NULL, ch->carrying)))) {
+  if (!(j = get_obj_in_list_vis(ch, arg, NULL, GET_ROOM(ch)->contents)) && (!(j = get_obj_in_list_vis(ch, arg, NULL, ch->carrying)))) {
     send_to_char(ch, "It doesn't seem to be here.\n\r");
     return;
   }

@@ -75,7 +75,7 @@ ACMD(do_masound)
     {
         struct room_direction_data *newexit;
 
-        if (((newexit = world[was_in_room].dir_option[door]) != NULL) &&
+        if (((newexit = W_EXIT(was_in_room, door)) != NULL) &&
             newexit->to_room != NOWHERE && newexit->to_room != was_in_room)
         {
             IN_ROOM(ch) = newexit->to_room;
@@ -461,13 +461,13 @@ ACMD(do_mpurge)
     char_data *vnext;
     obj_data  *obj_next;
 
-    for (victim = world[IN_ROOM(ch)].people; victim; victim = vnext) {
+    for (victim = GET_ROOM(ch)->people; victim; victim = vnext) {
       vnext = victim->next_in_room;
       if (IS_NPC(victim) && victim != ch)
         extract_char(victim);
     }
 
-    for (obj = world[IN_ROOM(ch)].contents; obj; obj = obj_next) {
+    for (obj = GET_ROOM(ch)->contents; obj; obj = obj_next) {
       obj_next = obj->next_content;
       extract_obj(obj);
     }
@@ -535,7 +535,7 @@ ACMD(do_mgoto)
 
     char_from_room(ch);
     char_to_room(ch, location);
-    enter_wtrigger(&world[IN_ROOM(ch)], ch, -1);
+    enter_wtrigger(GET_ROOM(ch), ch, -1);
 }
 
 /* lets the mobile do a command at another location. Very useful */
@@ -612,13 +612,13 @@ ACMD(do_mteleport)
       return;
     }
 
-    for (vict = world[IN_ROOM(ch)].people; vict; vict = next_ch) {
+    for (vict = GET_ROOM(ch)->people; vict; vict = next_ch) {
       next_ch = vict->next_in_room;
 
       if (valid_dg_target(vict, DG_ALLOW_GODS)) {
         char_from_room(vict);
         char_to_room(vict, target);
-        enter_wtrigger(&world[IN_ROOM(vict)], vict, -1);
+        enter_wtrigger(GET_ROOM(vict), vict, -1);
       }
     }
   } else {
@@ -635,7 +635,7 @@ ACMD(do_mteleport)
     if (valid_dg_target(vict, DG_ALLOW_GODS)) {
       char_from_room(vict);
       char_to_room(vict, target);
-      enter_wtrigger(&world[IN_ROOM(vict)], vict, -1);
+      enter_wtrigger(GET_ROOM(vict), vict, -1);
     }
   }
 }

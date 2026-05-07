@@ -53,7 +53,7 @@ ACMD(do_say)
     snprintf(buf, sizeof(buf), "$n\tn says, '%s'", argument);
     msg = act(buf, FALSE, ch, 0, 0, TO_ROOM | DG_NO_TRIG);
 
-    for (vict = world[IN_ROOM(ch)].people; vict; vict = vict->next_in_room)
+    for (vict = GET_ROOM(ch)->people; vict; vict = vict->next_in_room)
       if (vict != ch && GET_POS(vict) > POS_SLEEPING)
         add_history(vict, msg, HIST_SAY);
 
@@ -496,7 +496,7 @@ ACMD(do_gen_comm)
     if (ROOM_FLAGGED(IN_ROOM(i->character), ROOM_SOUNDPROOF) && (GET_LEVEL(ch) < LVL_GOD))
       continue;
 
-    if (subcmd == SCMD_SHOUT && ((world[IN_ROOM(ch)].zone != world[IN_ROOM(i->character)].zone) ||
+    if (subcmd == SCMD_SHOUT && ((GET_ROOM_ZONE(IN_ROOM(ch)) != GET_ROOM_ZONE(IN_ROOM(i->character))) ||
          !AWAKE(i->character)))
       continue;
 

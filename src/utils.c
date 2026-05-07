@@ -872,7 +872,7 @@ int room_is_dark(room_rnum room)
     return (FALSE);
   }
 
-  if (world[room].light)
+  if (ROOM_AT(room)->light)
     return (FALSE);
 
   if (ROOM_FLAGGED(room, ROOM_DARK))

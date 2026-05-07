@@ -61,10 +61,10 @@ void mobile_activity(void)
 
     /* Scavenger (picking up objects) */
     if (MOB_FLAGGED(ch, MOB_SCAVENGER))
-      if (world[IN_ROOM(ch)].contents && !rand_number(0, 10)) {
+      if (GET_ROOM(ch)->contents && !rand_number(0, 10)) {
 	max = 1;
 	best_obj = NULL;
-	for (obj = world[IN_ROOM(ch)].contents; obj; obj = obj->next_content)
+	for (obj = GET_ROOM(ch)->contents; obj; obj = obj->next_content)
 	  if (CAN_GET_OBJ(ch, obj) && GET_OBJ_COST(obj) > max) {
 	    best_obj = obj;
 	    max = GET_OBJ_COST(obj);
@@ -82,7 +82,7 @@ void mobile_activity(void)
        !ROOM_FLAGGED(EXIT(ch, door)->to_room, ROOM_NOMOB) &&
        !ROOM_FLAGGED(EXIT(ch, door)->to_room, ROOM_DEATH) &&
        (!MOB_FLAGGED(ch, MOB_STAY_ZONE) ||
-           (world[EXIT(ch, door)->to_room].zone == world[IN_ROOM(ch)].zone))) 
+           (GET_ROOM_ZONE(EXIT(ch, door)->to_room) == GET_ROOM(ch)->zone))) 
     {
       /* If the mob is charmed, do not move the mob. */
       if (ch->master == NULL)
@@ -92,7 +92,7 @@ void mobile_activity(void)
     /* Aggressive Mobs */
      if (!MOB_FLAGGED(ch, MOB_HELPER) && (!AFF_FLAGGED(ch, AFF_BLIND) || !AFF_FLAGGED(ch, AFF_CHARM))) {
       found = FALSE;
-      for (vict = world[IN_ROOM(ch)].people; vict && !found; vict = vict->next_in_room) {
+      for (vict = GET_ROOM(ch)->people; vict && !found; vict = vict->next_in_room) {
 	if (IS_NPC(vict) || !CAN_SEE(ch, vict) || PRF_FLAGGED(vict, PRF_NOHASSLE))
 	  continue;
 
@@ -117,7 +117,7 @@ void mobile_activity(void)
     /* Mob Memory */
     if (MOB_FLAGGED(ch, MOB_MEMORY) && MEMORY(ch)) {
       found = FALSE;
-      for (vict = world[IN_ROOM(ch)].people; vict && !found; vict = vict->next_in_room) {
+      for (vict = GET_ROOM(ch)->people; vict && !found; vict = vict->next_in_room) {
 	if (IS_NPC(vict) || !CAN_SEE(ch, vict) || PRF_FLAGGED(vict, PRF_NOHASSLE))
 	  continue;
 
@@ -152,7 +152,7 @@ void mobile_activity(void)
     if (MOB_FLAGGED(ch, MOB_HELPER) && (!AFF_FLAGGED(ch, AFF_BLIND) || !AFF_FLAGGED(ch, AFF_CHARM))) 
     {
       found = FALSE;
-      for (vict = world[IN_ROOM(ch)].people; vict && !found; vict = vict->next_in_room) 
+      for (vict = GET_ROOM(ch)->people; vict && !found; vict = vict->next_in_room) 
       {
 	      if (ch == vict || !IS_NPC(vict) || !FIGHTING(vict))
           continue; 
@@ -267,4 +267,3 @@ static bool aggressive_mob_on_a_leash(struct char_data *slave, struct char_data 
   /* So sorry, now you're a player killer... Tsk tsk. */
   return (FALSE);
 }
-

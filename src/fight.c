@@ -167,7 +167,7 @@ void check_killer(struct char_data *ch, struct char_data *vict)
   send_to_char(ch, "If you want to be a PLAYER KILLER, so be it...\r\n");
   mudlog(BRF, MAX(LVL_IMMORT, MAX(GET_INVIS_LEV(ch), GET_INVIS_LEV(vict))), 
     TRUE, "PC Killer bit set on %s for initiating attack on %s at %s.",
-    GET_NAME(ch), GET_NAME(vict), world[IN_ROOM(vict)].name);
+    GET_NAME(ch), GET_NAME(vict), GET_ROOM(vict)->name);
 }
 
 bool pk_allowed(struct char_data *ch, struct char_data *victim)
@@ -315,7 +315,7 @@ void death_cry(struct char_data *ch)
 
   for (door = 0; door < DIR_COUNT; door++)
     if (CAN_GO(ch, door))
-      send_to_room(world[IN_ROOM(ch)].dir_option[door]->to_room, "Your blood freezes as you hear someone's death cry.\r\n");
+      send_to_room(GET_ROOM(ch)->dir_option[door]->to_room, "Your blood freezes as you hear someone's death cry.\r\n");
 }
 
 void raw_kill(struct char_data * ch, struct char_data * killer)
@@ -340,7 +340,7 @@ struct char_data *i;
   if (killer) {
     if (killer->group) {
       while ((i = (struct char_data *) simple_list(killer->group->members)) != NULL)
-        if(IN_ROOM(i) == IN_ROOM(ch)  || (world[IN_ROOM(i)].zone == world[IN_ROOM(ch)].zone))
+        if(IN_ROOM(i) == IN_ROOM(ch)  || (GET_ROOM(i)->zone == GET_ROOM(ch)->zone))
           autoquest_trigger_check(i, ch, NULL, AQ_MOB_KILL);      
     } else
         autoquest_trigger_check(killer, ch, NULL, AQ_MOB_KILL);
@@ -825,7 +825,7 @@ int damage(struct char_data *ch, struct char_data *victim, int dam, int attackty
 
     if (!IS_NPC(victim)) {
       mudlog(BRF, MAX(LVL_IMMORT, MAX(GET_INVIS_LEV(ch), GET_INVIS_LEV(victim))), 
-        TRUE, "%s killed by %s at %s", GET_NAME(victim), GET_NAME(ch), world[IN_ROOM(victim)].name);
+        TRUE, "%s killed by %s at %s", GET_NAME(victim), GET_NAME(ch), GET_ROOM(victim)->name);
       if (MOB_FLAGGED(ch, MOB_MEMORY))
 	forget(ch, victim);
     }

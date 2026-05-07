@@ -948,14 +948,14 @@ static int find_shop_for_keeper(struct char_data *keeper)
 
   if (GET_INSTANCE_ID(keeper) > 0) {
     for (shop_nr = top_shop + 1; shop_nr <= top; shop_nr++)
-      if (shop_index[shop_nr].instance_id == GET_INSTANCE_ID(keeper) &&
+      if (SHOP_AT(shop_nr) && SHOP_AT(shop_nr)->instance_id == GET_INSTANCE_ID(keeper) &&
           SHOP_KEEPER(shop_nr) == keeper->nr)
         return shop_nr;
     return NOTHING;
   }
 
   for (shop_nr = 0; shop_nr <= top_shop; shop_nr++)
-    if (!shop_index[shop_nr].instance_id && SHOP_KEEPER(shop_nr) == keeper->nr)
+    if (!SHOP_AT(shop_nr)->instance_id && SHOP_KEEPER(shop_nr) == keeper->nr)
       return shop_nr;
 
   return NOTHING;

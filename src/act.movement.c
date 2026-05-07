@@ -161,9 +161,9 @@ int do_simple_move(struct char_data *ch, int dir, int need_specials_check)
   /* Leave Trigger Checks: Does a leave trigger block exit from the room? */
   if (!leave_mtrigger(ch, dir) || IN_ROOM(ch) != was_in) /* prevent teleport crashes */
     return 0;
-  if (!leave_wtrigger(&world[IN_ROOM(ch)], ch, dir) || IN_ROOM(ch) != was_in) /* prevent teleport crashes */
+  if (!leave_wtrigger(GET_ROOM(ch), ch, dir) || IN_ROOM(ch) != was_in) /* prevent teleport crashes */
     return 0;
-  if (!leave_otrigger(&world[IN_ROOM(ch)], ch, dir) || IN_ROOM(ch) != was_in) /* prevent teleport crashes */
+  if (!leave_otrigger(GET_ROOM(ch), ch, dir) || IN_ROOM(ch) != was_in) /* prevent teleport crashes */
     return 0;
 
   /* Charm effect: Does it override the movement? */
@@ -235,7 +235,7 @@ int do_simple_move(struct char_data *ch, int dir, int need_specials_check)
 
   /* Room Size Capacity: Is the room full of people already? */
   if (ROOM_FLAGGED(going_to, ROOM_TUNNEL) &&
-      num_pc_in_room(&(world[going_to])) >= CONFIG_TUNNEL_SIZE)
+      num_pc_in_room(ROOM_AT(going_to)) >= CONFIG_TUNNEL_SIZE)
   {
     if (CONFIG_TUNNEL_SIZE > 1)
       send_to_char(ch, "There isn't enough room for you to go there!\r\n");
@@ -297,7 +297,7 @@ int do_simple_move(struct char_data *ch, int dir, int need_specials_check)
    * Assumptions: The character has already truly left the was_in room. If
    * the entry trigger "prevents" movement into the room, it is the triggers
    * job to provide a message to the original was_in room. */
-  if (!entry_mtrigger(ch) || !enter_wtrigger(&world[going_to], ch, dir)) {
+  if (!entry_mtrigger(ch) || !enter_wtrigger(ROOM_AT(going_to), ch, dir)) {
     char_from_room(ch);
     char_to_room(ch, was_in);
     return 0;
@@ -314,7 +314,7 @@ int do_simple_move(struct char_data *ch, int dir, int need_specials_check)
   /* ... and Kill the player if the room is a death trap. */
   if (ROOM_FLAGGED(going_to, ROOM_DEATH) && GET_LEVEL(ch) < LVL_IMMORT)
   {
-    mudlog(BRF, LVL_IMMORT, TRUE, "%s hit death trap #%d (%s)", GET_NAME(ch), GET_ROOM_VNUM(going_to), world[going_to].name);
+    mudlog(BRF, LVL_IMMORT, TRUE, "%s hit death trap #%d (%s)", GET_NAME(ch), GET_ROOM_VNUM(going_to), ROOM_AT(going_to)->name);
     death_cry(ch);
     extract_char(ch);
     return (0);
@@ -504,7 +504,7 @@ static const int flags_door[] =
   NEED_CLOSED | NEED_LOCKED
 };
 
-#define EXITN(room, door)		(world[room].dir_option[door])
+#define EXITN(room, door)		(W_EXIT(room, door))
 #define OPEN_DOOR(room, obj, door)	((obj) ?\
 		(REMOVE_BIT(GET_OBJ_VAL(obj, 1), CONT_CLOSED)) :\
 		(REMOVE_BIT(EXITN(room, door)->exit_info, EX_CLOSED)))
@@ -536,7 +536,7 @@ static void do_doorcmd(struct char_data *ch, struct obj_data *obj, int door, int
 
   len = snprintf(buf, sizeof(buf), "$n %ss ", cmd_door[scmd]);
   if (!obj && ((other_room = EXIT(ch, door)->to_room) != NOWHERE))
-    if ((back = world[other_room].dir_option[rev_dir[door]]) != NULL)
+    if ((back = W_EXIT(other_room, rev_dir[door])) != NULL)
       if (back->to_room != IN_ROOM(ch))
         back = NULL;
 
@@ -778,7 +778,7 @@ ACMD(do_sit)
 
   one_argument(argument, arg);
 
-  if (!(furniture = get_obj_in_list_vis(ch, arg, NULL, world[ch->in_room].contents)))
+  if (!(furniture = get_obj_in_list_vis(ch, arg, NULL, GET_ROOM(ch)->contents)))
     found = 0;
   else
     found = 1;

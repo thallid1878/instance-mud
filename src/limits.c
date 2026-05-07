@@ -379,11 +379,11 @@ void point_update(void)
 
 	if (j->carried_by)
 	  act("$p decays in your hands.", FALSE, j->carried_by, j, 0, TO_CHAR);
-	else if ((IN_ROOM(j) != NOWHERE) && (world[IN_ROOM(j)].people)) {
+	else if ((IN_ROOM(j) != NOWHERE) && (GET_ROOM(j)->people)) {
 	  act("A quivering horde of maggots consumes $p.",
-	      TRUE, world[IN_ROOM(j)].people, j, 0, TO_ROOM);
+	      TRUE, GET_ROOM(j)->people, j, 0, TO_ROOM);
 	  act("A quivering horde of maggots consumes $p.",
-	      TRUE, world[IN_ROOM(j)].people, j, 0, TO_CHAR);
+	      TRUE, GET_ROOM(j)->people, j, 0, TO_CHAR);
 	}
 	for (jj = j->contains; jj; jj = next_thing2) {
 	  next_thing2 = jj->next_content;	/* Next in inventory */
