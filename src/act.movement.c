@@ -606,20 +606,15 @@ static void do_doorcmd(struct char_data *ch, struct obj_data *obj, int door, int
 
 static int ok_pick(struct char_data *ch, obj_vnum keynum, int pickproof, int scmd)
 {
-  int percent, skill_lvl;
-
   if (scmd != SCMD_PICK)
     return (1);
 
-  percent = rand_number(1, 101);
-  skill_lvl = GET_SKILL(ch, SKILL_PICK_LOCK) + dex_app_skill[STAT_APP_INDEX(GET_DEX(ch))].p_locks;
-
   if (keynum == NOTHING)
     send_to_char(ch, "Odd - you can't seem to find a keyhole.\r\n");
+  else if (IS_NPC(ch) || !GET_SKILL(ch, SKILL_PICK_LOCK))
+    send_to_char(ch, "You have no idea how to pick locks.\r\n");
   else if (pickproof)
     send_to_char(ch, "It resists your attempts to pick it.\r\n");
-  else if (percent > skill_lvl)
-    send_to_char(ch, "You failed to pick the lock.\r\n");
   else
     return (1);
 

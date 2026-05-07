@@ -165,18 +165,6 @@ ACMD(do_track)
     return;
   }
 
-  /* 101 is a complete failure, no matter what the proficiency. */
-  if (rand_number(0, 101) >= GET_SKILL(ch, SKILL_TRACK)) {
-    int tries = 10;
-    /* Find a random direction. :) */
-    do {
-      dir = rand_number(0, DIR_COUNT - 1);
-    } while (!CAN_GO(ch, dir) && --tries);
-    send_to_char(ch, "You sense a trail %s from here!\r\n", dirs[dir]);
-    return;
-  }
-
-  /* They passed the skill check. */
   dir = find_first_step(IN_ROOM(ch), IN_ROOM(vict));
 
   switch (dir) {

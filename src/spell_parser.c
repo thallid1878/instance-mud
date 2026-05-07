@@ -56,9 +56,9 @@ static struct syllable syls[] = { { " ", " " }, { "ar", "abra" },
         "y", "l" }, { "z", "k" }, { "", "" } };
 
 static int mag_manacost(struct char_data *ch, int spellnum) {
-  return MAX(SINFO.mana_max - (SINFO.mana_change *
-      (GET_LEVEL(ch) - SINFO.min_level[(int) GET_CLASS(ch)])),
-  SINFO.mana_min);
+  int rank = MIN(10, MAX(1, (GET_SKILL(ch, spellnum) + 9) / 10));
+
+  return MAX(SINFO.mana_max - (SINFO.mana_change * (rank - 1)), SINFO.mana_min);
 }
 
 static char *obfuscate_spell(const char *unobfuscated) {
@@ -208,15 +208,13 @@ int call_magic(struct char_data *caster, struct char_data *cvict,
     int attacker_roll = 0, defender_roll = 0;
 
     if (!spell_attack_hits(caster, cvict, savetype, &attacker_roll, &defender_roll)) {
-      act("Your spell misses $N.", FALSE, caster, 0, cvict, TO_CHAR);
-      act("$n's spell misses you.", FALSE, caster, 0, cvict, TO_VICT);
-
       if (CONFIG_DEBUG_MODE >= NRM)
         send_to_char(caster, "\t1Debug:\r\n   \t2Spell attack roll: \t3%d\r\n"
           "   \t2Spell defense roll: \t3%d\tn\r\n",
           attacker_roll, defender_roll);
 
-      return (0);
+      damage(caster, cvict, 0, spellnum);
+      return (1);
     }
 
     if (CONFIG_DEBUG_MODE >= NRM)
@@ -542,10 +540,6 @@ ACMD(do_cast) {
     send_to_char(ch, "Cast what?!?\r\n");
     return;
   }
-  if (GET_LEVEL(ch) < SINFO.min_level[(int) GET_CLASS(ch)]) {
-    send_to_char(ch, "You do not know that spell!\r\n");
-    return;
-  }
   if (GET_SKILL(ch, spellnum) == 0) {
     send_to_char(ch, "You are unfamiliar with that spell.\r\n");
     return;
@@ -631,21 +625,10 @@ ACMD(do_cast) {
     return;
   }
 
-  /* You throws the dice and you takes your chances.. 101% is total failure */
-  if (rand_number(0, 101) > GET_SKILL(ch, spellnum)) {
+  if (cast_spell(ch, tch, tobj, spellnum)) {
     WAIT_STATE(ch, PULSE_VIOLENCE);
-    if (!tch || !skill_message(0, ch, tch, spellnum))
-      send_to_char(ch, "You lost your concentration!\r\n");
     if (mana > 0)
-      GET_MANA(ch) = MAX(0, MIN(GET_MAX_MANA(ch), GET_MANA(ch) - (mana / 2)));
-    if (SINFO.violent && tch && IS_NPC(tch))
-    hit(tch, ch, TYPE_UNDEFINED);
-  } else { /* cast spell returns 1 on success; subtract mana & set waitstate */
-    if (cast_spell(ch, tch, tobj, spellnum)) {
-      WAIT_STATE(ch, PULSE_VIOLENCE);
-      if (mana > 0)
-        GET_MANA(ch) = MAX(0, MIN(GET_MAX_MANA(ch), GET_MANA(ch) - mana));
-    }
+      GET_MANA(ch) = MAX(0, MIN(GET_MAX_MANA(ch), GET_MANA(ch) - mana));
   }
 }
 
@@ -748,7 +731,7 @@ void mag_assign_spells(void) {
       "You feel less righteous.");
 
   spello(SPELL_BLINDNESS, "blindness", 35, 25, 1, POS_STANDING,
-  TAR_CHAR_ROOM | TAR_NOT_SELF, FALSE, MAG_AFFECTS,
+  TAR_CHAR_ROOM | TAR_NOT_SELF, TRUE, MAG_AFFECTS,
       "You feel a cloak of blindness dissolve.");
 
   spello(SPELL_BURNING_HANDS, "burning hands", 30, 10, 3, POS_FIGHTING,

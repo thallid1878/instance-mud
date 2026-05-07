@@ -23,6 +23,7 @@
 #include "constants.h"
 #include "act.h"
 #include "class.h"
+#include "handler.h"
 
 /* Names first */
 const char *class_abbrevs[] = {
@@ -1410,7 +1411,7 @@ void do_start(struct char_data *ch)
   set_title(ch, NULL);
   roll_real_abils(ch);
 
-  GET_MAX_HIT(ch)  = 10;
+  GET_MAX_HIT(ch)  = 1;
   GET_MAX_MANA(ch) = 100;
   GET_MAX_MOVE(ch) = 82;
 
@@ -1432,13 +1433,12 @@ void do_start(struct char_data *ch)
  * class every time they gain a level. */
 void advance_level(struct char_data *ch)
 {
-  int add_hp, add_mana = 0, add_move = 0, i;
+  int add_mana = 0, add_move = 0, i;
 
-  add_hp = con_app[STAT_APP_INDEX(GET_CON(ch))].hitp + rand_number(8, 12);
   add_mana = rand_number(1, 6);
   add_move = rand_number(1, 3);
 
-  ch->points.max_hit += MAX(1, add_hp);
+  update_max_hit_from_con(ch);
   ch->points.max_move += MAX(1, add_move);
 
   if (GET_LEVEL(ch) > 1)

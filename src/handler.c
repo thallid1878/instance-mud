@@ -33,6 +33,7 @@ static int extractions_pending = 0;
 static int apply_ac(struct char_data *ch, int eq_pos);
 static void update_object(struct obj_data *obj, int use);
 static void affect_modify_ar(struct char_data * ch, byte loc, sbyte mod, int bitv[], bool add);
+static int applied_hit_modifier(struct char_data *ch);
 
 char *fname(const char *namelist)
 {
@@ -206,6 +207,48 @@ static void aff_apply_modify(struct char_data *ch, byte loc, sbyte mod, char *ms
   } /* switch */
 }
 
+static int applied_hit_modifier(struct char_data *ch)
+{
+  struct affected_type *af;
+  int i, j, mod = 0;
+
+  if (!ch)
+    return 0;
+
+  for (i = 0; i < NUM_WEARS; i++) {
+    if (GET_EQ(ch, i)) {
+      for (j = 0; j < MAX_OBJ_AFFECT; j++) {
+        if (GET_EQ(ch, i)->affected[j].location == APPLY_HIT)
+          mod += GET_EQ(ch, i)->affected[j].modifier;
+      }
+    }
+  }
+
+  for (af = ch->affected; af; af = af->next)
+    if (af->location == APPLY_HIT)
+      mod += af->modifier;
+
+  return mod;
+}
+
+void update_max_hit_from_con(struct char_data *ch)
+{
+  int old_max, new_max, was_full;
+
+  if (!ch)
+    return;
+
+  old_max = GET_MAX_HIT(ch);
+  was_full = (old_max > 0 && GET_HIT(ch) >= old_max);
+  new_max = (GET_CON(ch) * HITPOINTS_PER_CON) + applied_hit_modifier(ch);
+  new_max = MAX(1, MIN(new_max, SHRT_MAX));
+
+  GET_MAX_HIT(ch) = new_max;
+
+  if (old_max <= 0 || was_full || GET_HIT(ch) > new_max)
+    GET_HIT(ch) = new_max;
+}
+
 static void affect_modify_ar(struct char_data * ch, byte loc, sbyte mod, int bitv[], bool add)
 {
   int i , j;
@@ -263,6 +306,7 @@ void affect_total(struct char_data *ch)
   GET_CON(ch) = MAX(MIN_AFFECTED_STAT_VALUE, MIN(GET_CON(ch), MAX_AFFECTED_STAT_VALUE));
   GET_CHA(ch) = MAX(MIN_AFFECTED_STAT_VALUE, MIN(GET_CHA(ch), MAX_AFFECTED_STAT_VALUE));
   GET_STR(ch) = MAX(MIN_AFFECTED_STAT_VALUE, MIN(GET_STR(ch), MAX_AFFECTED_STAT_VALUE));
+  update_max_hit_from_con(ch);
 }
 
 /* Insert an affect_type in a char_data structure. Automatically sets

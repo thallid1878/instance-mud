@@ -19,7 +19,8 @@ int instance_zone_is_runtime(zone_rnum zone);
 int instance_shop_top(void);
 room_rnum instance_safe_return_room(struct char_data *ch);
 room_vnum instance_safe_load_room_vnum(struct char_data *ch);
-int instance_create(zone_rnum template_zone, room_rnum return_room, room_rnum *entry_room);
+int instance_create(zone_rnum template_zone, room_rnum return_room, long owner_id,
+  room_rnum *entry_room);
 int instance_leave(struct char_data *ch);
 int instance_relocate_char(struct char_data *ch);
 void instance_update(void);

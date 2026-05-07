@@ -149,8 +149,7 @@ ASPELL(spell_summon)
     }
   }
 
-  if (MOB_FLAGGED(victim, MOB_NOSUMMON) ||
-      (IS_NPC(victim) && mag_savingthrow(victim, SAVING_SPELL, 0))) {
+  if (MOB_FLAGGED(victim, MOB_NOSUMMON)) {
     send_to_char(ch, "%s", SUMMON_FAIL);
     return;
   }
@@ -277,8 +276,6 @@ ASPELL(spell_charm)
     send_to_char(ch, "You fail - shouldn't be doing it anyway.\r\n");
   else if (circle_follow(victim, ch))
     send_to_char(ch, "Sorry, following in circles is not allowed.\r\n");
-  else if (mag_savingthrow(victim, SAVING_PARA, 0))
-    send_to_char(ch, "Your victim resists!\r\n");
   else {
     if (victim->master)
       stop_follower(victim);

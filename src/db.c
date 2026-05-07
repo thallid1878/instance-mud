@@ -1640,7 +1640,7 @@ static void interpret_espec(const char *keyword, const char *value, int i, int n
   }
 
   CASE("Str") {
-    RANGE(3, 25);
+    RANGE(3, MAX_STAT_VALUE);
     mob_proto[i].real_abils.str = num_arg;
   }
 
@@ -1649,27 +1649,27 @@ static void interpret_espec(const char *keyword, const char *value, int i, int n
   }
 
   CASE("Int") {
-    RANGE(3, 25);
+    RANGE(3, MAX_STAT_VALUE);
     mob_proto[i].real_abils.intel = num_arg;
   }
 
   CASE("Wis") {
-    RANGE(3, 25);
+    RANGE(3, MAX_STAT_VALUE);
     mob_proto[i].real_abils.wis = num_arg;
   }
 
   CASE("Dex") {
-    RANGE(3, 25);
+    RANGE(3, MAX_STAT_VALUE);
     mob_proto[i].real_abils.dex = num_arg;
   }
 
   CASE("Con") {
-    RANGE(3, 25);
+    RANGE(3, MAX_STAT_VALUE);
     mob_proto[i].real_abils.con = num_arg;
   }
 
   CASE("Cha") {
-    RANGE(3, 25);
+    RANGE(3, MAX_STAT_VALUE);
     mob_proto[i].real_abils.cha = num_arg;
   }
 
@@ -2446,12 +2446,7 @@ struct char_data *read_mobile(mob_vnum nr, int type) /* and mob_rnum */
   
   new_mobile_data(mob);  
   
-  if (!mob->points.max_hit) {
-    mob->points.max_hit = dice(mob->points.hit, mob->points.mana) +
-      mob->points.move;
-  } else
-    mob->points.max_hit = rand_number(mob->points.hit, mob->points.mana);
-
+  update_max_hit_from_con(mob);
   mob->points.hit = mob->points.max_hit;
   mob->points.mana = mob->points.max_mana;
   mob->points.move = mob->points.max_move;
@@ -3525,7 +3520,7 @@ void init_char(struct char_data *ch)
     GET_EXP(ch) = 7000000;
 
     /* The implementor never goes through do_start(). */
-    GET_MAX_HIT(ch) = 500;
+    GET_MAX_HIT(ch) = 1;
     GET_MAX_MANA(ch) = 100;
     GET_MAX_MOVE(ch) = 82;
     GET_HIT(ch) = GET_MAX_HIT(ch);
@@ -3584,6 +3579,8 @@ void init_char(struct char_data *ch)
   ch->real_abils.str = 25;
   ch->real_abils.con = 25;
   ch->real_abils.cha = 25;
+  ch->aff_abils = ch->real_abils;
+  update_max_hit_from_con(ch);
 
   for (i = 0; i < 3; i++)
     GET_COND(ch, i) = (GET_LEVEL(ch) == LVL_IMPL ? -1 : 24);

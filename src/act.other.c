@@ -106,7 +106,6 @@ ACMD(do_not_here)
 ACMD(do_sneak)
 {
   struct affected_type af;
-  byte percent;
 
   if (IS_NPC(ch) || !GET_SKILL(ch, SKILL_SNEAK)) {
     send_to_char(ch, "You have no idea how to do that.\r\n");
@@ -115,11 +114,6 @@ ACMD(do_sneak)
   send_to_char(ch, "Okay, you'll try to move silently for a while.\r\n");
   if (AFF_FLAGGED(ch, AFF_SNEAK))
     affect_from_char(ch, SKILL_SNEAK);
-
-  percent = rand_number(1, 101);	/* 101% is a complete failure */
-
-  if (percent > GET_SKILL(ch, SKILL_SNEAK) + dex_app_skill[STAT_APP_INDEX(GET_DEX(ch))].sneak)
-    return;
 
   new_affect(&af);
   af.spell = SKILL_SNEAK;
@@ -130,8 +124,6 @@ ACMD(do_sneak)
 
 ACMD(do_hide)
 {
-  byte percent;
-
   if (IS_NPC(ch) || !GET_SKILL(ch, SKILL_HIDE)) {
     send_to_char(ch, "You have no idea how to do that.\r\n");
     return;
@@ -142,11 +134,6 @@ ACMD(do_hide)
   if (AFF_FLAGGED(ch, AFF_HIDE))
     REMOVE_BIT_AR(AFF_FLAGS(ch), AFF_HIDE);
 
-  percent = rand_number(1, 101);	/* 101% is a complete failure */
-
-  if (percent > GET_SKILL(ch, SKILL_HIDE) + dex_app_skill[STAT_APP_INDEX(GET_DEX(ch))].hide)
-    return;
-
   SET_BIT_AR(AFF_FLAGS(ch), AFF_HIDE);
 }
 
@@ -155,7 +142,7 @@ ACMD(do_steal)
   struct char_data *vict;
   struct obj_data *obj;
   char vict_name[MAX_INPUT_LENGTH], obj_name[MAX_INPUT_LENGTH];
-  int percent, gold, eq_pos, pcsteal = 0, ohoh = 0;
+  int gold, eq_pos;
 
   if (IS_NPC(ch) || !GET_SKILL(ch, SKILL_STEAL)) {
     send_to_char(ch, "You have no idea how to do that.\r\n");
@@ -183,21 +170,12 @@ ACMD(do_steal)
       send_to_char(ch, "Stealing from players is not allowed.\r\n");
       return;
     }
-    pcsteal = (CONFIG_PT_SETTING == CONFIG_PT_LIMITED);
   }
 
-  /* 101% is a complete failure */
-  percent = rand_number(1, 101) - dex_app_skill[STAT_APP_INDEX(GET_DEX(ch))].p_pocket;
-
-  if (GET_POS(vict) < POS_SLEEPING)
-    percent = -1;		/* ALWAYS SUCCESS, unless heavy object. */
-
-  if (!AWAKE(vict))	/* Easier to steal from sleeping people. */
-    percent -= 50;
-
-  /* No stealing if not allowed. If it is no stealing from Imm's or Shopkeepers. */
-  if (GET_LEVEL(vict) >= LVL_IMMORT || GET_MOB_SPEC(vict) == shop_keeper)
-    percent = 101;		/* Failure */
+  if (GET_LEVEL(vict) >= LVL_IMMORT || GET_MOB_SPEC(vict) == shop_keeper) {
+    send_to_char(ch, "That target is too alert to steal from.\r\n");
+    return;
+  }
 
   if (str_cmp(obj_name, "coins") && str_cmp(obj_name, "gold")) {
 
@@ -230,70 +208,46 @@ ACMD(do_steal)
       }
     } else {			/* obj found in inventory */
 
-      percent += GET_OBJ_WEIGHT(obj);	/* Make heavy harder */
-
-      if (percent > GET_SKILL(ch, SKILL_STEAL)) {
-	ohoh = TRUE;
-	send_to_char(ch, "Oops..\r\n");
-  
-  /* Player got caught and stealing is limited via cedit */
-  if ( (pcsteal) && (!PLR_FLAGGED(ch, PLR_THIEF))) {
-        SET_BIT_AR(PLR_FLAGS(ch), PLR_THIEF);
-  }
-
-	act("$n tried to steal something from you!", FALSE, ch, 0, vict, TO_VICT);
-	act("$n tries to steal something from $N.", TRUE, ch, 0, vict, TO_NOTVICT);
-      } else {			/* Steal the item */
-	if (IS_CARRYING_N(ch) + 1 < CAN_CARRY_N(ch)) {
-          if (!give_otrigger(obj, vict, ch) ||
-              !receive_mtrigger(ch, vict, obj) ) {
-            send_to_char(ch, "Impossible!\r\n");
-            return;
-          }
-	  if (IS_CARRYING_W(ch) + GET_OBJ_WEIGHT(obj) < CAN_CARRY_W(ch)) {
-	    obj_from_char(obj);
-	    obj_to_char(obj, ch);
-	    send_to_char(ch, "Got it!\r\n");
-	  }
-	} else
-	  send_to_char(ch, "You cannot carry that much.\r\n");
-      }
+      if (IS_CARRYING_N(ch) + 1 < CAN_CARRY_N(ch)) {
+        if (!give_otrigger(obj, vict, ch) ||
+            !receive_mtrigger(ch, vict, obj) ) {
+          send_to_char(ch, "Impossible!\r\n");
+          return;
+        }
+	if (IS_CARRYING_W(ch) + GET_OBJ_WEIGHT(obj) < CAN_CARRY_W(ch)) {
+	  obj_from_char(obj);
+	  obj_to_char(obj, ch);
+	  send_to_char(ch, "Got it!\r\n");
+	}
+      } else
+	send_to_char(ch, "You cannot carry that much.\r\n");
     }
   } else {			/* Steal some coins */
-    if (AWAKE(vict) && (percent > GET_SKILL(ch, SKILL_STEAL))) {
-      ohoh = TRUE;
-        /* Player got caught and stealing is limited via cedit */
-      if ( (pcsteal) && (!PLR_FLAGGED(ch, PLR_THIEF))) {
-        SET_BIT_AR(PLR_FLAGS(ch), PLR_THIEF);
-      }
-      send_to_char(ch, "Oops..\r\n");
-      act("You discover that $n has $s hands in your wallet.", FALSE, ch, 0, vict, TO_VICT);
-      act("$n tries to steal gold from $N.", TRUE, ch, 0, vict, TO_NOTVICT);
+    /* Steal some gold coins */
+    gold = (GET_GOLD(vict) * rand_number(1, 10)) / 100;
+    gold = MIN(1782, gold);
+    if (gold > 0) {
+      increase_gold(ch, gold);
+      decrease_gold(vict, gold);
+      if (gold > 1)
+	send_to_char(ch, "Bingo!  You got %d gold coins.\r\n", gold);
+      else
+	send_to_char(ch, "You manage to swipe a solitary gold coin.\r\n");
     } else {
-      /* Steal some gold coins */
-      gold = (GET_GOLD(vict) * rand_number(1, 10)) / 100;
-      gold = MIN(1782, gold);
-      if (gold > 0) {
-		increase_gold(ch, gold);
-		decrease_gold(vict, gold);
-        if (gold > 1)
-	  send_to_char(ch, "Bingo!  You got %d gold coins.\r\n", gold);
-	else
-	  send_to_char(ch, "You manage to swipe a solitary gold coin.\r\n");
-      } else {
-	send_to_char(ch, "You couldn't get any gold...\r\n");
-      }
+      send_to_char(ch, "You couldn't get any gold...\r\n");
     }
   }
-
-  if (ohoh && IS_NPC(vict) && AWAKE(vict))
-    hit(vict, ch, TYPE_UNDEFINED);
 }
 
 ACMD(do_practice)
 {
   if (IS_NPC(ch))
     return;
+
+  if (GET_POS(ch) == POS_FIGHTING || FIGHTING(ch)) {
+    send_to_char(ch, "You cannot practice while fighting.\r\n");
+    return;
+  }
 
   skip_spaces(&argument);
 

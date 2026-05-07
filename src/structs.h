@@ -912,8 +912,8 @@ struct char_point_data
   int bank_gold;   /**< Gold the char has in a bank account	*/
   int exp;         /**< The experience points, or value, of the character. */
 
-  sbyte hitroll;   /**< Any bonus or penalty to the hit roll */
-  sbyte damroll;   /**< Any bonus or penalty to the damage roll */
+  sh_int hitroll;  /**< Any bonus or penalty to the hit roll */
+  sh_int damroll;  /**< Any bonus or penalty to the damage roll */
 };
 
 /** char_special_data_saved: specials which both a PC and an NPC have in

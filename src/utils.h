@@ -539,6 +539,7 @@ int valid_room_rnum_instance(room_rnum rnum, int instance_id);
 #define MAX_STAT_VALUE 255
 #define MIN_AFFECTED_STAT_VALUE -32768
 #define MAX_AFFECTED_STAT_VALUE 32767
+#define HITPOINTS_PER_CON 5
 #define STAT_APP_INDEX(stat) (MAX(0, MIN((stat), 25)))
 
 /** Experience points of ch. */
@@ -568,6 +569,11 @@ int valid_room_rnum_instance(room_rnum rnum, int instance_id);
         (GET_HITROLL(ch) + (AFF_FLAGGED((ch), AFF_HIDE) ? HIDDEN_HITROLL_BONUS : 0))
 /** Current damage roll modifier for ch. */
 #define GET_DAMROLL(ch)   ((ch)->points.damroll)
+/** Typed derived combat bonuses. */
+#define STAT_HALF_BONUS(stat) (MAX(0, (stat)) / 2)
+#define GET_PHYSICAL_DAMAGE_BONUS(ch) ((ch) ? STAT_HALF_BONUS(GET_STR(ch)) : 0)
+#define GET_SPELL_DAMAGE_BONUS(ch)    ((ch) ? STAT_HALF_BONUS(GET_INT(ch)) : 0)
+#define GET_HEALING_BONUS(ch)         ((ch) ? STAT_HALF_BONUS(GET_WIS(ch)) : 0)
 
 /** Current position (standing, sitting) of ch. */
 #define GET_POS(ch)	  ((ch)->char_specials.position)

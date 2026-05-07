@@ -29,6 +29,8 @@ int damage(struct char_data *ch, struct char_data *victim, int dam, int attackty
 void death_cry(struct char_data *ch);
 void die(struct char_data * ch, struct char_data * killer);
 void hit(struct char_data *ch, struct char_data *victim, int type);
+bool physical_attack_hits(struct char_data *ch, struct char_data *victim,
+  int *attacker_roll, int *defender_roll);
 void perform_violence(void);
 void raw_kill(struct char_data * ch, struct char_data * killer);
 void  set_fighting(struct char_data *ch, struct char_data *victim);

@@ -21,6 +21,9 @@
 #include "lists.h"
 #include "instance.h"
 
+#define INSTANCE_BLOCK_SIZE 100
+#define INSTANCE_MAX_ROOM_SLOT ((IDXTYPE_MAX - (INSTANCE_BLOCK_SIZE - 1)) / INSTANCE_BLOCK_SIZE)
+
 struct instance_obj_ref {
   struct obj_data *obj;
   struct instance_obj_ref *next;
@@ -28,6 +31,8 @@ struct instance_obj_ref {
 
 struct instance_data {
   int id;
+  int slot;
+  long owner_id;
   zone_rnum template_zone;
   zone_rnum zone;
   room_rnum *template_rooms;
@@ -54,11 +59,18 @@ static zone_rnum izone_base = NOWHERE;
 static int ishop_base = -1;
 
 static struct instance_data *instance_by_id(int id);
+static int allocate_instance_id(void);
+static int allocate_instance_slot(void);
+static int ensure_instance_blocks(int slot);
+static int instance_room_offset(zone_rnum zone, room_rnum room);
+static struct instance_data *instance_owned_by_char(struct char_data *ch, zone_rnum template_zone);
 static struct instance_data *instance_group_instance(struct char_data *ch, zone_rnum template_zone);
+static struct room_data *instance_room_slot(struct instance_data *inst, room_rnum room);
 static struct room_data *instance_room_at(struct instance_data *inst, room_rnum room);
 static room_rnum instance_room_for_template(struct instance_data *inst, room_rnum room);
 static room_rnum instance_entry_room(struct instance_data *inst);
 static void clone_room_to_instance(struct instance_data *inst, int index);
+static int count_instance_shops(zone_rnum zone);
 static void clone_instance_shops(struct instance_data *inst);
 static void reset_instance(struct instance_data *inst);
 static void destroy_instance(struct instance_data *inst);
@@ -234,12 +246,175 @@ static struct instance_data *instance_by_id(int id)
   return NULL;
 }
 
-static struct room_data *instance_room_at(struct instance_data *inst, room_rnum room)
+static int allocate_instance_id(void)
 {
-  if (!inst || !iworld || room == NOWHERE || room >= inst->room_count)
+  int start, id;
+
+  if (next_instance_id <= 0)
+    next_instance_id = 1;
+
+  start = next_instance_id;
+  do {
+    id = next_instance_id;
+    next_instance_id = (next_instance_id == INT_MAX) ? 1 : next_instance_id + 1;
+
+    if (id > 0 && !instance_by_id(id))
+      return id;
+  } while (next_instance_id != start);
+
+  return 0;
+}
+
+static int allocate_instance_slot(void)
+{
+  struct instance_data *inst;
+  int slot, in_use;
+
+  for (slot = 0; slot <= INSTANCE_MAX_ROOM_SLOT; slot++) {
+    in_use = FALSE;
+    for (inst = instance_list; inst; inst = inst->next) {
+      if (inst->slot == slot) {
+        in_use = TRUE;
+        break;
+      }
+    }
+
+    if (!in_use)
+      return slot;
+  }
+
+  return -1;
+}
+
+static int ensure_iworld_block(int slot)
+{
+  room_rnum new_top = (slot * INSTANCE_BLOCK_SIZE) + INSTANCE_BLOCK_SIZE - 1;
+  size_t old_count = (top_of_runtime_world == NOWHERE) ? 0 : top_of_runtime_world + 1;
+  size_t new_count = new_top + 1;
+
+  if (slot < 0 || slot > INSTANCE_MAX_ROOM_SLOT)
+    return FALSE;
+
+  if (top_of_runtime_world != NOWHERE && new_top <= top_of_runtime_world)
+    return TRUE;
+
+  RECREATE(iworld, struct room_data, new_count);
+  if (new_count > old_count)
+    memset(iworld + old_count, 0, (new_count - old_count) * sizeof(struct room_data));
+  top_of_runtime_world = new_top;
+  return TRUE;
+}
+
+static int ensure_izone_block(int slot)
+{
+  zone_rnum new_top;
+  size_t old_count, new_count;
+
+  if (izone_base == NOWHERE) {
+    if (top_of_zone_table >= IDXTYPE_MAX - 1)
+      return FALSE;
+    izone_base = top_of_zone_table + 1;
+    top_of_runtime_zone_table = izone_base - 1;
+  }
+
+  if ((int)izone_base + slot >= IDXTYPE_MAX)
+    return FALSE;
+
+  new_top = izone_base + slot;
+  old_count = (top_of_runtime_zone_table == NOWHERE ||
+      top_of_runtime_zone_table < izone_base) ? 0 :
+      top_of_runtime_zone_table - izone_base + 1;
+  new_count = slot + 1;
+
+  if (top_of_runtime_zone_table != NOWHERE && new_top <= top_of_runtime_zone_table)
+    return TRUE;
+
+  RECREATE(izone, struct zone_data, new_count);
+  if (new_count > old_count)
+    memset(izone + old_count, 0, (new_count - old_count) * sizeof(struct zone_data));
+  top_of_runtime_zone_table = new_top;
+  return TRUE;
+}
+
+static int ensure_ishop_block(int slot)
+{
+  int new_top;
+  size_t old_count, new_count;
+
+  if (ishop_base < 0) {
+    if (top_shop >= IDXTYPE_MAX - 1)
+      return FALSE;
+    ishop_base = top_shop + 1;
+    top_of_runtime_shop = ishop_base - 1;
+  }
+
+  if (ishop_base + (slot * INSTANCE_BLOCK_SIZE) + INSTANCE_BLOCK_SIZE - 1 >= IDXTYPE_MAX)
+    return FALSE;
+
+  new_top = ishop_base + (slot * INSTANCE_BLOCK_SIZE) + INSTANCE_BLOCK_SIZE - 1;
+  old_count = (top_of_runtime_shop < ishop_base) ? 0 : top_of_runtime_shop - ishop_base + 1;
+  new_count = (slot + 1) * INSTANCE_BLOCK_SIZE;
+
+  if (new_top <= top_of_runtime_shop)
+    return TRUE;
+
+  RECREATE(ishop_index, struct shop_data, new_count);
+  if (new_count > old_count)
+    memset(ishop_index + old_count, 0, (new_count - old_count) * sizeof(struct shop_data));
+  top_of_runtime_shop = new_top;
+  return TRUE;
+}
+
+static int ensure_instance_blocks(int slot)
+{
+  return ensure_iworld_block(slot) && ensure_izone_block(slot) && ensure_ishop_block(slot);
+}
+
+static int instance_room_offset(zone_rnum zone, room_rnum room)
+{
+  struct zone_data *z = ZONE_AT(zone);
+  struct room_data *r = ROOM_AT(room);
+  int offset;
+
+  if (!z || !r)
+    return -1;
+
+  offset = r->number - z->bot;
+  return (offset >= 0 && offset < INSTANCE_BLOCK_SIZE) ? offset : -1;
+}
+
+static struct room_data *instance_room_slot(struct instance_data *inst, room_rnum room)
+{
+  if (!inst || !iworld || room == NOWHERE || room >= INSTANCE_BLOCK_SIZE)
     return NULL;
 
   return &iworld[inst->room_start + room];
+}
+
+static struct room_data *instance_room_at(struct instance_data *inst, room_rnum room)
+{
+  struct room_data *r = instance_room_slot(inst, room);
+
+  if (!r || r->instance_id != inst->id)
+    return NULL;
+
+  return r;
+}
+
+static struct instance_data *instance_owned_by_char(struct char_data *ch, zone_rnum template_zone)
+{
+  struct instance_data *inst;
+  long owner_id;
+
+  if (!ch || IS_NPC(ch) || GET_IDNUM(ch) <= 0)
+    return NULL;
+
+  owner_id = GET_IDNUM(ch);
+  for (inst = instance_list; inst; inst = inst->next)
+    if (inst->owner_id == owner_id && inst->template_zone == template_zone)
+      return inst;
+
+  return NULL;
 }
 
 static struct instance_data *instance_group_instance(struct char_data *ch, zone_rnum template_zone)
@@ -296,8 +471,11 @@ static room_rnum instance_entry_room(struct instance_data *inst)
 static void clone_room_to_instance(struct instance_data *inst, int index)
 {
   struct room_data *src = ROOM_AT(inst->template_rooms[index]);
-  struct room_data *dst = instance_room_at(inst, inst->rooms[index]);
+  struct room_data *dst = instance_room_slot(inst, inst->rooms[index]);
   int dir;
+
+  if (!src || !dst)
+    return;
 
   memset(dst, 0, sizeof(*dst));
   *dst = *src;
@@ -353,26 +531,39 @@ static int shop_has_room_in_zone(int shop, zone_rnum zone)
   return FALSE;
 }
 
+static int count_instance_shops(zone_rnum zone)
+{
+  int shop, count = 0;
+
+  for (shop = 0; shop <= top_shop; shop++)
+    if (shop_has_room_in_zone(shop, zone))
+      count++;
+
+  return count;
+}
+
 static void clone_instance_shops(struct instance_data *inst)
 {
-  int shop, new_shop;
+  int shop, new_shop, offset = 0;
   struct shop_data *dst;
 
-  if (ishop_base < 0) {
-    ishop_base = top_shop + 1;
-    top_of_runtime_shop = ishop_base - 1;
-  }
-
-  inst->shop_start = top_of_runtime_shop + 1;
+  inst->shop_start = ishop_base + (inst->slot * INSTANCE_BLOCK_SIZE);
   inst->shop_count = 0;
 
   for (shop = 0; shop <= top_shop; shop++) {
     if (!shop_has_room_in_zone(shop, inst->template_zone))
       continue;
 
-    new_shop = ++top_of_runtime_shop;
-    RECREATE(ishop_index, struct shop_data, top_of_runtime_shop - ishop_base + 1);
+    if (offset >= INSTANCE_BLOCK_SIZE) {
+      log("SYSERR: Instance %d has too many shops for slot block %d.", inst->id,
+        INSTANCE_BLOCK_SIZE);
+      break;
+    }
+
+    new_shop = inst->shop_start + offset++;
     dst = ishop_slot(new_shop);
+    if (!dst)
+      continue;
     memset(dst, 0, sizeof(struct shop_data));
     copy_shop(dst, SHOP_AT(shop), FALSE);
     dst->instance_id = inst->id;
@@ -646,12 +837,14 @@ static void reset_instance(struct instance_data *inst)
     reset_wtrigger(instance_room_at(inst, inst->rooms[cmd_no]));
 }
 
-int instance_create(zone_rnum template_zone, room_rnum return_room, room_rnum *entry_room)
+int instance_create(zone_rnum template_zone, room_rnum return_room, long owner_id,
+  room_rnum *entry_room)
 {
   struct instance_data *inst;
   struct zone_data *src_zone, *dst_zone;
-  int i, count = 0;
-  room_rnum room, new_top;
+  int i, count = 0, shop_count, slot, id;
+  int used_offsets[INSTANCE_BLOCK_SIZE] = { 0 };
+  room_rnum room;
   zone_rnum new_zone;
 
   if (template_zone == NOWHERE || template_zone > top_of_zone_table)
@@ -666,22 +859,68 @@ int instance_create(zone_rnum template_zone, room_rnum return_room, room_rnum *e
   if (count <= 0)
     return 0;
 
-  if (izone_base == NOWHERE) {
-    izone_base = top_of_zone_table + 1;
-    top_of_runtime_zone_table = izone_base - 1;
+  if (count > INSTANCE_BLOCK_SIZE) {
+    mudlog(BRF, LVL_IMPL, TRUE,
+      "Unable to instance zone %d: %d rooms exceeds block size %d.",
+      ZONE_AT(template_zone)->number, count, INSTANCE_BLOCK_SIZE);
+    return 0;
   }
 
+  shop_count = count_instance_shops(template_zone);
+  if (shop_count > INSTANCE_BLOCK_SIZE) {
+    mudlog(BRF, LVL_IMPL, TRUE,
+      "Unable to instance zone %d: %d shops exceeds block size %d.",
+      ZONE_AT(template_zone)->number, shop_count, INSTANCE_BLOCK_SIZE);
+    return 0;
+  }
+
+  slot = allocate_instance_slot();
+  if (slot < 0)
+    return 0;
+
+  id = allocate_instance_id();
+  if (!id)
+    return 0;
+
+  if (!ensure_instance_blocks(slot))
+    return 0;
+
   CREATE(inst, struct instance_data, 1);
-  inst->id = next_instance_id++;
+  inst->id = id;
+  inst->slot = slot;
+  inst->owner_id = owner_id;
   inst->template_zone = template_zone;
   inst->return_room = return_room;
   inst->room_count = count;
-  inst->room_start = (top_of_runtime_world == NOWHERE) ? 0 : top_of_runtime_world + 1;
+  inst->room_start = slot * INSTANCE_BLOCK_SIZE;
   CREATE(inst->template_rooms, room_rnum, count);
   CREATE(inst->rooms, room_rnum, count);
 
-  new_zone = ++top_of_runtime_zone_table;
-  RECREATE(izone, struct zone_data, top_of_runtime_zone_table - izone_base + 1);
+  i = 0;
+  for (room = 0; room <= top_of_world; room++) {
+    int offset;
+
+    if (world[room].zone != template_zone)
+      continue;
+
+    offset = instance_room_offset(template_zone, room);
+    if (offset < 0 || used_offsets[offset]) {
+      mudlog(BRF, LVL_IMPL, TRUE,
+        "Unable to instance zone %d: room %d is outside or duplicates the %d-room block.",
+        ZONE_AT(template_zone)->number, world[room].number, INSTANCE_BLOCK_SIZE);
+      free(inst->template_rooms);
+      free(inst->rooms);
+      free(inst);
+      return 0;
+    }
+
+    used_offsets[offset] = TRUE;
+    inst->template_rooms[i] = room;
+    inst->rooms[i] = offset;
+    i++;
+  }
+
+  new_zone = izone_base + slot;
   dst_zone = izone_slot(new_zone);
   src_zone = ZONE_AT(template_zone);
   memset(dst_zone, 0, sizeof(struct zone_data));
@@ -697,20 +936,6 @@ int instance_create(zone_rnum template_zone, room_rnum return_room, room_rnum *e
   SET_BIT_AR(dst_zone->zone_flags, ZONE_INSTANCE);
   inst->zone = new_zone;
 
-  new_top = inst->room_start + count - 1;
-  RECREATE(iworld, struct room_data, new_top + 1);
-
-  i = 0;
-  for (room = 0; room <= top_of_world; room++) {
-    if (world[room].zone != template_zone)
-      continue;
-
-    inst->template_rooms[i] = room;
-    inst->rooms[i] = i;
-    i++;
-  }
-  top_of_runtime_world = new_top;
-
   for (i = 0; i < inst->room_count; i++)
     clone_room_to_instance(inst, i);
   remap_instance_exits(inst);
@@ -725,8 +950,8 @@ int instance_create(zone_rnum template_zone, room_rnum return_room, room_rnum *e
   if (entry_room)
     *entry_room = inst->rooms[0];
 
-  mudlog(CMP, LVL_IMPL, TRUE, "Created dungeon instance %d from zone %d (%s).",
-    inst->id, src_zone->number, src_zone->name);
+  mudlog(CMP, LVL_IMPL, TRUE, "Created dungeon instance %d from zone %d (%s) in slot %d.",
+    inst->id, src_zone->number, src_zone->name, inst->slot);
   return inst->id;
 }
 
@@ -869,15 +1094,14 @@ static void destroy_instance(struct instance_data *inst)
   struct zone_data *z;
   int i;
 
-  for (i = 0; i < inst->room_count; i++)
-    queue_instance_room_chars(inst, inst->rooms[i]);
+  for (i = 0; i < INSTANCE_BLOCK_SIZE; i++)
+    queue_instance_room_chars(inst, i);
   extract_pending_chars();
 
-  for (i = 0; i < inst->room_count; i++) {
-    room_rnum room = inst->rooms[i];
-    struct room_data *r = instance_room_at(inst, room);
+  for (i = 0; i < INSTANCE_BLOCK_SIZE; i++) {
+    struct room_data *r = instance_room_slot(inst, i);
 
-    if (!r)
+    if (!r || r->instance_id != inst->id)
       continue;
 
     while (r->contents)
@@ -892,7 +1116,7 @@ static void destroy_instance(struct instance_data *inst)
     r->zone = NOWHERE;
   }
 
-  for (i = 0; i < inst->shop_count; i++)
+  for (i = 0; i < INSTANCE_BLOCK_SIZE; i++)
     free_instance_shop_slot(inst->shop_start + i);
 
   z = ZONE_AT(inst->zone);
@@ -915,7 +1139,8 @@ static void destroy_instance(struct instance_data *inst)
     prev = cur;
   }
 
-  mudlog(CMP, LVL_IMPL, TRUE, "Destroyed dungeon instance %d.", inst->id);
+  mudlog(CMP, LVL_IMPL, TRUE, "Destroyed dungeon instance %d from slot %d.",
+    inst->id, inst->slot);
   free(inst->template_rooms);
   free(inst->rooms);
   free(inst);
@@ -935,8 +1160,8 @@ void instance_list_to_char(struct char_data *ch)
     int players = instance_player_count(inst);
     struct zone_data *z = ZONE_AT(inst->template_zone);
 
-    send_to_char(ch, "  #%d zone %d (%s), rooms: %d, shops: %d, players: %d\r\n",
-      inst->id, z ? z->number : NOWHERE,
+    send_to_char(ch, "  #%d slot %d zone %d (%s), rooms: %d, shops: %d, players: %d\r\n",
+      inst->id, inst->slot, z ? z->number : NOWHERE,
       z ? z->name : "unknown", inst->room_count, inst->shop_count, players);
   }
 }
@@ -944,7 +1169,8 @@ void instance_list_to_char(struct char_data *ch)
 ACMD(do_instance)
 {
   char arg[MAX_INPUT_LENGTH], subarg[MAX_INPUT_LENGTH];
-  struct instance_data *group_inst = NULL;
+  struct instance_data *group_inst = NULL, *owned_inst = NULL, *target_inst = NULL;
+  const char *action = "Created";
   zone_rnum zone;
   room_rnum entry = NOWHERE, return_room;
   int id;
@@ -987,12 +1213,22 @@ ACMD(do_instance)
   }
 
   return_room = IN_ROOM(ch);
+  owned_inst = instance_owned_by_char(ch, zone);
   group_inst = instance_group_instance(ch, zone);
-  if (group_inst) {
-    id = group_inst->id;
-    entry = instance_entry_room(group_inst);
+  if (owned_inst) {
+    target_inst = owned_inst;
+    action = "Rejoined your";
+  } else if (group_inst) {
+    target_inst = group_inst;
+    action = "Joined your group's";
+  }
+
+  if (target_inst) {
+    id = target_inst->id;
+    entry = instance_entry_room(target_inst);
+    target_inst->empty_since = 0;
   } else {
-    id = instance_create(zone, return_room, &entry);
+    id = instance_create(zone, return_room, GET_IDNUM(ch), &entry);
   }
 
   if (!id || entry == NOWHERE) {
@@ -1006,7 +1242,6 @@ ACMD(do_instance)
   char_to_room(ch, entry);
   ch->instance_return_room = valid_room_rnum(return_room) ? return_room : r_mortal_start_room;
   act("$n steps out of a shimmering tear in the air.", TRUE, ch, 0, 0, TO_ROOM);
-  send_to_char(ch, "%s dungeon instance #%d.\r\n",
-    group_inst ? "Joined your group's" : "Created", id);
+  send_to_char(ch, "%s dungeon instance #%d.\r\n", action, id);
   look_at_room(ch, 0);
 }

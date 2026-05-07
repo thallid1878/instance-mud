@@ -21,6 +21,21 @@
 #include "fight.h"
 #include "mud_event.h"
 
+static bool physical_skill_hits(struct char_data *ch, struct char_data *vict)
+{
+  int attacker_roll = 0, defender_roll = 0;
+  bool hit;
+
+  hit = !AWAKE(vict) || physical_attack_hits(ch, vict, &attacker_roll, &defender_roll);
+
+  if (CONFIG_DEBUG_MODE >= NRM)
+    send_to_char(ch, "\t1Debug:\r\n   \t2Physical skill attack roll: \t3%d\r\n"
+      "   \t2Physical skill defense roll: \t3%d\tn\r\n",
+      attacker_roll, defender_roll);
+
+  return hit;
+}
+
 ACMD(do_assist)
 {
   char arg[MAX_INPUT_LENGTH];
@@ -128,7 +143,6 @@ ACMD(do_backstab)
 {
   char buf[MAX_INPUT_LENGTH];
   struct char_data *vict;
-  int percent, prob;
 
   if (IS_NPC(ch) || !GET_SKILL(ch, SKILL_BACKSTAB)) {
     send_to_char(ch, "You have no idea how to do that.\r\n");
@@ -166,13 +180,7 @@ ACMD(do_backstab)
     return;
   }
 
-  percent = rand_number(1, 101);	/* 101% is a complete failure */
-  prob = GET_SKILL(ch, SKILL_BACKSTAB);
-
-  if (AWAKE(vict) && (percent > prob))
-    damage(ch, vict, 0, SKILL_BACKSTAB);
-  else
-    hit(ch, vict, SKILL_BACKSTAB);
+  hit(ch, vict, SKILL_BACKSTAB);
 
   WAIT_STATE(ch, 2 * PULSE_VIOLENCE);
 }
@@ -271,7 +279,6 @@ ACMD(do_bash)
 {
   char arg[MAX_INPUT_LENGTH];
   struct char_data *vict;
-  int percent, prob;
 
   one_argument(argument, arg);
 
@@ -304,13 +311,7 @@ ACMD(do_bash)
     return;
   }
 
-  percent = rand_number(1, 101);	/* 101% is a complete failure */
-  prob = GET_SKILL(ch, SKILL_BASH);
-
-  if (MOB_FLAGGED(vict, MOB_NOBASH))
-    percent = 101;
-
-  if (percent > prob) {
+  if (MOB_FLAGGED(vict, MOB_NOBASH) || !physical_skill_hits(ch, vict)) {
     damage(ch, vict, 0, SKILL_BASH);
     GET_POS(ch) = POS_SITTING;
   } else {
@@ -333,7 +334,6 @@ ACMD(do_rescue)
 {
   char arg[MAX_INPUT_LENGTH];
   struct char_data *vict, *tmp_ch;
-  int percent, prob;
 
   if (IS_NPC(ch) || !GET_SKILL(ch, SKILL_RESCUE)) {
     send_to_char(ch, "You have no idea how to do that.\r\n");
@@ -367,13 +367,6 @@ ACMD(do_rescue)
 
   if (!tmp_ch) {
     act("But nobody is fighting $M!", FALSE, ch, 0, vict, TO_CHAR);
-    return;
-  }
-  percent = rand_number(1, 101);	/* 101% is a complete failure */
-  prob = GET_SKILL(ch, SKILL_RESCUE);
-
-  if (percent > prob) {
-    send_to_char(ch, "You fail the rescue!\r\n");
     return;
   }
   send_to_char(ch, "Banzai!  To the rescue...\r\n");
@@ -443,11 +436,8 @@ EVENTFUNC(event_whirlwind)
   /* The "return" of the event function is the time until the event is called
    * again. If we return 0, then the event is freed and removed from the list, but
    * any other numerical response will be the delay until the next call */
-  if (GET_SKILL(ch, SKILL_WHIRLWIND) < rand_number(1, 101)) {
-    send_to_char(ch, "You stop spinning.\r\n");
-    return 0;
-  } else
-    return 1.5 * PASSES_PER_SEC;
+  send_to_char(ch, "You stop spinning.\r\n");
+  return 0;
 }
 
 /* The "Whirlwind" skill is designed to provide a basic understanding of the
@@ -494,7 +484,6 @@ ACMD(do_kick)
 {
   char arg[MAX_INPUT_LENGTH];
   struct char_data *vict;
-  int percent, prob;
 
   if (IS_NPC(ch) || !GET_SKILL(ch, SKILL_KICK)) {
     send_to_char(ch, "You have no idea how.\r\n");
@@ -515,11 +504,8 @@ ACMD(do_kick)
     send_to_char(ch, "Aren't we funny today...\r\n");
     return;
   }
-  /* 101% is a complete failure */
-  percent = ((10 - (compute_armor_class(vict) / 10)) * 2) + rand_number(1, 101);
-  prob = GET_SKILL(ch, SKILL_KICK);
 
-  if (percent > prob) {
+  if (!physical_skill_hits(ch, vict)) {
     damage(ch, vict, 0, SKILL_KICK);
   } else
     damage(ch, vict, GET_LEVEL(ch) / 2, SKILL_KICK);
@@ -531,7 +517,6 @@ ACMD(do_bandage)
 {
   char arg[MAX_INPUT_LENGTH];
   struct char_data * vict;
-  int percent, prob;
 
   if (!GET_SKILL(ch, SKILL_BANDAGE))
   {
@@ -557,17 +542,6 @@ ACMD(do_bandage)
   }
 
   WAIT_STATE(ch, PULSE_VIOLENCE * 2);
-
-  percent = rand_number(1, 101);        /* 101% is a complete failure */
-  prob = GET_SKILL(ch, SKILL_BANDAGE);
-
-  if (percent <= prob) {
-    act("Your attempt to bandage fails.", FALSE, ch, 0, 0, TO_CHAR);
-    act("$n tries to bandage $N, but fails miserably.", TRUE, ch, 
-      0, vict, TO_NOTVICT);
-    damage(vict, vict, 2, TYPE_SUFFERING);
-    return;
-  }
 
   act("You successfully bandage $N.", FALSE, ch, 0, vict, TO_CHAR);
   act("$n bandages $N, who looks a bit better now.", TRUE, ch, 0, 

@@ -62,11 +62,8 @@ static void group_gain(struct char_data *ch, struct char_data *victim);
 static void solo_gain(struct char_data *ch, struct char_data *victim);
 /** @todo refactor this function name */
 static char *replace_string(const char *str, const char *weapon_singular, const char *weapon_plural);
-static bool melee_hit_roll(struct char_data *ch, struct char_data *victim,
-  int *attacker_roll, int *defender_roll);
-
-
 #define IS_WEAPON(type) (((type) >= TYPE_HIT) && ((type) < TYPE_SUFFERING))
+static bool uses_physical_damage_bonus(int attacktype);
 /* The Fight related routines */
 void appear(struct char_data *ch)
 {
@@ -697,6 +694,9 @@ int damage(struct char_data *ch, struct char_data *victim, int dam, int attackty
   if (!IS_NPC(victim) && ((GET_LEVEL(victim) >= LVL_IMMORT) && PRF_FLAGGED(victim, PRF_NOHASSLE)))
     dam = 0;
 
+  if (dam > 0 && uses_physical_damage_bonus(attacktype))
+    dam += GET_PHYSICAL_DAMAGE_BONUS(ch);
+
   dam = damage_mtrigger(ch, victim, dam, attacktype);
   if (dam == -1) {
   	return (0);
@@ -865,7 +865,7 @@ int damage(struct char_data *ch, struct char_data *victim, int dam, int attackty
   return (dam);
 }
 
-static bool melee_hit_roll(struct char_data *ch, struct char_data *victim,
+bool physical_attack_hits(struct char_data *ch, struct char_data *victim,
   int *attacker_roll, int *defender_roll)
 {
   *attacker_roll = rand_number(1, 20) + GET_STR(ch) + GET_EFFECTIVE_HITROLL(ch);
@@ -873,6 +873,22 @@ static bool melee_hit_roll(struct char_data *ch, struct char_data *victim,
     GET_EFFECTIVE_HITROLL(victim);
 
   return *attacker_roll > *defender_roll;
+}
+
+static bool uses_physical_damage_bonus(int attacktype)
+{
+  if (IS_WEAPON(attacktype))
+    return TRUE;
+
+  switch (attacktype) {
+  case SKILL_BACKSTAB:
+  case SKILL_BASH:
+  case SKILL_KICK:
+  case SKILL_WHIRLWIND:
+    return TRUE;
+  default:
+    return FALSE;
+  }
 }
 
 void hit(struct char_data *ch, struct char_data *victim, int type)
@@ -906,7 +922,7 @@ void hit(struct char_data *ch, struct char_data *victim, int type)
   if (!AWAKE(victim))
     dam = TRUE;
   else
-    dam = melee_hit_roll(ch, victim, &attacker_roll, &defender_roll);
+    dam = physical_attack_hits(ch, victim, &attacker_roll, &defender_roll);
 
   if (CONFIG_DEBUG_MODE >= NRM)
     send_to_char(ch, "\t1Debug:\r\n   \t2Melee attack roll: \t3%d\r\n"
@@ -918,9 +934,8 @@ void hit(struct char_data *ch, struct char_data *victim, int type)
     damage(ch, victim, 0, type == SKILL_BACKSTAB ? SKILL_BACKSTAB : w_type);
   else {
     /* okay, we know the guy has been hit.  now calculate damage.
-     * Start with the damage bonuses: the damroll and strength apply */
-    dam = str_app[STRENGTH_APPLY_INDEX(ch)].todam;
-    dam += GET_DAMROLL(ch);
+     * Generic damage roll applies here; strength scaling is added by damage(). */
+    dam = GET_DAMROLL(ch);
 
     /* Maybe holding arrow? */
     if (wielded && GET_OBJ_TYPE(wielded) == ITEM_WEAPON) {

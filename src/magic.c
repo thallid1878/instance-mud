@@ -320,6 +320,8 @@ int mag_damage(int level, struct char_data *ch, struct char_data *victim,
 
   } /* switch(spellnum) */
 
+  if (dam > 0 && victim != ch)
+    dam += GET_SPELL_DAMAGE_BONUS(ch);
 
   /* divide damage by two if victim makes his saving throw */
   if (mag_savingthrow(victim, savetype, 0))
@@ -387,7 +389,7 @@ void mag_affects(int level, struct char_data *ch, struct char_data *victim,
     break;
 
   case SPELL_BLINDNESS:
-    if (MOB_FLAGGED(victim, MOB_NOBLIND) || GET_LEVEL(victim) >= LVL_IMMORT || mag_savingthrow(victim, savetype, 0)) {
+    if (MOB_FLAGGED(victim, MOB_NOBLIND) || GET_LEVEL(victim) >= LVL_IMMORT) {
       send_to_char(ch, "You fail.\r\n");
       return;
     }
@@ -402,11 +404,6 @@ void mag_affects(int level, struct char_data *ch, struct char_data *victim,
     break;
 
   case SPELL_CURSE:
-    if (mag_savingthrow(victim, savetype, 0)) {
-      send_to_char(ch, "%s", CONFIG_NOEFFECT);
-      return;
-    }
-
     af[0].location = APPLY_HITROLL;
     af[0].duration = 1 + (GET_LEVEL(ch) / 2);
     af[0].modifier = -1;
@@ -473,11 +470,6 @@ void mag_affects(int level, struct char_data *ch, struct char_data *victim,
     break;
 
   case SPELL_POISON:
-    if (mag_savingthrow(victim, savetype, 0)) {
-      send_to_char(ch, "%s", CONFIG_NOEFFECT);
-      return;
-    }
-
     af[0].location = APPLY_STR;
     af[0].duration = GET_LEVEL(ch);
     af[0].modifier = -2;
@@ -506,8 +498,6 @@ void mag_affects(int level, struct char_data *ch, struct char_data *victim,
     if ((CONFIG_PK_SETTING == CONFIG_PK_OFF) && !IS_NPC(ch) && !IS_NPC(victim))
       return;
     if (MOB_FLAGGED(victim, MOB_NOSLEEP))
-      return;
-    if (mag_savingthrow(victim, savetype, 0))
       return;
 
     af[0].duration = 4 + (GET_LEVEL(ch) / 4);
@@ -688,14 +678,12 @@ void mag_areas(int level, struct char_data *ch, int spellnum, int savetype)
 	if ((spellnum == SPELL_EARTHQUAKE) && AFF_FLAGGED(tch, AFF_FLYING))
 	  continue;
     if (!spell_attack_hits(ch, tch, savetype, &attacker_roll, &defender_roll)) {
-      act("Your spell misses $N.", FALSE, ch, 0, tch, TO_CHAR);
-      act("$n's spell misses you.", FALSE, ch, 0, tch, TO_VICT);
-
       if (CONFIG_DEBUG_MODE >= NRM)
         send_to_char(ch, "\t1Debug:\r\n   \t2Spell attack roll: \t3%d\r\n"
           "   \t2Spell defense roll: \t3%d\tn\r\n",
           attacker_roll, defender_roll);
 
+      damage(ch, tch, 0, spellnum);
       continue;
     }
     if (CONFIG_DEBUG_MODE >= NRM)
@@ -751,7 +739,7 @@ void mag_summons(int level, struct char_data *ch, struct obj_data *obj,
 {
   struct char_data *mob = NULL;
   struct obj_data *tobj, *next_obj;
-  int pfail = 0, msg = 0, fmsg = 0, num = 1, handle_corpse = FALSE, i;
+  int msg = 0, num = 1, handle_corpse = FALSE, i;
   mob_vnum mob_num;
 
   if (ch == NULL)
@@ -760,21 +748,17 @@ void mag_summons(int level, struct char_data *ch, struct obj_data *obj,
   switch (spellnum) {
   case SPELL_CLONE:
     msg = 10;
-    fmsg = rand_number(2, 6);	/* Random fail message. */
     mob_num = MOB_CLONE;
     /*
      * We have designated the clone spell as the example for how to use the
      * mag_materials function.
      * In stock tbaMUD it checks to see if the character has item with
      * vnum 161 which is a set of sacrificial entrails. If we have the entrails
-     * the spell will succeed,  and if not, the spell will fail 102% of the time
-     * (prevents random success... see below).
+     * the spell will succeed, and if not, the material check stops the spell.
      * The object is extracted and the generic cast messages are displayed.
      */
     if( !mag_materials(ch, OBJ_CLONE, NOTHING, NOTHING, TRUE, TRUE) )
-      pfail = 102; /* No materials, spell fails. */
-    else
-      pfail = 0;	/* We have the entrails, spell is successfully cast. */
+      return;
     break;
 
   case SPELL_ANIMATE_DEAD:
@@ -784,9 +768,7 @@ void mag_summons(int level, struct char_data *ch, struct obj_data *obj,
     }
     handle_corpse = TRUE;
     msg = 11;
-    fmsg = rand_number(2, 6);	/* Random fail message. */
     mob_num = MOB_ZOMBIE;
-    pfail = 10;	/* 10% failure, should vary in the future. */
     break;
 
   default:
@@ -795,10 +777,6 @@ void mag_summons(int level, struct char_data *ch, struct obj_data *obj,
 
   if (AFF_FLAGGED(ch, AFF_CHARM)) {
     send_to_char(ch, "You are too giddy to have any followers!\r\n");
-    return;
-  }
-  if (rand_number(0, 101) < pfail) {
-    send_to_char(ch, "%s", mag_summon_fail_msgs[fmsg]);
     return;
   }
   for (i = 0; i < num; i++) {
@@ -865,6 +843,8 @@ void mag_points(int level, struct char_data *ch, struct char_data *victim,
     send_to_char(victim, "A warm feeling floods your body.\r\n");
     break;
   }
+  if (healing > 0)
+    healing += GET_HEALING_BONUS(ch);
   GET_HIT(victim) = MIN(GET_MAX_HIT(victim), GET_HIT(victim) + healing);
   GET_MOVE(victim) = MIN(GET_MAX_MOVE(victim), GET_MOVE(victim) + move);
   update_pos(victim);

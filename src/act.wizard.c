@@ -891,7 +891,7 @@ static void do_stat_character(struct char_data *ch, struct char_data *k)
                       CCCYN(ch, C_NRM), CCYEL(ch, C_NRM), GET_SCREEN_WIDTH(k), CCNRM(ch, C_NRM),
                       CCYEL(ch, C_NRM), GET_PAGE_LENGTH(k), CCCYN(ch, C_NRM), CCNRM(ch, C_NRM));
 
-  send_to_char(ch, "Armor: [%d], Hitroll: [%2d], Damroll: [%2d], Saving throws: [%d/%d/%d/%d/%d]\r\n",
+  send_to_char(ch, "Armor: [%d], Hitroll: [%d], Damroll: [%d], Saving throws: [%d/%d/%d/%d/%d]\r\n",
 	  compute_armor_value(k), k->points.hitroll,
 	  k->points.damroll, GET_SAVE(k, 0), GET_SAVE(k, 1), GET_SAVE(k, 2),
 	  GET_SAVE(k, 3), GET_SAVE(k, 4));
@@ -3096,7 +3096,7 @@ static int perform_set(struct char_data *ch, struct char_data *vict, int mode, c
       affect_total(vict);
       break;
     case 10:  /* damroll */
-      vict->points.damroll = RANGE(-20, 20);
+      vict->points.damroll = RANGE(SHRT_MIN, SHRT_MAX);
       affect_total(vict);
       break;
     case 11: /* delete */
@@ -3143,7 +3143,7 @@ static int perform_set(struct char_data *ch, struct char_data *vict, int mode, c
       affect_total(vict);
       break;
     case 19: /* hitroll */
-      vict->points.hitroll = RANGE(-20, 20);
+      vict->points.hitroll = RANGE(SHRT_MIN, SHRT_MAX);
       affect_total(vict);
       break;
     case 20: /* hunger */

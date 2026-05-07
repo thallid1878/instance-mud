@@ -34,7 +34,7 @@ static const char *how_good(int percent);
 static int skill_rank(int percent);
 static int skill_percent_from_rank(int rank);
 static int skill_rank_cost(int rank);
-static bool is_buyable_skill(int skill_num);
+static bool is_practicable_skill(int skill_num);
 static int stat_purchase_cost(int stat);
 static bool find_purchasable_stat(struct char_data *ch, char *argument,
   stat_value_t **stat, const char **name);
@@ -72,9 +72,9 @@ static const char *how_good(int percent)
   if (percent < 0)
     return " (error)";
   if (rank == 0)
-    return " (not learned)";
+    return "not learned";
 
-  snprintf(buf, sizeof(buf), " (level %d)", rank);
+  snprintf(buf, sizeof(buf), "rank %d", rank);
   return buf;
 }
 
@@ -96,9 +96,11 @@ static int skill_rank_cost(int rank)
   return rank * rank * 1000;
 }
 
-static bool is_buyable_skill(int skill_num)
+static bool is_practicable_skill(int skill_num)
 {
-  if (skill_num <= MAX_SPELLS || skill_num > MAX_SKILLS)
+  if (skill_num < 1 || skill_num > MAX_SKILLS)
+    return FALSE;
+  if (!spell_info[skill_num].name)
     return FALSE;
   if (spell_info[skill_num].name == unused_spellname)
     return FALSE;
@@ -185,25 +187,30 @@ ACMD(do_buystat)
 void list_skills(struct char_data *ch)
 {
   const char *overflow = "\r\n**OVERFLOW**\r\n";
-  int i, rank, sortpos, ret;
+  int i, rank, sortpos, ret, learned = 0, unlearned = 0;
   size_t len = 0;
   char buf2[MAX_STRING_LENGTH];
 
   len = snprintf(buf2, sizeof(buf2), "Experience available: %d\r\n"
-	"Buy or upgrade with: practice <skill>\r\n\r\n",
+	"Buy or upgrade with: practice <skill|spell>\r\n\r\n"
+	"Learned skills and spells:\r\n",
 	GET_EXP(ch));
 
   for (sortpos = 1; sortpos <= MAX_SKILLS; sortpos++) {
     i = spell_sort_info[sortpos];
-    if (is_buyable_skill(i)) {
+    if (is_practicable_skill(i)) {
       rank = skill_rank(GET_SKILL(ch, i));
-      ret = snprintf(buf2 + len, sizeof(buf2) - len, "%-20s %s",
+      if (rank == 0)
+        continue;
+
+      learned++;
+      ret = snprintf(buf2 + len, sizeof(buf2) - len, "  %-24s %-8s",
         spell_info[i].name, how_good(GET_SKILL(ch, i)));
       if (ret < 0 || len + ret >= sizeof(buf2))
         break;
       len += ret;
       if (rank < 10)
-        ret = snprintf(buf2 + len, sizeof(buf2) - len, " next: %d xp\r\n",
+        ret = snprintf(buf2 + len, sizeof(buf2) - len, "next: %d xp\r\n",
           skill_rank_cost(rank + 1));
       else
         ret = snprintf(buf2 + len, sizeof(buf2) - len, " mastered\r\n");
@@ -212,6 +219,39 @@ void list_skills(struct char_data *ch)
       len += ret;
     }
   }
+
+  if (!learned) {
+    ret = snprintf(buf2 + len, sizeof(buf2) - len, "  None.\r\n");
+    if (ret > 0 && len + ret < sizeof(buf2))
+      len += ret;
+  }
+
+  ret = snprintf(buf2 + len, sizeof(buf2) - len, "\r\nUnlearned skills and spells:\r\n");
+  if (ret > 0 && len + ret < sizeof(buf2))
+    len += ret;
+
+  for (sortpos = 1; sortpos <= MAX_SKILLS; sortpos++) {
+    i = spell_sort_info[sortpos];
+    if (is_practicable_skill(i)) {
+      rank = skill_rank(GET_SKILL(ch, i));
+      if (rank > 0)
+        continue;
+
+      unlearned++;
+      ret = snprintf(buf2 + len, sizeof(buf2) - len, "  %-24s learn: %d xp\r\n",
+        spell_info[i].name, skill_rank_cost(1));
+      if (ret < 0 || len + ret >= sizeof(buf2))
+        break;
+      len += ret;
+    }
+  }
+
+  if (!unlearned) {
+    ret = snprintf(buf2 + len, sizeof(buf2) - len, "  None.\r\n");
+    if (ret > 0 && len + ret < sizeof(buf2))
+      len += ret;
+  }
+
   if (len >= sizeof(buf2))
     strcpy(buf2 + sizeof(buf2) - strlen(overflow) - 1, overflow); /* strcpy: OK */
 
@@ -241,8 +281,8 @@ bool practice_purchase(struct char_data *ch, char *argument)
   }
 
   skill_num = find_skill_num(skill_name_arg);
-  if (!is_buyable_skill(skill_num)) {
-    send_to_char(ch, "You cannot buy that skill right now.\r\n");
+  if (!is_practicable_skill(skill_num)) {
+    send_to_char(ch, "You cannot buy that skill or spell right now.\r\n");
     return TRUE;
   }
 
@@ -254,7 +294,7 @@ bool practice_purchase(struct char_data *ch, char *argument)
 
   cost = skill_rank_cost(rank + 1);
   if (GET_EXP(ch) < cost) {
-    send_to_char(ch, "You need %d experience to improve %s to level %d.\r\n",
+    send_to_char(ch, "You need %d experience to improve %s to rank %d.\r\n",
       cost, spell_info[skill_num].name, rank + 1);
     return TRUE;
   }
@@ -262,7 +302,7 @@ bool practice_purchase(struct char_data *ch, char *argument)
   GET_EXP(ch) -= cost;
   SET_SKILL(ch, skill_num, skill_percent_from_rank(rank + 1));
   save_char(ch);
-  send_to_char(ch, "You spend %d experience and improve %s to level %d.\r\n",
+  send_to_char(ch, "You spend %d experience and improve %s to rank %d.\r\n",
     cost, spell_info[skill_num].name, rank + 1);
   return TRUE;
 }
