@@ -138,6 +138,7 @@ static int file_to_string(const char *name, char *buf);
 static int file_to_string_alloc(const char *name, char **buf);
 static int count_alias_records(FILE *fl);
 static void parse_simple_mob(FILE *mob_f, int i, int nr);
+static void distribute_mobile_exp_to_stats(struct char_data *mob);
 static void interpret_espec(const char *keyword, const char *value, int i, int nr);
 static void parse_espec(char *buf, int i, int nr);
 static void parse_enhanced_mob(FILE *mob_f, int i, int nr);
@@ -1565,7 +1566,7 @@ static void parse_simple_mob(FILE *mob_f, int i, int nr)
   GET_MAX_HIT(mob_proto + i) = 0;
   GET_HIT(mob_proto + i) = t[3];
   GET_MANA(mob_proto + i) = t[4];
-  GET_MOVE(mob_proto + i) = t[5];
+  GET_HIT_ADD(mob_proto + i) = t[5];
 
   GET_MAX_MANA(mob_proto + i) = 10;
   GET_MAX_MOVE(mob_proto + i) = 50;
@@ -2422,6 +2423,54 @@ void new_mobile_data(struct char_data *ch)
   ch->group    = NULL;
 }
 
+static int mobile_stat_purchase_cost(stat_value_t stat)
+{
+  return NPC_STAT_PURCHASE_COST(stat);
+}
+
+static void distribute_mobile_exp_to_stats(struct char_data *mob)
+{
+  stat_value_t *stats[] = {
+    &mob->real_abils.str,
+    &mob->real_abils.intel,
+    &mob->real_abils.wis,
+    &mob->real_abils.dex,
+    &mob->real_abils.con,
+    &mob->real_abils.cha
+  };
+  long long budget;
+  int affordable[6];
+  int affordable_count, i, choice, cost;
+
+  if (!mob || GET_EXP(mob) <= 0)
+    return;
+
+  budget = GET_EXP(mob);
+
+  do {
+    affordable_count = 0;
+
+    for (i = 0; i < 6; i++) {
+      if (*stats[i] >= MAX_STAT_VALUE)
+        continue;
+
+      cost = mobile_stat_purchase_cost(*stats[i]);
+      if (cost <= budget)
+        affordable[affordable_count++] = i;
+    }
+
+    if (affordable_count == 0)
+      break;
+
+    choice = affordable[rand_number(0, affordable_count - 1)];
+    cost = mobile_stat_purchase_cost(*stats[choice]);
+    *stats[choice] += 1;
+    budget -= cost;
+  } while (budget > 0);
+
+  mob->aff_abils = mob->real_abils;
+}
+
 
 /* create a new mobile from a prototype */
 struct char_data *read_mobile(mob_vnum nr, int type) /* and mob_rnum */
@@ -2445,6 +2494,7 @@ struct char_data *read_mobile(mob_vnum nr, int type) /* and mob_rnum */
   character_list = mob;
   
   new_mobile_data(mob);  
+  distribute_mobile_exp_to_stats(mob);
   
   update_max_hit_from_con(mob);
   mob->points.hit = mob->points.max_hit;
@@ -3573,12 +3623,12 @@ void init_char(struct char_data *ch)
   for (i = 0; i < 5; i++)
     GET_SAVE(ch, i) = 0;
 
-  ch->real_abils.intel = 25;
-  ch->real_abils.wis = 25;
-  ch->real_abils.dex = 25;
-  ch->real_abils.str = 25;
-  ch->real_abils.con = 25;
-  ch->real_abils.cha = 25;
+  ch->real_abils.intel = STAT_BASE_VALUE;
+  ch->real_abils.wis = STAT_BASE_VALUE;
+  ch->real_abils.dex = STAT_BASE_VALUE;
+  ch->real_abils.str = STAT_BASE_VALUE;
+  ch->real_abils.con = STAT_BASE_VALUE;
+  ch->real_abils.cha = STAT_BASE_VALUE;
   ch->aff_abils = ch->real_abils;
   update_max_hit_from_con(ch);
 

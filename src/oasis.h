@@ -56,7 +56,6 @@
 #define MAX_CONTAINER_SIZE    10000
 
 #define MAX_MOB_GOLD         100000
-#define MAX_MOB_EXP          150000
 
 /* this is one mud year.. */
 #define MAX_OBJ_TIMER       1071000

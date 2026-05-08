@@ -541,6 +541,8 @@ int valid_room_rnum_instance(room_rnum rnum, int instance_id);
 #define MAX_AFFECTED_STAT_VALUE 32767
 #define HITPOINTS_PER_CON 5
 #define STAT_APP_INDEX(stat) (MAX(0, MIN((stat), 25)))
+#define PC_MAX_HIT 32767
+#define NPC_STAT_PURCHASE_COST(stat) ((MAX(0, (stat) - STAT_BASE_VALUE) + 1) * 10)
 
 /** Experience points of ch. */
 #define GET_EXP(ch)	  ((ch)->points.exp)
@@ -550,6 +552,8 @@ int valid_room_rnum_instance(room_rnum rnum, int instance_id);
 #define GET_HIT(ch)	  ((ch)->points.hit)
 /** Maximum hit points of ch. */
 #define GET_MAX_HIT(ch)	  ((ch)->points.max_hit)
+/** NPC hit point addition from the mobile xdy+z prototype field. */
+#define GET_HIT_ADD(ch)   ((ch)->mob_specials.hitpoint_addition)
 /** Current move points (stamina) of ch. */
 #define GET_MOVE(ch)	  ((ch)->points.move)
 /** Maximum move points (stamina) of ch. */

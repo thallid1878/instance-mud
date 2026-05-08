@@ -3139,7 +3139,7 @@ static int perform_set(struct char_data *ch, struct char_data *vict, int mode, c
       affect_total(vict);
       break;
     case 18: /* hit */
-      vict->points.hit = RANGE(-9, vict->points.max_hit);
+      GET_HIT(vict) = RANGE(-9, GET_MAX_HIT(vict));
       affect_total(vict);
       break;
     case 19: /* hitroll */
@@ -3209,7 +3209,7 @@ static int perform_set(struct char_data *ch, struct char_data *vict, int mode, c
       affect_total(vict);
       break;
     case 28: /* maxhit */
-      vict->points.max_hit = RANGE(1, 5000);
+      GET_MAX_HIT(vict) = RANGE(1, IS_NPC(vict) ? INT_MAX : PC_MAX_HIT);
       affect_total(vict);
       break;
     case 29: /* maxmana */
@@ -4654,6 +4654,41 @@ ACMD(do_sqlimport)
   mudlog(BRF, LVL_IMPL, TRUE, "%s imported %s into SQL storage.", GET_NAME(ch), path);
   send_to_char(ch, "Imported %s into SQL storage.\r\n", path);
   send_to_char(ch, "The running world still uses the current in-memory data until reload or reboot.\r\n");
+}
+
+ACMD(do_sqlexport)
+{
+  char zone_arg[MAX_INPUT_LENGTH];
+  int zone_num, exported;
+
+  one_argument(argument, zone_arg);
+
+  if (!*zone_arg || !is_number(zone_arg)) {
+    send_to_char(ch, "Usage: sqlexport <zone number>\r\n");
+    return;
+  }
+
+  if (!storage_is_sql()) {
+    send_to_char(ch, "The sqlexport command is only available when --usesql is active.\r\n");
+    return;
+  }
+
+  zone_num = atoi(zone_arg);
+  if (zone_num < 0) {
+    send_to_char(ch, "Zone number must be zero or greater.\r\n");
+    return;
+  }
+
+  exported = storage_sql_export_zone(zone_num);
+  if (exported <= 0) {
+    send_to_char(ch, "No SQL world files found for zone %d.\r\n", zone_num);
+    return;
+  }
+
+  mudlog(BRF, LVL_IMPL, TRUE, "%s exported SQL zone %d to flat-file storage.",
+    GET_NAME(ch), zone_num);
+  send_to_char(ch, "Exported %d SQL world file%s for zone %d to flat files.\r\n",
+    exported, exported == 1 ? "" : "s", zone_num);
 }
 
 #define PLIST_FORMAT \

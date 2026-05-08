@@ -192,6 +192,7 @@ ACMD(do_bandage);
  ****************************************************************************/
 /* Functions with subcommands */
 /* do_gen_tog */
+ACMD(do_combatinfo);
 ACMD(do_gen_tog);
 #define SCMD_NOSUMMON    0
 #define SCMD_NOHASSLE    1
@@ -337,6 +338,7 @@ ACMD(do_set);
 ACMD(do_show);
 ACMD(do_snoop);
 ACMD(do_sqlimport);
+ACMD(do_sqlexport);
 ACMD(do_instance);
 ACMD(do_stat);
 ACMD(do_switch);

@@ -1456,6 +1456,9 @@ ACMD(do_grab)
       GET_OBJ_TYPE(obj) != ITEM_STAFF && GET_OBJ_TYPE(obj) != ITEM_SCROLL &&
 	  GET_OBJ_TYPE(obj) != ITEM_POTION)
 	send_to_char(ch, "You can't hold that.\r\n");
+      else if (!IS_NPC(ch) && GET_OBJ_TYPE(obj) == ITEM_WEAPON &&
+	  GET_SKILL(ch, SKILL_DUAL_WIELD) <= 0)
+	send_to_char(ch, "You need to learn dual wield before holding an off-hand weapon.\r\n");
       else
 	perform_wear(ch, obj, WEAR_HOLD);
     }

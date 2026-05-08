@@ -1158,7 +1158,7 @@ static char *make_prompt(struct descriptor_data *d)
     /* show only when below 25% */
     if (PRF_FLAGGED(d->character, PRF_DISPAUTO) && len < sizeof(prompt)) {
       struct char_data *ch = d->character;
-      if (GET_HIT(ch) << 2 < GET_MAX_HIT(ch) ) {
+      if ((long long)GET_HIT(ch) * 4 < GET_MAX_HIT(ch) ) {
         count = snprintf(prompt + len, sizeof(prompt) - len, "%dH ", GET_HIT(ch));
         if (count >= 0)
           len += count;
@@ -2847,15 +2847,23 @@ static void msdp_update( void )
       /* This would be better moved elsewhere */
       if ( pOpponent != NULL )
       {
-          int hit_points = (GET_HIT(pOpponent) * 100) / GET_MAX_HIT(pOpponent);
-          MSDPSetNumber( d, eMSDP_OPPONENT_HEALTH, hit_points );
-          MSDPSetNumber( d, eMSDP_OPPONENT_HEALTH_MAX, 100 );
+          MSDPSetNumber( d, eMSDP_OPPONENT_HEALTH, MAX(0, GET_HIT(pOpponent)) );
+          MSDPSetNumber( d, eMSDP_OPPONENT_HEALTH_MAX, MAX(0, GET_MAX_HIT(pOpponent)) );
+          MSDPSetNumber( d, eMSDP_OPPONENT_MANA, MAX(0, GET_MANA(pOpponent)) );
+          MSDPSetNumber( d, eMSDP_OPPONENT_MANA_MAX, MAX(0, GET_MAX_MANA(pOpponent)) );
+          MSDPSetNumber( d, eMSDP_OPPONENT_MOVEMENT, MAX(0, GET_MOVE(pOpponent)) );
+          MSDPSetNumber( d, eMSDP_OPPONENT_MOVEMENT_MAX, MAX(0, GET_MAX_MOVE(pOpponent)) );
           MSDPSetNumber( d, eMSDP_OPPONENT_LEVEL, GET_LEVEL(pOpponent) );
           MSDPSetString( d, eMSDP_OPPONENT_NAME, PERS(pOpponent, ch) );
       }
       else /* Clear the values */
       {
           MSDPSetNumber( d, eMSDP_OPPONENT_HEALTH, 0 );
+          MSDPSetNumber( d, eMSDP_OPPONENT_HEALTH_MAX, 0 );
+          MSDPSetNumber( d, eMSDP_OPPONENT_MANA, 0 );
+          MSDPSetNumber( d, eMSDP_OPPONENT_MANA_MAX, 0 );
+          MSDPSetNumber( d, eMSDP_OPPONENT_MOVEMENT, 0 );
+          MSDPSetNumber( d, eMSDP_OPPONENT_MOVEMENT_MAX, 0 );
           MSDPSetNumber( d, eMSDP_OPPONENT_LEVEL, 0 ); 
           MSDPSetString( d, eMSDP_OPPONENT_NAME, "" ); 
       }

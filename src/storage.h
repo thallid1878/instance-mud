@@ -33,6 +33,7 @@ FILE *storage_fopen_read(const char *path);
 FILE *storage_fopen_write(const char *path);
 void storage_fclose_write(FILE *fl, const char *path);
 void storage_sql_import_path(const char *path);
+int storage_sql_export_zone(int zone_num);
 void storage_sql_delete_path(const char *path);
 
 #endif /* _STORAGE_H_ */

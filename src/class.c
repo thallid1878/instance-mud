@@ -1409,7 +1409,13 @@ void do_start(struct char_data *ch)
   GET_EXP(ch) = 1;
 
   set_title(ch, NULL);
-  roll_real_abils(ch);
+  ch->real_abils.str = STAT_BASE_VALUE;
+  ch->real_abils.intel = STAT_BASE_VALUE;
+  ch->real_abils.wis = STAT_BASE_VALUE;
+  ch->real_abils.dex = STAT_BASE_VALUE;
+  ch->real_abils.con = STAT_BASE_VALUE;
+  ch->real_abils.cha = STAT_BASE_VALUE;
+  ch->aff_abils = ch->real_abils;
 
   GET_MAX_HIT(ch)  = 1;
   GET_MAX_MANA(ch) = 100;
@@ -1561,6 +1567,7 @@ void init_spell_levels(void)
   /* WARRIORS */
   spell_level(SKILL_KICK, CLASS_WARRIOR, 1);
   spell_level(SKILL_RESCUE, CLASS_WARRIOR, 3);
+  spell_level(SKILL_DUAL_WIELD, CLASS_WARRIOR, 1);
   spell_level(SKILL_BANDAGE, CLASS_WARRIOR, 7);
   spell_level(SKILL_TRACK, CLASS_WARRIOR, 9);
   spell_level(SKILL_BASH, CLASS_WARRIOR, 12);

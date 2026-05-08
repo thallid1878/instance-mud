@@ -273,8 +273,9 @@
 #define PRF_AUTODOOR     33   /**< Use the next available door */
 #define PRF_ZONERESETS   34   /**< Show when zones reset */
 #define PRF_VERBOSE      35   /**< Listings like where are more verbose */
+#define PRF_COMBATINFO   36   /**< Show combat damage breakdowns */
 /** Total number of available PRF flags */
-#define NUM_PRF_FLAGS    36
+#define NUM_PRF_FLAGS    37
 
 /* Affect bits: used in char_data.char_specials.saved.affected_by */
 /* WARNING: In the world files, NEVER set the bits marked "R" ("Reserved") */
@@ -900,8 +901,8 @@ struct char_point_data
 {
   sh_int mana;     /**< Current mana level  */
   sh_int max_mana; /**< Max mana level */
-  sh_int hit;      /**< Curent hit point, or health, level */
-  sh_int max_hit;  /**< Max hit point, or health, level */
+  int hit;         /**< Curent hit point, or health, level */
+  int max_hit;     /**< Max hit point, or health, level */
   sh_int move;     /**< Current move point, or stamina, level */
   sh_int max_move; /**< Max move point, or stamina, level */
 
@@ -993,6 +994,7 @@ struct mob_special_data
   memory_rec *memory; /**< List of PCs to remember */
   byte attack_type;   /**< The primary attack type (bite, sting, hit, etc.) */
   byte default_pos;   /**< Default position (standing, sleeping, etc.) */
+  int hitpoint_addition; /**< NPC-only bonus hit points added after CON. */
   byte damnodice;     /**< The number of dice to roll for damage */
   byte damsizedice;   /**< The size of each die rolled for damage. */
 };

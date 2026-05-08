@@ -642,6 +642,18 @@ ACMD(do_display)
 
 #define TOG_OFF 0
 #define TOG_ON  1
+
+ACMD(do_combatinfo)
+{
+  if (IS_NPC(ch))
+    return;
+
+  if (PRF_TOG_CHK(ch, PRF_COMBATINFO))
+    send_to_char(ch, "Combat damage breakdowns enabled.\r\n");
+  else
+    send_to_char(ch, "Combat damage breakdowns disabled.\r\n");
+}
+
 ACMD(do_gen_tog)
 {
   long result;

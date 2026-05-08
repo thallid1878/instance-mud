@@ -532,6 +532,180 @@ static void sql_store_data(const char *path, const char *data, unsigned long dat
   free(escaped_path);
 }
 
+static int storage_spec_is_world_file(const struct storage_table_spec *spec)
+{
+  return spec->extension && path_starts_with(spec->source_dir, "world/");
+}
+
+static void ensure_directory_exists(const char *path)
+{
+#if defined(CIRCLE_UNIX)
+  char copy[MAX_STRING_LENGTH], *slash;
+
+  snprintf(copy, sizeof(copy), "%s", path);
+
+  for (slash = copy; *slash; slash++) {
+    if (*slash != '/')
+      continue;
+
+    *slash = '\0';
+    if (*copy)
+      mkdir(copy, 0775);
+    *slash = '/';
+  }
+
+  if (*copy)
+    mkdir(copy, 0775);
+#else
+  (void)path;
+#endif
+}
+
+static int write_flatfile_data(const char *path, const char *data, unsigned long data_len)
+{
+  FILE *fl;
+
+  if (!(fl = fopen(path, "wb"))) {
+    log("SYSERR: Could not open %s for SQL export.", path);
+    return FALSE;
+  }
+
+  if (data_len > 0 && fwrite(data, 1, data_len, fl) != data_len) {
+    log("SYSERR: Could not write all data to %s for SQL export.", path);
+    fclose(fl);
+    return FALSE;
+  }
+
+  if (fclose(fl) != 0) {
+    log("SYSERR: Could not close %s after SQL export.", path);
+    return FALSE;
+  }
+
+  return TRUE;
+}
+
+static int index_line_matches(const char *line, size_t line_len, const char *entry)
+{
+  size_t entry_len;
+
+  while (line_len > 0 && (line[line_len - 1] == '\r' || line[line_len - 1] == '\n' ||
+      isspace((unsigned char)line[line_len - 1])))
+    line_len--;
+
+  while (line_len > 0 && isspace((unsigned char)*line)) {
+    line++;
+    line_len--;
+  }
+
+  entry_len = strlen(entry);
+  return line_len == entry_len && !strncmp(line, entry, entry_len);
+}
+
+static void add_flatfile_index_entry(const struct storage_table_spec *spec, const char *filename)
+{
+  FILE *fl;
+  char index_path[MAX_STRING_LENGTH], *data = NULL, *cursor, *end, *line_start;
+  unsigned long data_len = 0;
+  size_t line_len;
+  int inserted = FALSE;
+
+  snprintf(index_path, sizeof(index_path), "%s/index", spec->source_dir);
+  data = read_file_data(index_path, &data_len);
+
+  if (data) {
+    cursor = data;
+    end = data + data_len;
+    while (cursor < end) {
+      line_start = cursor;
+      while (cursor < end && *cursor != '\n')
+        cursor++;
+      line_len = cursor - line_start;
+      if (index_line_matches(line_start, line_len, filename)) {
+        free(data);
+        return;
+      }
+      if (cursor < end && *cursor == '\n')
+        cursor++;
+    }
+  }
+
+  ensure_directory_exists(spec->source_dir);
+  if (!(fl = fopen(index_path, "w"))) {
+    log("SYSERR: Could not update %s after SQL export.", index_path);
+    free(data);
+    return;
+  }
+
+  if (data) {
+    cursor = data;
+    end = data + data_len;
+    while (cursor < end) {
+      line_start = cursor;
+      while (cursor < end && *cursor != '\n')
+        cursor++;
+      line_len = cursor - line_start;
+
+      if (index_line_matches(line_start, line_len, "$") && !inserted) {
+        fprintf(fl, "%s\n", filename);
+        inserted = TRUE;
+      }
+
+      fwrite(line_start, 1, line_len, fl);
+      fputc('\n', fl);
+
+      if (cursor < end && *cursor == '\n')
+        cursor++;
+    }
+  }
+
+  if (!inserted)
+    fprintf(fl, "%s\n$\n", filename);
+
+  fclose(fl);
+  free(data);
+}
+
+static char *sql_fetch_zone_file_data(const struct storage_table_spec *spec,
+  int zone_num, const char *default_path, unsigned long *data_len)
+{
+  MYSQL_RES *result;
+  MYSQL_ROW row;
+  char table_name[SQL_MAX_TABLE_NAME], query[SQL_MAX_QUERY], *escaped_path, *data;
+  unsigned long *lengths;
+
+  *data_len = 0;
+  make_table_name(table_name, sizeof(table_name), spec->base_name);
+  escaped_path = sql_escape(default_path, strlen(default_path));
+  snprintf(query, sizeof(query),
+    "SELECT data FROM `%s` WHERE source_path='%s' OR vnum=%d "
+    "ORDER BY (source_path='%s') DESC, imported_at DESC LIMIT 1",
+    table_name, escaped_path, zone_num, escaped_path);
+  free(escaped_path);
+
+  if (mysql.query(sql_conn, query) != 0)
+    sql_die("SQL zone export query failed");
+
+  result = mysql.store_result(sql_conn);
+  if (!result)
+    sql_die("SQL zone export result failed");
+
+  row = mysql.fetch_row(result);
+  if (!row) {
+    mysql.free_result(result);
+    return NULL;
+  }
+
+  lengths = mysql.fetch_lengths(result);
+  *data_len = lengths ? lengths[0] : (unsigned long)strlen(row[0]);
+  CREATE(data, char, *data_len + 1);
+  if (*data_len > 0)
+    memcpy(data, row[0], *data_len);
+  data[*data_len] = '\0';
+
+  mysql.free_result(result);
+  return data;
+}
+
 static void append_text(char **buf, size_t *used, size_t *size, const char *text)
 {
   size_t len = strlen(text);
@@ -858,6 +1032,40 @@ void storage_sql_import_path(const char *path)
   sql_import_file(table_name, normalized_path, subdir, source_name,
     parse_vnum_from_filename(source_name, spec->extension));
   sql_rebuild_index_for_spec(spec);
+}
+
+int storage_sql_export_zone(int zone_num)
+{
+  size_t i;
+  int exported = 0;
+  char filename[MAX_INPUT_LENGTH], path[MAX_STRING_LENGTH];
+  char *data;
+  unsigned long data_len;
+  const struct storage_table_spec *spec;
+
+  if (!storage_is_sql())
+    return 0;
+
+  for (i = 0; i < sizeof(storage_tables) / sizeof(storage_tables[0]); i++) {
+    spec = &storage_tables[i];
+    if (!storage_spec_is_world_file(spec))
+      continue;
+
+    snprintf(filename, sizeof(filename), "%d%s", zone_num, spec->extension);
+    snprintf(path, sizeof(path), "%s/%s", spec->source_dir, filename);
+
+    if (!(data = sql_fetch_zone_file_data(spec, zone_num, path, &data_len)))
+      continue;
+
+    ensure_directory_exists(spec->source_dir);
+    if (write_flatfile_data(path, data, data_len)) {
+      add_flatfile_index_entry(spec, filename);
+      exported++;
+    }
+    free(data);
+  }
+
+  return exported;
 }
 
 void storage_sql_delete_path(const char *path)

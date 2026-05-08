@@ -111,6 +111,7 @@
 #define SKILL_STEAL                 139 /* Reserved Skill[] DO NOT CHANGE */
 #define SKILL_TRACK                 140 /* Reserved Skill[] DO NOT CHANGE */
 #define SKILL_BANDAGE               141 /* Reserved Skill[] DO NOT CHANGE */
+#define SKILL_DUAL_WIELD            142
 
 /* New skills may be added here up to MAX_SKILLS (200) */
 

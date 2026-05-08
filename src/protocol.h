@@ -9,7 +9,7 @@
  Set your MUD_NAME, and change descriptor_t if necessary.
  ******************************************************************************/
 
-#define MUD_NAME "tbaMUD"
+#define MUD_NAME "instance-mud"
 
 typedef struct descriptor_data descriptor_t;
 
@@ -130,6 +130,10 @@ typedef enum
    /* Combat */
    eMSDP_OPPONENT_HEALTH, 
    eMSDP_OPPONENT_HEALTH_MAX, 
+   eMSDP_OPPONENT_MANA,
+   eMSDP_OPPONENT_MANA_MAX,
+   eMSDP_OPPONENT_MOVEMENT,
+   eMSDP_OPPONENT_MOVEMENT_MAX,
    eMSDP_OPPONENT_LEVEL, 
    eMSDP_OPPONENT_NAME, 
 

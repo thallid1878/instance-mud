@@ -845,7 +845,13 @@ void mag_points(int level, struct char_data *ch, struct char_data *victim,
   }
   if (healing > 0)
     healing += GET_HEALING_BONUS(ch);
-  GET_HIT(victim) = MIN(GET_MAX_HIT(victim), GET_HIT(victim) + healing);
+  if (healing > 0) {
+    long long healed = (long long)GET_HIT(victim) + healing;
+
+    if (healed > GET_MAX_HIT(victim))
+      healed = GET_MAX_HIT(victim);
+    GET_HIT(victim) = (int)healed;
+  }
   GET_MOVE(victim) = MIN(GET_MAX_MOVE(victim), GET_MOVE(victim) + move);
   update_pos(victim);
 }

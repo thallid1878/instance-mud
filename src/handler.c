@@ -233,15 +233,26 @@ static int applied_hit_modifier(struct char_data *ch)
 
 void update_max_hit_from_con(struct char_data *ch)
 {
-  int old_max, new_max, was_full;
+  int old_max, new_max, was_full, max_allowed;
+  long long calculated_max;
 
   if (!ch)
     return;
 
   old_max = GET_MAX_HIT(ch);
   was_full = (old_max > 0 && GET_HIT(ch) >= old_max);
-  new_max = (GET_CON(ch) * HITPOINTS_PER_CON) + applied_hit_modifier(ch);
-  new_max = MAX(1, MIN(new_max, SHRT_MAX));
+  calculated_max = ((long long)GET_CON(ch) * HITPOINTS_PER_CON) + applied_hit_modifier(ch);
+
+  if (IS_NPC(ch))
+    calculated_max += GET_HIT_ADD(ch);
+
+  max_allowed = IS_NPC(ch) ? INT_MAX : PC_MAX_HIT;
+  if (calculated_max < 1)
+    calculated_max = 1;
+  if (calculated_max > max_allowed)
+    calculated_max = max_allowed;
+
+  new_max = (int)calculated_max;
 
   GET_MAX_HIT(ch) = new_max;
 

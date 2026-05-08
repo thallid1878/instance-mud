@@ -63,7 +63,10 @@ static void solo_gain(struct char_data *ch, struct char_data *victim);
 /** @todo refactor this function name */
 static char *replace_string(const char *str, const char *weapon_singular, const char *weapon_plural);
 #define IS_WEAPON(type) (((type) >= TYPE_HIT) && ((type) < TYPE_SUFFERING))
+static bool show_combat_info(struct char_data *ch);
 static bool uses_physical_damage_bonus(int attacktype);
+static int perform_damage(struct char_data *ch, struct char_data *victim, int dam, int attacktype, bool add_physical_bonus);
+static void perform_dual_wield_attack(struct char_data *ch, struct char_data *victim);
 /* The Fight related routines */
 void appear(struct char_data *ch)
 {
@@ -82,25 +85,12 @@ void appear(struct char_data *ch)
 
 static int armor_value_for_position(struct char_data *ch, int eq_pos)
 {
-  int factor, j, armor;
+  int j, armor;
 
   if (!GET_EQ(ch, eq_pos) || GET_OBJ_TYPE(GET_EQ(ch, eq_pos)) != ITEM_ARMOR)
     return 0;
 
-  switch (eq_pos) {
-  case WEAR_BODY:
-    factor = 3;
-    break;
-  case WEAR_HEAD:
-  case WEAR_LEGS:
-    factor = 2;
-    break;
-  default:
-    factor = 1;
-    break;
-  }
-
-  armor = factor * GET_OBJ_VAL(GET_EQ(ch, eq_pos), 0);
+  armor = GET_OBJ_VAL(GET_EQ(ch, eq_pos), 0);
 
   for (j = 0; j < MAX_OBJ_AFFECT; j++)
     if (GET_EQ(ch, eq_pos)->affected[j].location == APPLY_AC)
@@ -654,11 +644,24 @@ int skill_message(int dam, struct char_data *ch, struct char_data *vict,
  *	> 0	How much damage done. */
 int damage(struct char_data *ch, struct char_data *victim, int dam, int attacktype)
 {
+  return perform_damage(ch, victim, dam, attacktype, TRUE);
+}
+
+static int perform_damage(struct char_data *ch, struct char_data *victim, int dam, int attacktype, bool add_physical_bonus)
+{
   long local_gold = 0, happy_gold = 0;
   char local_buf[256];
   struct char_data *tmp_char;
   struct obj_data *corpse_obj;
-  int armor;
+  int armor = 0;
+  int base_damage = dam;
+  int physical_bonus = 0;
+  int pre_trigger_damage = dam;
+  int post_trigger_damage = dam;
+  int pre_sanctuary_damage = dam;
+  int sanctuary_active = FALSE;
+  int physical_attack = uses_physical_damage_bonus(attacktype);
+  int pre_armor_damage = dam;
 
   if (GET_POS(victim) <= POS_DEAD) {
     /* This is "normal"-ish now with delayed extraction. -gg 3/15/2001 */
@@ -694,10 +697,14 @@ int damage(struct char_data *ch, struct char_data *victim, int dam, int attackty
   if (!IS_NPC(victim) && ((GET_LEVEL(victim) >= LVL_IMMORT) && PRF_FLAGGED(victim, PRF_NOHASSLE)))
     dam = 0;
 
-  if (dam > 0 && uses_physical_damage_bonus(attacktype))
-    dam += GET_PHYSICAL_DAMAGE_BONUS(ch);
+  if (add_physical_bonus && dam > 0 && physical_attack) {
+    physical_bonus = GET_PHYSICAL_DAMAGE_BONUS(ch);
+    dam += physical_bonus;
+  }
+  pre_trigger_damage = dam;
 
   dam = damage_mtrigger(ch, victim, dam, attacktype);
+  post_trigger_damage = dam;
   if (dam == -1) {
   	return (0);
   }
@@ -724,18 +731,41 @@ int damage(struct char_data *ch, struct char_data *victim, int dam, int attackty
     appear(ch);
 
   /* Cut damage in half if victim has sanct, to a minimum 1 */
-  if (AFF_FLAGGED(victim, AFF_SANCTUARY) && dam >= 2)
+  pre_sanctuary_damage = dam;
+  sanctuary_active = AFF_FLAGGED(victim, AFF_SANCTUARY) ? TRUE : FALSE;
+  if (sanctuary_active && dam >= 2)
     dam /= 2;
+  pre_armor_damage = dam;
 
   if (dam > 0) {
     armor = compute_armor_value(victim);
     if (armor > 0)
-      dam = (dam * 100) / (100 + armor);
+      dam = (int)(((long long)dam * 1000) / (1000 + armor));
     dam = MAX(1, dam);
   }
 
-  /* Set the maximum damage per round and subtract the hit points */
-  dam = MAX(MIN(dam, 100), 0);
+  /* Keep damage non-negative and subtract the hit points. */
+  dam = MAX(dam, 0);
+
+  if (show_combat_info(ch) && (base_damage > 0 || dam > 0))
+    send_to_char(ch, "\t1Debug:\r\n   \t2Attack type: \t3%d (%s)\r\n"
+      "   \t2Physical attack: \t3%s\r\n"
+      "   \t2STR: \t3%d\r\n"
+      "   \t2Damroll: \t3%d\r\n"
+      "   \t2Damage base: \t3%d\r\n"
+      "   \t2Physical bonus: \t3%d\r\n"
+      "   \t2Before trigger: \t3%d\r\n"
+      "   \t2After trigger: \t3%d\r\n"
+      "   \t2Sanctuary: \t3%s\r\n"
+      "   \t2Before sanctuary: \t3%d\r\n"
+      "   \t2Before armor: \t3%d\r\n"
+      "   \t2Armor: \t3%d\r\n"
+      "   \t2Final damage: \t3%d\tn\r\n",
+      attacktype, skill_name(attacktype), physical_attack ? "yes" : "no",
+      GET_STR(ch), GET_DAMROLL(ch), base_damage, physical_bonus,
+      pre_trigger_damage, post_trigger_damage, sanctuary_active ? "yes" : "no",
+      pre_sanctuary_damage, pre_armor_damage, armor, dam);
+
   GET_HIT(victim) -= dam;
 
   /* Gain exp for the hit */
@@ -875,6 +905,13 @@ bool physical_attack_hits(struct char_data *ch, struct char_data *victim,
   return *attacker_roll > *defender_roll;
 }
 
+static bool show_combat_info(struct char_data *ch)
+{
+  return ch && !IS_NPC(ch) &&
+    (CONFIG_DEBUG_MODE >= NRM ||
+    (GET_LEVEL(ch) >= LVL_IMMORT && PRF_FLAGGED(ch, PRF_COMBATINFO)));
+}
+
 static bool uses_physical_damage_bonus(int attacktype)
 {
   if (IS_WEAPON(attacktype))
@@ -891,10 +928,84 @@ static bool uses_physical_damage_bonus(int attacktype)
   }
 }
 
+static int dual_wield_rank(struct char_data *ch)
+{
+  int percent;
+
+  if (!ch || IS_NPC(ch))
+    return 0;
+
+  percent = GET_SKILL(ch, SKILL_DUAL_WIELD);
+  if (percent <= 0)
+    return 0;
+
+  return MIN(10, MAX(1, (percent + 9) / 10));
+}
+
+static int weapon_attack_type(struct obj_data *weapon)
+{
+  int attack_type;
+
+  if (!weapon || GET_OBJ_TYPE(weapon) != ITEM_WEAPON)
+    return TYPE_HIT;
+
+  attack_type = GET_OBJ_VAL(weapon, 3) + TYPE_HIT;
+  if (!IS_WEAPON(attack_type))
+    return TYPE_HIT;
+
+  return attack_type;
+}
+
+static void perform_dual_wield_attack(struct char_data *ch, struct char_data *victim)
+{
+  struct obj_data *primary = GET_EQ(ch, WEAR_WIELD);
+  struct obj_data *offhand = GET_EQ(ch, WEAR_HOLD);
+  int rank, dam, attack_type, attacker_roll = 0, defender_roll = 0;
+  bool attack_hits;
+
+  if (!ch || !victim || IS_NPC(ch))
+    return;
+  if (!primary || GET_OBJ_TYPE(primary) != ITEM_WEAPON)
+    return;
+  if (!offhand || GET_OBJ_TYPE(offhand) != ITEM_WEAPON)
+    return;
+  if (!CAN_WEAR(offhand, ITEM_WEAR_HOLD))
+    return;
+  if (!SAME_ROOM(ch, victim) || GET_POS(victim) <= POS_DEAD)
+    return;
+
+  rank = dual_wield_rank(ch);
+  if (rank <= 0)
+    return;
+
+  attack_type = weapon_attack_type(offhand);
+  if (!AWAKE(victim))
+    attack_hits = TRUE;
+  else
+    attack_hits = physical_attack_hits(ch, victim, &attacker_roll, &defender_roll);
+
+  if (show_combat_info(ch))
+    send_to_char(ch, "\t1Debug:\r\n   \t2Off-hand attack roll: \t3%d\r\n"
+      "   \t2Off-hand defense roll: \t3%d\tn\r\n",
+      attacker_roll, defender_roll);
+
+  if (!attack_hits) {
+    perform_damage(ch, victim, 0, attack_type, FALSE);
+    return;
+  }
+
+  dam = GET_DAMROLL(ch) + dice(GET_OBJ_VAL(offhand, 1), GET_OBJ_VAL(offhand, 2)) +
+    GET_PHYSICAL_DAMAGE_BONUS(ch);
+  dam = MAX(1, dam);
+  dam = MAX(1, (dam * rank) / 10);
+
+  perform_damage(ch, victim, dam, attack_type, FALSE);
+}
+
 void hit(struct char_data *ch, struct char_data *victim, int type)
 {
   struct obj_data *wielded = GET_EQ(ch, WEAR_WIELD);
-  int w_type, dam, attacker_roll = 0, defender_roll = 0;
+  int w_type, dam, damage_result, attacker_roll = 0, defender_roll = 0;
 
   /* Check that the attacker and victim exist */
   if (!ch || !victim) return;
@@ -924,15 +1035,17 @@ void hit(struct char_data *ch, struct char_data *victim, int type)
   else
     dam = physical_attack_hits(ch, victim, &attacker_roll, &defender_roll);
 
-  if (CONFIG_DEBUG_MODE >= NRM)
-    send_to_char(ch, "\t1Debug:\r\n   \t2Melee attack roll: \t3%d\r\n"
-      "   \t2Melee defense roll: \t3%d\tn\r\n",
+  if (show_combat_info(ch))
+    send_to_char(ch, "\t1Debug:\r\n   \t2Main-hand attack roll: \t3%d\r\n"
+      "   \t2Main-hand defense roll: \t3%d\tn\r\n",
       attacker_roll, defender_roll);
 
-  if (!dam)
+  if (!dam) {
     /* the attacker missed the victim */
-    damage(ch, victim, 0, type == SKILL_BACKSTAB ? SKILL_BACKSTAB : w_type);
-  else {
+    damage_result = damage(ch, victim, 0, type == SKILL_BACKSTAB ? SKILL_BACKSTAB : w_type);
+    if (type != SKILL_BACKSTAB && damage_result != -1)
+      perform_dual_wield_attack(ch, victim);
+  } else {
     /* okay, we know the guy has been hit.  now calculate damage.
      * Generic damage roll applies here; strength scaling is added by damage(). */
     dam = GET_DAMROLL(ch);
@@ -966,8 +1079,11 @@ void hit(struct char_data *ch, struct char_data *victim, int type)
 
     if (type == SKILL_BACKSTAB)
       damage(ch, victim, dam * backstab_mult(GET_LEVEL(ch)), SKILL_BACKSTAB);
-    else
-      damage(ch, victim, dam, w_type);
+    else {
+      damage_result = damage(ch, victim, dam, w_type);
+      if (damage_result != -1)
+        perform_dual_wield_attack(ch, victim);
+    }
   }
 
   /* check if the victim has a hitprcnt trigger */

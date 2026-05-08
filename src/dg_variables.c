@@ -774,7 +774,13 @@ void find_replacement(void *go, struct script_data *sc, trig_data *trig,
           else if (!str_cmp(field, "hitp")) {
             if (subfield && *subfield) {
               int addition = atoi(subfield);
-              GET_HIT(c) += addition;
+              long long adjusted_hit = (long long)GET_HIT(c) + addition;
+
+              if (adjusted_hit > INT_MAX)
+                adjusted_hit = INT_MAX;
+              if (adjusted_hit < INT_MIN)
+                adjusted_hit = INT_MIN;
+              GET_HIT(c) = (int)adjusted_hit;
               update_pos(c);
             }
             snprintf(str, slen, "%d", GET_HIT(c));
@@ -884,7 +890,14 @@ void find_replacement(void *go, struct script_data *sc, trig_data *trig,
           else if (!str_cmp(field, "maxhitp")) {
             if (subfield && *subfield) {
               int addition = atoi(subfield);
-              GET_MAX_HIT(c) = MAX(GET_MAX_HIT(c) + addition, 1);
+              int max_allowed = IS_NPC(c) ? INT_MAX : PC_MAX_HIT;
+              long long adjusted_max = (long long)GET_MAX_HIT(c) + addition;
+
+              if (adjusted_max < 1)
+                adjusted_max = 1;
+              if (adjusted_max > max_allowed)
+                adjusted_max = max_allowed;
+              GET_MAX_HIT(c) = (int)adjusted_max;
             }
             snprintf(str, slen, "%d", GET_MAX_HIT(c));
           }
