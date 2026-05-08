@@ -85,16 +85,19 @@ void appear(struct char_data *ch)
 
 static int armor_value_for_position(struct char_data *ch, int eq_pos)
 {
+  struct obj_data *obj = GET_EQ(ch, eq_pos);
   int j, armor;
 
-  if (!GET_EQ(ch, eq_pos) || GET_OBJ_TYPE(GET_EQ(ch, eq_pos)) != ITEM_ARMOR)
+  if (!obj)
     return 0;
 
-  armor = GET_OBJ_VAL(GET_EQ(ch, eq_pos), 0);
+  armor = 0;
+  if (GET_OBJ_TYPE(obj) == ITEM_ARMOR)
+    armor += GET_OBJ_VAL(obj, 0);
 
   for (j = 0; j < MAX_OBJ_AFFECT; j++)
-    if (GET_EQ(ch, eq_pos)->affected[j].location == APPLY_AC)
-      armor += GET_EQ(ch, eq_pos)->affected[j].modifier;
+    if (obj->affected[j].location == APPLY_AC)
+      armor += obj->affected[j].modifier;
 
   return armor;
 }

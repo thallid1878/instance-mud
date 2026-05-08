@@ -9,7 +9,7 @@
  Set your MUD_NAME, and change descriptor_t if necessary.
  ******************************************************************************/
 
-#define MUD_NAME "instance-mud"
+#define MUD_NAME "Instance-MUD"
 
 typedef struct descriptor_data descriptor_t;
 

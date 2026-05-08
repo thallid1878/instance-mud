@@ -339,7 +339,7 @@ int main(int argc, char **argv)
   /* Moved here to distinguish command line options and to show up
    * in the log if stderr is redirected to a file. */
   log("Loading configuration.");
-  log("%s", tbamud_version);
+  log("%s", instance_mud_version);
 
   if (chdir(dir) < 0) {
     perror("SYSERR: Fatal error changing to data directory");
