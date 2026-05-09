@@ -93,7 +93,7 @@ static int skill_percent_from_rank(int rank)
 
 static int skill_rank_cost(int rank)
 {
-  return rank * rank * 1000;
+  return rank * 1000;
 }
 
 static bool is_practicable_skill(int skill_num)

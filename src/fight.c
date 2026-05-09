@@ -368,13 +368,13 @@ static void perform_group_gain(struct char_data *ch, int base,
 {
   int share, hap_share;
 
-  share = MIN(CONFIG_MAX_EXP_GAIN, MAX(1, base));
+  share = MAX(1, base);
 
   if ((IS_HAPPYHOUR) && (IS_HAPPYEXP))
   {
     /* This only reports the correct amount - the calc is done in gain_exp */
     hap_share = share + (int)((float)share * ((float)HAPPY_EXP / (float)(100)));
-    share = MIN(CONFIG_MAX_EXP_GAIN, MAX(1, hap_share));
+    share = MAX(1, hap_share);
   }
   if (share > 1)
     send_to_char(ch, "You receive your share of experience -- %d points.\r\n", share);
@@ -394,12 +394,14 @@ static void group_gain(struct char_data *ch, struct char_data *victim)
     if (SAME_ROOM(ch, k))
       tot_members++;
 
-  /* round up to the nearest tot_members */
-  tot_gain = (GET_EXP(victim) / 3) + tot_members - 1;
-
-  /* prevent illegal xp creation when killing players */
-  if (!IS_NPC(victim))
+  if (IS_NPC(victim)) {
+    /* Mobs award their full OLC experience value as the group pool. */
+    tot_gain = GET_EXP(victim) + tot_members - 1;
+  } else {
+    /* prevent illegal xp creation when killing players */
+    tot_gain = (GET_EXP(victim) / 3) + tot_members - 1;
     tot_gain = MIN(CONFIG_MAX_EXP_LOSS * 2 / 3, tot_gain);
+  }
 
   if (tot_members >= 1)
     base = MAX(1, tot_gain / tot_members);
@@ -415,13 +417,18 @@ static void solo_gain(struct char_data *ch, struct char_data *victim)
 {
   int exp, happy_exp;
 
-  exp = MIN(CONFIG_MAX_EXP_GAIN, GET_EXP(victim) / 3);
+  if (IS_NPC(victim)) {
+    /* Mobs award their full OLC experience value. */
+    exp = GET_EXP(victim);
+  } else {
+    exp = MIN(CONFIG_MAX_EXP_GAIN, GET_EXP(victim) / 3);
 
-  /* Calculate level-difference bonus */
-  if (IS_NPC(ch))
-    exp += MAX(0, (exp * MIN(4, (GET_LEVEL(victim) - GET_LEVEL(ch)))) / 8);
-  else
-    exp += MAX(0, (exp * MIN(8, (GET_LEVEL(victim) - GET_LEVEL(ch)))) / 8);
+    /* Calculate level-difference bonus for player kills only. */
+    if (IS_NPC(ch))
+      exp += MAX(0, (exp * MIN(4, (GET_LEVEL(victim) - GET_LEVEL(ch)))) / 8);
+    else
+      exp += MAX(0, (exp * MIN(8, (GET_LEVEL(victim) - GET_LEVEL(ch)))) / 8);
+  }
 
   exp = MAX(exp, 1);
 
