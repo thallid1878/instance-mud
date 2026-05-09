@@ -1,0 +1,189 @@
+#2300
+orb light~
+a glowing orb of light~
+A small glowing ball is rolling around here.~
+A glowing orb, probably could be used as a light source.
+~
+1 0 0 0 0 ao 0 0 0 0 0 0 0
+0 0 100 0
+0 0 0 0 0
+A
+13 10
+A
+18 5
+#2301
+ring~
+a woven ring of thread~
+A small loop of braided threads are left idle on the ground.~
+It doesn't look like much but you can feel some power coming from it.
+~
+11 0 0 0 0 ab 0 0 0 0 0 0 0
+0 0 0 0
+0 0 0 0 0
+A
+18 2
+A
+17 10
+#2302
+chain necklace pendant~
+a small stone pendant on a thin chain~
+A small bit of chain with a strange stone attached has been discarded here.~
+It feels like a small mount of power is held inside.
+~
+11 0 0 0 0 ac 0 0 0 0 0 0 0
+0 0 0 0
+0 0 0 0 0
+A
+18 2
+A
+13 10
+A
+17 10
+#2303
+Cloth Armor Chest~
+@WCloth Armor Chestpiece@n~
+A small pile of cloth with 3 small holes and one larger one is piled up here.~
+Cloth is better than nothing I guess.
+~
+9 0 0 0 0 ad 0 0 0 0 0 0 0
+15 0 0 0
+1 0 0 0 0
+A
+13 5
+A
+12 10
+A
+14 10
+#2304
+simple cloth hat~
+@WA simple cloth hat@n~
+A simple hat made of cloth was left here.~
+At least you will not get sunburned.
+~
+9 0 0 0 0 ae 0 0 0 0 0 0 0
+5 0 0 0
+0 0 0 0 0
+A
+13 5
+A
+14 5
+A
+12 5
+#2305
+cloth pants~
+@WCloth Pants@n~
+Cloth pants are sitting here...hide your shame!~
+You can at least cover up your important bits!
+~
+9 0 0 0 0 af 0 0 0 0 0 0 0
+15 0 0 0
+1 0 0 0 0
+A
+13 10
+A
+12 10
+A
+14 10
+#2306
+cloth shoes~
+@WCloth shoes@n~
+A bundle of cloth to that can wrap around your feet is lying here.~
+Beats going barefoot.
+~
+9 0 0 0 0 ag 0 0 0 0 0 0 0
+5 0 0 0
+0 0 0 0 0
+A
+13 10
+#2307
+cloth gloves~
+@WCloth gloves@n~
+A pair of gloves made of cloth are lying here.~
+Save your hands, save the world!
+~
+9 0 0 0 0 ah 0 0 0 0 0 0 0
+5 0 0 0
+0 0 0 0 0
+#2308
+cloth arm armwraps wraps~
+@WCloth arm wraps@n~
+Two piles of cloth long enough to wrap around your arms is lying here.~
+Ths isn't anything special.
+~
+9 0 0 0 0 ai 0 0 0 0 0 0 0
+15 0 0 0
+0 0 0 0 0
+A
+13 10
+A
+12 10
+A
+14 10
+#2309
+cloth belt~
+@WA belt made of woven cloth@n~
+A belt made of cloth sits here waiting to be worn.~
+It'll hold up your pants!
+And there seems to be a pouch!
+~
+15 0 0 0 0 al 0 0 0 0 0 0 0
+500 5 -1 0
+0 0 0 0 0
+A
+17 10
+A
+19 5
+#2310
+cloth cloak~
+@WCloth cloak@n~
+A cloak made of cloth is crumpled on the ground.~
+~
+11 0 0 0 0 ak 0 0 0 0 0 0 0
+0 0 0 0
+1 0 0 0 0
+A
+17 10
+A
+13 20
+A
+19 10
+#2311
+cloth leather bracers~
+@WCloth and leather bracers@n~
+Some cloth with scraps of leather woven in it is lying here.~
+~
+9 0 0 0 0 am 0 0 0 0 0 0 0
+10 0 0 0
+1 0 0 0 0
+A
+13 5
+A
+19 5
+#2312
+bone dagger~
+a crude dagger made from bone~
+S sharpened piece of bone is lying here.~
+~
+5 0 0 0 0 ano 0 0 0 0 0 0 0
+5 2 4 11
+0 0 0 0 0
+A
+19 5
+#2313
+fountain~
+A large fountain~
+A large fountain is here for drinking water!~
+~
+23 0 0 0 0 0 0 0 0 0 0 0 0
+-1 1410065408 15 0
+0 0 0 0 0
+#2314
+fountain~
+A large fountain~
+A large fountain is here for drinking water!~
+~
+23 0 0 0 0 0 0 0 0 0 0 0 0
+-1 1316134912 10 0
+0 0 0 0 0
+T 2301
+$~

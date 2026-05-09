@@ -1,0 +1,827 @@
+#2300
+An empty void~
+There is nothingness all around you but a faint light appears below you as your float here.
+~
+23 0 0 0 0 0
+D5
+~
+~
+0 0 2301
+S
+T 2399
+#2301
+A never ending meadow~
+Waist high grass is all around you as far as the eye can see, the only spot with any opening is a hole in the ground right in front of your feet.
+~
+23 4 0 0 0 2
+D0
+~
+~
+0 0 2306
+D1
+~
+~
+0 0 2308
+D2
+~
+~
+0 0 2307
+D3
+~
+~
+0 0 2309
+D5
+~
+~
+0 0 2302
+S
+#2302
+Inside the cavern~
+You find yourself in a large open cave, there is another way down at your feet, and rocky ledges all around it to explore.
+~
+23 4 0 0 0 0
+D0
+~
+~
+0 0 2314
+D1
+~
+~
+0 0 2316
+D2
+~
+~
+0 0 2315
+D3
+~
+~
+0 0 2317
+D4
+~
+~
+0 0 2301
+D5
+~
+~
+0 0 2303
+S
+#2303
+Deeper in the cavern~
+Deeper into the cavern, you are starting to feel a sense of dread.
+~
+23 4 0 0 0 0
+D0
+~
+~
+0 0 2322
+D1
+~
+~
+0 0 2324
+D2
+~
+~
+0 0 2323
+D3
+~
+~
+0 0 2325
+D4
+~
+~
+0 0 2302
+D5
+~
+~
+0 0 2304
+S
+#2304
+on a shelf above a lake in the cave~
+Even deeper in the cave, you can now see a lake shore on the level below you, perhaps you should explore this area a bit more before climbing down further.
+~
+23 4 0 0 0 0
+D0
+~
+~
+0 0 2330
+D1
+~
+~
+0 0 2332
+D2
+~
+~
+0 0 2331
+D3
+~
+~
+0 0 2333
+D4
+~
+~
+0 0 2303
+D5
+~
+~
+0 0 2305
+S
+#2305
+By the lake shore inside the cavern~
+You look out and see a crystal clear late ahead of you, this beach area might is littered with the bones of dead fish and other things. Something strong must lurk down here.
+~
+23 4 0 0 0 0
+D0
+~
+~
+0 0 2338
+D1
+~
+~
+0 0 2340
+D2
+~
+~
+0 0 2339
+D3
+~
+~
+0 0 2341
+D4
+~
+~
+0 0 2304
+D5
+~
+~
+0 0 2346
+S
+#2306
+A never ending meadow~
+Waist high grass is all around you as far as the eye can see.
+~
+23 0 0 0 0 0
+D1
+~
+~
+0 0 2310
+D2
+~
+~
+0 0 2301
+D3
+~
+~
+0 0 2311
+S
+#2307
+A never ending meadow~
+Waist high grass is all around you as far as the eye can see.
+~
+23 0 0 0 0 0
+D0
+~
+~
+0 0 2301
+D1
+~
+~
+0 0 2312
+D3
+~
+~
+0 0 2313
+S
+#2308
+A never ending meadow~
+Waist high grass is all around you as far as the eye can see.
+~
+23 0 0 0 0 0
+D0
+~
+~
+0 0 2310
+D2
+~
+~
+0 0 2312
+D3
+~
+~
+0 0 2301
+S
+#2309
+A never ending meadow~
+Waist high grass is all around you as far as the eye can see.
+~
+23 0 0 0 0 0
+D0
+~
+~
+0 0 2311
+D1
+~
+~
+0 0 2301
+D2
+~
+~
+0 0 2313
+S
+#2310
+A never ending meadow~
+Waist high grass is all around you as far as the eye can see.
+~
+23 0 0 0 0 0
+D2
+~
+~
+0 0 2308
+D3
+~
+~
+0 0 2306
+S
+#2311
+A never ending meadow~
+Waist high grass is all around you as far as the eye can see.
+~
+23 0 0 0 0 0
+D1
+~
+~
+0 0 2306
+D2
+~
+~
+0 0 2309
+S
+#2312
+A never ending meadow~
+Waist high grass is all around you as far as the eye can see.
+~
+23 0 0 0 0 0
+D0
+~
+~
+0 0 2308
+D3
+~
+~
+0 0 2307
+S
+#2313
+A never ending meadow~
+Waist high grass is all around you as far as the eye can see.
+~
+23 0 0 0 0 0
+D0
+~
+~
+0 0 2309
+D1
+~
+~
+0 0 2307
+S
+#2314
+Inside the cavern~
+As you move through the cave you can see many small rocks laying around, a perfect hiding place for something to pop out at you.
+~
+23 0 0 0 0 0
+D1
+~
+~
+0 0 2318
+D2
+~
+~
+0 0 2302
+D3
+~
+~
+0 0 2319
+S
+#2315
+Inside the cavern~
+As you move through the cave you can see many small rocks laying around, a perfect hiding place for something to pop out at you.
+~
+23 0 0 0 0 0
+D0
+~
+~
+0 0 2302
+D1
+~
+~
+0 0 2320
+D3
+~
+~
+0 0 2321
+S
+#2316
+Inside the cavern~
+As you move through the cave you can see many small rocks laying around, a perfect hiding place for something to pop out at you.
+~
+23 0 0 0 0 0
+D0
+~
+~
+0 0 2318
+D2
+~
+~
+0 0 2320
+D3
+~
+~
+0 0 2302
+S
+#2317
+Inside the cavern~
+As you move through the cave you can see many small rocks laying around, a perfect hiding place for something to pop out at you.
+~
+23 0 0 0 0 0
+D0
+~
+~
+0 0 2319
+D1
+~
+~
+0 0 2302
+D2
+~
+~
+0 0 2321
+S
+#2318
+Inside the cavern~
+As you move through the cave you can see many small rocks laying around, a perfect hiding place for something to pop out at you.
+~
+23 0 0 0 0 0
+D2
+~
+~
+0 0 2316
+D3
+~
+~
+0 0 2314
+S
+#2319
+Inside the cavern~
+As you move through the cave you can see many small rocks laying around, a perfect hiding place for something to pop out at you.
+~
+23 0 0 0 0 0
+D1
+~
+~
+0 0 2314
+D2
+~
+~
+0 0 2317
+S
+#2320
+Inside the cavern~
+As you move through the cave you can see many small rocks laying around, a perfect hiding place for something to pop out at you.
+~
+23 0 0 0 0 0
+D0
+~
+~
+0 0 2316
+D3
+~
+~
+0 0 2315
+S
+#2321
+Inside the cavern~
+As you move through the cave you can see many small rocks laying around, a perfect hiding place for something to pop out at you.
+~
+23 0 0 0 0 0
+D0
+~
+~
+0 0 2317
+D1
+~
+~
+0 0 2315
+S
+#2322
+Deeper in the cavern~
+As you move through the cave you can see many small rocks laying around, a perfect hiding place for something to pop out at you.
+~
+23 0 0 0 0 0
+D1
+~
+~
+0 0 2326
+D2
+~
+~
+0 0 2303
+D3
+~
+~
+0 0 2327
+S
+#2323
+Deeper in the cavern~
+As you move through the cave you can see many small rocks laying around, a perfect hiding place for something to pop out at you.
+~
+23 0 0 0 0 0
+D0
+~
+~
+0 0 2303
+D1
+~
+~
+0 0 2328
+D3
+~
+~
+0 0 2329
+S
+#2324
+Deeper in the cavern~
+As you move through the cave you can see many small rocks laying around, a perfect hiding place for something to pop out at you.
+~
+23 0 0 0 0 0
+D0
+~
+~
+0 0 2326
+D2
+~
+~
+0 0 2328
+D3
+~
+~
+0 0 2303
+S
+#2325
+Deeper in the cavern~
+As you move through the cave you can see many small rocks laying around, a perfect hiding place for something to pop out at you.
+~
+23 0 0 0 0 0
+D0
+~
+~
+0 0 2327
+D1
+~
+~
+0 0 2303
+D2
+~
+~
+0 0 2329
+S
+#2326
+Deeper in the cavern~
+As you move through the cave you can see many small rocks laying around, a perfect hiding place for something to pop out at you.
+~
+23 0 0 0 0 0
+D2
+~
+~
+0 0 2324
+D3
+~
+~
+0 0 2322
+S
+#2327
+Deeper in the cavern~
+As you move through the cave you can see many small rocks laying around, a perfect hiding place for something to pop out at you.
+~
+23 0 0 0 0 0
+D1
+~
+~
+0 0 2322
+D2
+~
+~
+0 0 2325
+S
+#2328
+Deeper in the cavern~
+As you move through the cave you can see many small rocks laying around, a perfect hiding place for something to pop out at you.
+~
+23 0 0 0 0 0
+D0
+~
+~
+0 0 2324
+D3
+~
+~
+0 0 2323
+S
+#2329
+Deeper in the cavern~
+As you move through the cave you can see many small rocks laying around, a perfect hiding place for something to pop out at you.
+~
+23 0 0 0 0 0
+D0
+~
+~
+0 0 2325
+D1
+~
+~
+0 0 2323
+S
+#2330
+on a shelf above a lake in the cave~
+Even deeper in the cave, you can now see a lake shore on the level below you, perhaps you should explore this area a bit more before climbing down further.
+~
+23 0 0 0 0 0
+D1
+~
+~
+0 0 2334
+D2
+~
+~
+0 0 2304
+D3
+~
+~
+0 0 2335
+S
+#2331
+on a shelf above a lake in the cave~
+Even deeper in the cave, you can now see a lake shore on the level below you, perhaps you should explore this area a bit more before climbing down further.
+~
+23 0 0 0 0 0
+D0
+~
+~
+0 0 2304
+D1
+~
+~
+0 0 2336
+D3
+~
+~
+0 0 2337
+S
+#2332
+on a shelf above a lake in the cave~
+Even deeper in the cave, you can now see a lake shore on the level below you, perhaps you should explore this area a bit more before climbing down further.
+~
+23 0 0 0 0 0
+D0
+~
+~
+0 0 2334
+D2
+~
+~
+0 0 2336
+D3
+~
+~
+0 0 2304
+S
+#2333
+on a shelf above a lake in the cave~
+Even deeper in the cave, you can now see a lake shore on the level below you, perhaps you should explore this area a bit more before climbing down further.
+~
+23 0 0 0 0 0
+D0
+~
+~
+0 0 2335
+D1
+~
+~
+0 0 2304
+D2
+~
+~
+0 0 2337
+S
+#2334
+on a shelf above a lake in the cave~
+Even deeper in the cave, you can now see a lake shore on the level below you, perhaps you should explore this area a bit more before climbing down further.
+~
+23 0 0 0 0 0
+D2
+~
+~
+0 0 2332
+D3
+~
+~
+0 0 2330
+S
+#2335
+on a shelf above a lake in the cave~
+Even deeper in the cave, you can now see a lake shore on the level below you, perhaps you should explore this area a bit more before climbing down further.
+~
+23 0 0 0 0 0
+D1
+~
+~
+0 0 2330
+D2
+~
+~
+0 0 2333
+S
+#2336
+on a shelf above a lake in the cave~
+Even deeper in the cave, you can now see a lake shore on the level below you, perhaps you should explore this area a bit more before climbing down further.
+~
+23 0 0 0 0 0
+D0
+~
+~
+0 0 2332
+D3
+~
+~
+0 0 2331
+S
+#2337
+on a shelf above a lake in the cave~
+Even deeper in the cave, you can now see a lake shore on the level below you, perhaps you should explore this area a bit more before climbing down further.
+~
+23 0 0 0 0 0
+D0
+~
+~
+0 0 2333
+D1
+~
+~
+0 0 2331
+S
+#2338
+By the lake shore inside the cavern~
+You look out and see a crystal clear late ahead of you, this beach area might is littered with the bones of dead fish and other things. Something strong must lurk down here.
+~
+23 0 0 0 0 0
+D1
+~
+~
+0 0 2342
+D2
+~
+~
+0 0 2305
+D3
+~
+~
+0 0 2343
+S
+#2339
+By the lake shore inside the cavern~
+You look out and see a crystal clear late ahead of you, this beach area might is littered with the bones of dead fish and other things. Something strong must lurk down here.
+~
+23 0 0 0 0 0
+D0
+~
+~
+0 0 2305
+D1
+~
+~
+0 0 2344
+D3
+~
+~
+0 0 2345
+S
+#2340
+By the lake shore inside the cavern~
+You look out and see a crystal clear late ahead of you, this beach area might is littered with the bones of dead fish and other things. Something strong must lurk down here.
+~
+23 0 0 0 0 0
+D0
+~
+~
+0 0 2342
+D2
+~
+~
+0 0 2344
+D3
+~
+~
+0 0 2305
+S
+#2341
+By the lake shore inside the cavern~
+You look out and see a crystal clear late ahead of you, this beach area might is littered with the bones of dead fish and other things. Something strong must lurk down here.
+~
+23 0 0 0 0 0
+D0
+~
+~
+0 0 2343
+D1
+~
+~
+0 0 2305
+D2
+~
+~
+0 0 2345
+S
+#2342
+By the lake shore inside the cavern~
+You look out and see a crystal clear late ahead of you, this beach area might is littered with the bones of dead fish and other things. Something strong must lurk down here.
+~
+23 0 0 0 0 0
+D2
+~
+~
+0 0 2340
+D3
+~
+~
+0 0 2338
+S
+#2343
+By the lake shore inside the cavern~
+You look out and see a crystal clear late ahead of you, this beach area might is littered with the bones of dead fish and other things. Something strong must lurk down here.
+~
+23 0 0 0 0 0
+D1
+~
+~
+0 0 2338
+D2
+~
+~
+0 0 2341
+S
+#2344
+By the lake shore inside the cavern~
+You look out and see a crystal clear late ahead of you, this beach area might is littered with the bones of dead fish and other things. Something strong must lurk down here.
+~
+23 0 0 0 0 0
+D0
+~
+~
+0 0 2340
+D3
+~
+~
+0 0 2339
+S
+#2345
+By the lake shore inside the cavern~
+You look out and see a crystal clear late ahead of you, this beach area might is littered with the bones of dead fish and other things. Something strong must lurk down here.
+~
+23 0 0 0 0 0
+D0
+~
+~
+0 0 2341
+D1
+~
+~
+0 0 2339
+S
+#2346
+A dark cavern~
+There is a small pile of rocks that looks to be hiding something below you.
+Perhaps you should check it out?
+But maybe now is a good time to buy some stats and skills for what is ahead.
+~
+23 260 0 0 0 0
+D4
+~
+~
+0 0 2305
+D5
+A small pile of rocks.
+~
+small pile rocks~
+1 0 2347
+S
+#2347
+The bosses lair!~
+The cave walls are slick with blood and the floor is littered with bones.
+The smell of rotting meat is enough to make you feel sick.
+Here in this room is the Dungeon Boss, good luck!
+~
+23 256 0 0 0 0
+D4
+~
+~
+0 0 -1
+S
+$~

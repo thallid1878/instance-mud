@@ -1,0 +1,86 @@
+#2300
+slime~
+a small blue slime~
+A small blue slime is sitting here on the ground.
+~
+A small blue slime, it is almost transparent, and you can clearly see it's body digesting it's last kill.
+~
+8 0 0 0 0 0 0 0 0 E
+0 20 0 1d1+25 3d4+0
+12 100
+8 8 0
+BareHandAttack: 7
+E
+#2301
+spider~
+a large spider~
+A large spider is here crawling around.
+~
+A large spider, easily mistaken for a large dog. It looks hungry, might be best to try and stay off the menu.
+~
+2088 0 0 0 0 0 0 0 0 E
+0 20 2 1d1+50 2d8+0
+25 200
+8 8 0
+BareHandAttack: 5
+E
+#2302
+snake boa titanoboa~
+a large titanoboa~
+A massive snake is slithering around here.
+~
+A massive snake, the titanoboa was the largest snake that ever lived, it looks hungry and can likely swallow you whole.
+~
+40 0 0 0 0 0 0 0 0 E
+0 20 3 1d1+75 4d6+0
+50 300
+8 8 0
+BareHandAttack: 4
+E
+#2303
+wolf~
+a large wolf~
+A large wolf is prowling here.
+~
+A massive wolf is roaming around inside this cave, best try and avoid it's teeth!
+~
+40 0 0 0 0 0 0 0 0 E
+0 20 5 1d1+100 4d8+0
+0 400
+8 8 0
+BareHandAttack: 4
+E
+#2304
+arthroplura~
+an arthropleura~
+An arthropleura is here crawling along the ground.
+~
+A massive centipede the arthropleura is here stalking around for it's next meal.
+~
+40 0 0 0 0 0 0 0 0 E
+0 20 5 1d1+150 4d12+0
+0 500
+8 8 0
+BareHandAttack: 4
+E
+#2305
+Baby Kraken~
+a baby kraken~
+A baby kraken is here ready to grab you!
+~
+It looks hungry!
+~
+40 0 0 0 0 0 0 0 0 E
+0 20 0 1d1+300 4d6+10
+1000 2500
+8 8 0
+BareHandAttack: 7
+Str: 10
+Dex: 10
+Int: 10
+Wis: 10
+Con: 10
+Cha: 10
+E
+T 2300
+$
