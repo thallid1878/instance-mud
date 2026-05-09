@@ -344,6 +344,14 @@ room_vnum instance_safe_load_room_vnum(struct char_data *ch)
   return valid_room_rnum(room) ? GET_ROOM_VNUM(room) : NOWHERE;
 }
 
+void instance_set_safe_loadroom(struct char_data *ch)
+{
+  if (!ch || IS_NPC(ch) || GET_INSTANCE_ID(ch) <= 0)
+    return;
+
+  GET_LOADROOM(ch) = instance_safe_load_room_vnum(ch);
+}
+
 static struct instance_data *instance_by_id(int id)
 {
   struct instance_data *inst;
@@ -1116,6 +1124,8 @@ int instance_exit_to_room(struct char_data *ch, room_rnum target)
     GET_POS(ch) = POS_STANDING;
 
   char_to_room(ch, target);
+  if (!IS_NPC(ch))
+    GET_LOADROOM(ch) = GET_ROOM_VNUM(target);
   return TRUE;
 }
 
@@ -1196,6 +1206,7 @@ int instance_enter_zone(struct char_data *ch, zone_rnum zone, room_rnum return_r
   ch->instance_id = id;
   char_to_room(ch, entry);
   ch->instance_return_room = valid_room_rnum(return_room) ? return_room : r_mortal_start_room;
+  instance_set_safe_loadroom(ch);
   if (enter_msg)
     act(enter_msg, TRUE, ch, 0, 0, TO_ROOM);
 

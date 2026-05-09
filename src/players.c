@@ -536,9 +536,9 @@ void save_char(struct char_data * ch)
     return;
   }
 
-  save_loadroom = GET_LOADROOM(ch);
   if (GET_INSTANCE_ID(ch) > 0)
-    save_loadroom = instance_safe_load_room_vnum(ch);
+    instance_set_safe_loadroom(ch);
+  save_loadroom = GET_LOADROOM(ch);
 
   /* Unaffect everything a character can be affected by. */
   for (i = 0; i < NUM_WEARS; i++) {

@@ -939,13 +939,19 @@ int levenshtein_distance(const char *s1, const char *s2)
 void char_from_furniture(struct char_data *ch)
 {
   struct obj_data *furniture;
+  struct obj_data *obj;
   struct char_data *tempch;
 
   if (!SITTING(ch))
     return;
 
-  if (!(furniture = SITTING(ch))){
-    log("SYSERR: No furniture for char in char_from_furniture.");
+  furniture = SITTING(ch);
+  for (obj = object_list; obj && obj != furniture; obj = obj->next)
+    ;
+
+  if (!obj) {
+    log("SYSERR: %s had stale furniture pointer %p in char_from_furniture.",
+      GET_NAME(ch), (void *)furniture);
     SITTING(ch) = NULL;
     NEXT_SITTING(ch) = NULL;
     return;

@@ -795,6 +795,8 @@ ACMD(do_sit)
     if (found == 0) {
       send_to_char(ch, "You sit down.\r\n");
       act("$n sits down.", FALSE, ch, 0, 0, TO_ROOM);
+      SITTING(ch) = NULL;
+      NEXT_SITTING(ch) = NULL;
       GET_POS(ch) = POS_SITTING;
     } else {
       if (GET_OBJ_TYPE(furniture) != ITEM_FURNITURE) {
@@ -853,6 +855,8 @@ ACMD(do_rest)
   case POS_STANDING:
     send_to_char(ch, "You sit down and rest your tired bones.\r\n");
     act("$n sits down and rests.", TRUE, ch, 0, 0, TO_ROOM);
+    SITTING(ch) = NULL;
+    NEXT_SITTING(ch) = NULL;
     GET_POS(ch) = POS_RESTING;
     break;
   case POS_SITTING:
@@ -881,6 +885,9 @@ ACMD(do_sleep)
 {
   switch (GET_POS(ch)) {
   case POS_STANDING:
+    SITTING(ch) = NULL;
+    NEXT_SITTING(ch) = NULL;
+    /* Fall through. */
   case POS_SITTING:
   case POS_RESTING:
     send_to_char(ch, "You go to sleep.\r\n");

@@ -23,6 +23,7 @@
 #include "modify.h"
 #include "genolc.h" /* for strip_cr and sprintascii */
 #include "storage.h"
+#include "instance.h"
 
 /* these factors should be unique integers */
 #define RENT_FACTOR    1
@@ -969,6 +970,8 @@ void Crash_save_all(void)
   for (d = descriptor_list; d; d = d->next) {
     if ((STATE(d) == CON_PLAYING) && !IS_NPC(d->character)) {
       if (PLR_FLAGGED(d->character, PLR_CRASH)) {
+        if (GET_INSTANCE_ID(d->character) > 0)
+          instance_set_safe_loadroom(d->character);
         Crash_crashsave(d->character);
         save_char(d->character);
         REMOVE_BIT_AR(PLR_FLAGS(d->character), PLR_CRASH);

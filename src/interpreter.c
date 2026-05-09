@@ -1347,6 +1347,7 @@ static bool move_new_player_to_starter_instance(struct char_data *ch)
   char_to_room(ch, entry_room);
   ch->instance_return_room = valid_room_rnum(r_mortal_start_room) ?
     r_mortal_start_room : NOWHERE;
+  instance_set_safe_loadroom(ch);
   enter_wtrigger(GET_ROOM(ch), ch, -1);
   login_wtrigger(GET_ROOM(ch), ch);
   return TRUE;
