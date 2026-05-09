@@ -600,12 +600,13 @@ WCMD(do_wdamage) {
 
 WCMD(do_wenterinstance)
 {
-  char arg1[MAX_INPUT_LENGTH], arg2[MAX_INPUT_LENGTH];
+  char arg1[MAX_INPUT_LENGTH], arg2[MAX_INPUT_LENGTH], arg3[MAX_INPUT_LENGTH];
   struct char_data *vict = NULL;
   zone_rnum zone;
+  room_rnum entry_room = NOWHERE;
   int id;
 
-  two_arguments(argument, arg1, arg2);
+  one_argument(two_arguments(argument, arg1, arg2), arg3);
 
   if (!*arg1 || !*arg2 || !is_number(arg2)) {
     wld_log(room, "wenterinstance called with bad syntax");
@@ -616,6 +617,13 @@ WCMD(do_wenterinstance)
   if (zone == NOWHERE || !ZONE_FLAGGED(zone, ZONE_DUNGEON)) {
     wld_log(room, "wenterinstance target is not a valid dungeon zone");
     return;
+  }
+  if (*arg3) {
+    if (!is_number(arg3) || (entry_room = real_room(atoi(arg3))) == NOWHERE ||
+        GET_ROOM_ZONE(entry_room) != zone) {
+      wld_log(room, "wenterinstance entry room is not in the target dungeon zone");
+      return;
+    }
   }
 
   if (*arg1 == UID_CHAR)
@@ -631,7 +639,8 @@ WCMD(do_wenterinstance)
   if (!valid_dg_target(vict, DG_ALLOW_GODS))
     return;
 
-  if (!instance_enter_zone(vict, zone, IN_ROOM(vict), NULL, NULL, &id, NULL)) {
+  if (!instance_enter_zone(vict, zone, entry_room, IN_ROOM(vict), NULL, NULL,
+      &id, NULL)) {
     wld_log(room, "wenterinstance failed for target %s", GET_NAME(vict));
     return;
   }

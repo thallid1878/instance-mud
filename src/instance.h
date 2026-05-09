@@ -28,9 +28,9 @@ int instance_create(zone_rnum template_zone, room_rnum return_room, long owner_i
   room_rnum *entry_room);
 int instance_create_at_room(zone_rnum template_zone, room_rnum template_room,
   room_rnum return_room, long owner_id, room_rnum *entry_room);
-int instance_enter_zone(struct char_data *ch, zone_rnum zone, room_rnum return_room,
-  const char *leave_msg, const char *enter_msg, int *instance_id,
-  const char **action);
+int instance_enter_zone(struct char_data *ch, zone_rnum zone,
+  room_rnum template_entry_room, room_rnum return_room, const char *leave_msg,
+  const char *enter_msg, int *instance_id, const char **action);
 int instance_exit_to_room(struct char_data *ch, room_rnum target);
 int instance_teleport_to_room(struct char_data *ch, room_rnum target);
 int instance_leave(struct char_data *ch);

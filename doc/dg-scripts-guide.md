@@ -367,7 +367,7 @@ about to become corpse contents.
 Instance-MUD adds DG commands for entering and leaving dungeon instances:
 
 ```text
-%enterinstance% <target> <zone vnum>
+%enterinstance% <target> <zone vnum> [entry room vnum]
 %exitinstance% <target> <real room vnum>
 ```
 
@@ -375,11 +375,14 @@ Examples:
 
 ```text
 %enterinstance% %actor% 23
+%enterinstance% %actor% 23 2307
 %exitinstance% %actor% 3001
 ```
 
 `%enterinstance%` creates or rejoins the actor's active instance of the dungeon
-zone. The target is moved into the instance entry room.
+zone. If an entry room vnum is provided, it must be a real room in that dungeon
+zone, and the target is moved to the matching copied room in the instance. If it
+is omitted, the target enters the first room in the zone.
 
 `%exitinstance%` removes the target from instance membership and moves them to a
 real-world room. The destination must not be an instanced/template room.

@@ -467,10 +467,11 @@ static OCMD(do_oenterinstance)
 {
     char_data *ch;
     zone_rnum zone;
+    room_rnum entry_room = NOWHERE;
     int id;
-    char arg1[MAX_INPUT_LENGTH], arg2[MAX_INPUT_LENGTH];
+    char arg1[MAX_INPUT_LENGTH], arg2[MAX_INPUT_LENGTH], arg3[MAX_INPUT_LENGTH];
 
-    two_arguments(argument, arg1, arg2);
+    one_argument(two_arguments(argument, arg1, arg2), arg3);
 
     if (!*arg1 || !*arg2 || !is_number(arg2)) {
         obj_log(obj, "oenterinstance called with bad syntax");
@@ -482,6 +483,13 @@ static OCMD(do_oenterinstance)
         obj_log(obj, "oenterinstance target is not a valid dungeon zone");
         return;
     }
+    if (*arg3) {
+        if (!is_number(arg3) || (entry_room = real_room(atoi(arg3))) == NOWHERE ||
+            GET_ROOM_ZONE(entry_room) != zone) {
+            obj_log(obj, "oenterinstance entry room is not in the target dungeon zone");
+            return;
+        }
+    }
 
     if (!(ch = get_char_by_obj(obj, arg1))) {
         obj_log(obj, "oenterinstance: no target found");
@@ -491,7 +499,7 @@ static OCMD(do_oenterinstance)
     if (!valid_dg_target(ch, DG_ALLOW_GODS))
         return;
 
-    if (!instance_enter_zone(ch, zone, IN_ROOM(ch), NULL, NULL, &id, NULL)) {
+    if (!instance_enter_zone(ch, zone, entry_room, IN_ROOM(ch), NULL, NULL, &id, NULL)) {
         obj_log(obj, "oenterinstance failed for target %s", GET_NAME(ch));
         return;
     }

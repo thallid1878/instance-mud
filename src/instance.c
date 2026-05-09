@@ -1157,9 +1157,9 @@ int instance_teleport_to_room(struct char_data *ch, room_rnum target)
   return TRUE;
 }
 
-int instance_enter_zone(struct char_data *ch, zone_rnum zone, room_rnum return_room,
-  const char *leave_msg, const char *enter_msg, int *instance_id,
-  const char **action)
+int instance_enter_zone(struct char_data *ch, zone_rnum zone,
+  room_rnum template_entry_room, room_rnum return_room, const char *leave_msg,
+  const char *enter_msg, int *instance_id, const char **action)
 {
   struct instance_data *group_inst = NULL, *owned_inst = NULL, *target_inst = NULL;
   const char *entry_action = "Created";
@@ -1173,6 +1173,11 @@ int instance_enter_zone(struct char_data *ch, zone_rnum zone, room_rnum return_r
 
   if (!ch || zone == NOWHERE || !ZONE_FLAGGED(zone, ZONE_DUNGEON) ||
       GET_INSTANCE_ID(ch))
+    return FALSE;
+
+  if (template_entry_room != NOWHERE &&
+      (!valid_room_rnum(template_entry_room) ||
+       GET_ROOM_ZONE(template_entry_room) != zone))
     return FALSE;
 
   if (!valid_room_rnum(return_room) || instance_room_is_template(return_room))
@@ -1190,8 +1195,13 @@ int instance_enter_zone(struct char_data *ch, zone_rnum zone, room_rnum return_r
 
   if (target_inst) {
     id = target_inst->id;
-    entry = instance_entry_room(target_inst);
+    entry = template_entry_room != NOWHERE ?
+      instance_room_for_template(target_inst, template_entry_room) :
+      instance_entry_room(target_inst);
     target_inst->empty_since = 0;
+  } else if (template_entry_room != NOWHERE) {
+    id = instance_create_at_room(zone, template_entry_room, return_room,
+      IS_NPC(ch) ? 0 : GET_IDNUM(ch), &entry);
   } else {
     id = instance_create(zone, return_room, IS_NPC(ch) ? 0 : GET_IDNUM(ch), &entry);
   }
@@ -1431,13 +1441,14 @@ ACMD(do_instance)
   char arg[MAX_INPUT_LENGTH], subarg[MAX_INPUT_LENGTH];
   const char *action = NULL;
   zone_rnum zone;
+  room_rnum entry_room = NOWHERE;
   room_rnum return_room;
   int id;
 
   two_arguments(argument, arg, subarg);
 
   if (!*arg) {
-    send_to_char(ch, "Usage: instance <zone vnum>|list|leave\r\n");
+    send_to_char(ch, "Usage: instance <zone vnum> [entry room vnum]|list|leave\r\n");
     return;
   }
 
@@ -1453,7 +1464,7 @@ ACMD(do_instance)
   }
 
   if (!is_number(arg)) {
-    send_to_char(ch, "Usage: instance <zone vnum>|list|leave\r\n");
+    send_to_char(ch, "Usage: instance <zone vnum> [entry room vnum]|list|leave\r\n");
     return;
   }
 
@@ -1466,13 +1477,23 @@ ACMD(do_instance)
     send_to_char(ch, "That zone is not flagged DUNGEON.\r\n");
     return;
   }
+  if (*subarg) {
+    if (!is_number(subarg) || (entry_room = real_room(atoi(subarg))) == NOWHERE) {
+      send_to_char(ch, "No such entry room.\r\n");
+      return;
+    }
+    if (GET_ROOM_ZONE(entry_room) != zone) {
+      send_to_char(ch, "That entry room is not in the requested dungeon zone.\r\n");
+      return;
+    }
+  }
   if (GET_INSTANCE_ID(ch)) {
     send_to_char(ch, "Leave your current instance first.\r\n");
     return;
   }
 
   return_room = IN_ROOM(ch);
-  if (!instance_enter_zone(ch, zone, return_room,
+  if (!instance_enter_zone(ch, zone, entry_room, return_room,
       "$n opens a shimmering tear in the air and steps through.",
       "$n steps out of a shimmering tear in the air.",
       &id, &action)) {
