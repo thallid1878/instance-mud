@@ -533,13 +533,15 @@ void find_replacement(void *go, struct script_data *sc, trig_data *trig,
           }
 
           else if (type == OBJ_TRIGGER) {
-            for (c = ROOM_AT(obj_room((obj_data *) go))->people; c;
-                 c = c->next_in_room)
-              if (valid_dg_target(c, DG_ALLOW_GODS)) {
-                if (!rand_number(0, count))
-                  rndm = c;
-                count++;
-              }
+            room = dg_room_of_obj((obj_data *) go);
+            if (room) {
+              for (c = room->people; c; c = c->next_in_room)
+                if (valid_dg_target(c, DG_ALLOW_GODS)) {
+                  if (!rand_number(0, count))
+                    rndm = c;
+                  count++;
+                }
+            }
           }
 
           else if (type == WLD_TRIGGER) {
@@ -1316,9 +1318,7 @@ void find_replacement(void *go, struct script_data *sc, trig_data *trig,
           break;
         case 'r':
           if (!str_cmp(field, "room")) {
-            room_rnum obj_room_rnum = obj_room(o);
-            struct room_data *obj_room_data = room_by_rnum_instance(obj_room_rnum,
-              GET_INSTANCE_ID(o));
+            struct room_data *obj_room_data = dg_room_of_obj(o);
 
             if (obj_room_data)
               snprintf(str, slen,"%c%ld",UID_CHAR, room_script_id(obj_room_data));

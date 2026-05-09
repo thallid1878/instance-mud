@@ -909,6 +909,7 @@ const char *otrig_types[] = {
   "UNUSED6",
   "Consume",
   "Time",
+  "Sacrifice",
   "\n"
 };
 
@@ -934,6 +935,33 @@ const char *wtrig_types[] = {
   "Door",
   "Login",
   "Time",
+  "UNUSED9",
+  "\n"
+};
+
+/** Names for corpse trigger types.  These reuse object trigger bits at runtime. */
+const char *corpse_trig_types[] = {
+  "Global",
+  "UNUSED1",
+  "Command",
+  "UNUSED2",
+  "UNUSED3",
+  "Timer",
+  "Get",
+  "UNUSED4",
+  "Give",
+  "UNUSED5",
+  "UNUSED6",
+  "UNUSED7",
+  "UNUSED8",
+  "Load",
+  "UNUSED9",
+  "UNUSED10",
+  "UNUSED11",
+  "UNUSED12",
+  "UNUSED13",
+  "Time",
+  "Sacrifice",
   "\n"
 };
 

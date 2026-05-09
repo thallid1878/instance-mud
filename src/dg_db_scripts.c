@@ -268,7 +268,7 @@ void assign_triggers(void *i, int type)
           mudlog(BRF, LVL_BUILDER, TRUE,
                  "SYSERR: trigger #%d non-existant, for mob #%d",
                  trg_proto->vnum, mob_index[mob->nr].vnum);
-        } else {
+        } else if (trig_index[rnum]->proto->attach_type != CORPSE_TRIGGER) {
           if (!SCRIPT(mob))
             CREATE(SCRIPT(mob), struct script_data, 1);
           add_trigger(SCRIPT(mob), read_trigger(rnum), -1);
@@ -313,5 +313,29 @@ void assign_triggers(void *i, int type)
       mudlog(BRF, LVL_BUILDER, TRUE,
              "SYSERR: unknown type for assign_triggers()");
       break;
+  }
+}
+
+void assign_corpse_triggers(obj_data *corpse, char_data *mob)
+{
+  int rnum;
+  struct trig_proto_list *trg_proto;
+
+  if (!corpse || !mob || !IS_MOB(mob))
+    return;
+
+  trg_proto = mob->proto_script;
+  while (trg_proto) {
+    rnum = real_trigger(trg_proto->vnum);
+    if (rnum == NOTHING) {
+      mudlog(BRF, LVL_BUILDER, TRUE,
+             "SYSERR: trigger #%d non-existant, for corpse of mob #%d",
+             trg_proto->vnum, GET_MOB_VNUM(mob));
+    } else if (trig_index[rnum]->proto->attach_type == CORPSE_TRIGGER) {
+      if (!SCRIPT(corpse))
+        CREATE(SCRIPT(corpse), struct script_data, 1);
+      add_trigger(SCRIPT(corpse), read_trigger(rnum), -1);
+    }
+    trg_proto = trg_proto->next;
   }
 }

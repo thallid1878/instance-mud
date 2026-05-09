@@ -197,6 +197,9 @@ static void trigedit_disp_menu(struct descriptor_data *d)
   } else if (trig->attach_type==WLD_TRIGGER) {
     attach_type = "Rooms";
     sprintbit(GET_TRIG_TYPE(trig), wtrig_types, trgtypes, sizeof(trgtypes));
+  } else if (trig->attach_type==CORPSE_TRIGGER) {
+    attach_type = "Corpses";
+    sprintbit(GET_TRIG_TYPE(trig), corpse_trig_types, trgtypes, sizeof(trgtypes));
   } else {
     attach_type = "Mobiles";
     sprintbit(GET_TRIG_TYPE(trig), trig_types, trgtypes, sizeof(trgtypes));
@@ -238,6 +241,9 @@ static void trigedit_disp_types(struct descriptor_data *d)
   {
     case WLD_TRIGGER:
       types = wtrig_types;
+      break;
+    case CORPSE_TRIGGER:
+      types = corpse_trig_types;
       break;
     case OBJ_TRIGGER:
       types = otrig_types;
@@ -508,7 +514,7 @@ void trigedit_parse(struct descriptor_data *d, char *arg)
          break;
        case '2':
          OLC_MODE(d) = TRIGEDIT_INTENDED;
-         write_to_output(d, "0: Mobiles, 1: Objects, 2: Rooms: ");
+         write_to_output(d, "0: Mobiles, 1: Objects, 2: Rooms, 3: Corpses: ");
          break;
        case '3':
          OLC_MODE(d) = TRIGEDIT_TYPES;
@@ -577,8 +583,9 @@ void trigedit_parse(struct descriptor_data *d, char *arg)
       break;
 
     case TRIGEDIT_INTENDED:
-      if ((atoi(arg)>=MOB_TRIGGER) || (atoi(arg)<=WLD_TRIGGER))
-        OLC_TRIG(d)->attach_type = atoi(arg);
+      i = atoi(arg);
+      if (i >= MOB_TRIGGER && i <= CORPSE_TRIGGER)
+        OLC_TRIG(d)->attach_type = i;
       OLC_VAL(d)++;
       break;
 
@@ -945,6 +952,14 @@ void dg_olc_script_copy(struct descriptor_data *d)
       OLC_SCRIPT(d) = NULL;
 }
 
+static bool dg_script_matches_olc_type(int attach_type, int olc_type)
+{
+  if (olc_type == MOB_TRIGGER)
+    return attach_type == MOB_TRIGGER || attach_type == CORPSE_TRIGGER;
+
+  return attach_type == olc_type;
+}
+
 void dg_script_menu(struct descriptor_data *d)
 {
   struct trig_proto_list *editscript;
@@ -963,7 +978,7 @@ void dg_script_menu(struct descriptor_data *d)
     write_to_output(d, "     %2d) [%s%d%s] %s%s%s", ++i, cyn,
       editscript->vnum, nrm, cyn,
       trig_index[real_trigger(editscript->vnum)]->proto->name, nrm);
-    if (trig_index[real_trigger(editscript->vnum)]->proto->attach_type != OLC_ITEM_TYPE(d))
+    if (!dg_script_matches_olc_type(trig_index[real_trigger(editscript->vnum)]->proto->attach_type, OLC_ITEM_TYPE(d)))
       write_to_output(d, "   %s** Mis-matched Trigger Type **%s\r\n",grn,nrm);
     else
       write_to_output(d, "\r\n");

@@ -20,6 +20,7 @@
 #define    MOB_TRIGGER   0
 #define    OBJ_TRIGGER   1
 #define    WLD_TRIGGER   2
+#define    CORPSE_TRIGGER 3
 
 /* unless you change this, Puff casts all your dg spells */
 #define DG_CASTER_PROXY 1
@@ -92,6 +93,7 @@
 
 #define OTRIG_CONSUME          (1 << 18)    /* char tries to eat/drink obj */
 #define OTRIG_TIME             (1 << 19)     /* trigger based on game hour */
+#define OTRIG_SACRIFICE        (1 << 20)    /* object is sacrificed        */
 
 /* wld trigger types */
 #define WTRIG_GLOBAL           (1 << 0)      /* check even if zone empty   */
@@ -218,6 +220,7 @@ int enter_wtrigger(room_data *room, char_data *actor, int dir);
 int drop_otrigger(obj_data *obj, char_data *actor);
 void timer_otrigger(obj_data *obj);
 int get_otrigger(obj_data *obj, char_data *actor);
+int corpse_get_otrigger(obj_data *corpse, obj_data *obj, char_data *actor);
 int drop_wtrigger(obj_data *obj, char_data *actor);
 int give_otrigger(obj_data *obj, char_data *actor,
          char_data *victim);
@@ -258,6 +261,7 @@ int door_mtrigger(char_data *actor, int subcmd, int dir);
 int door_wtrigger(char_data *actor, int subcmd, int dir);
 
 int consume_otrigger(obj_data *obj, char_data *actor, int cmd);
+int sacrifice_otrigger(obj_data *obj, char_data *actor);
 
 void time_mtrigger(char_data *ch);
 void time_otrigger(obj_data *obj);
@@ -325,6 +329,7 @@ void trig_data_copy(trig_data *this_data, const trig_data *trg);
 void dg_read_trigger(FILE *fp, void *proto, int type);
 void dg_obj_trigger(char *line, struct obj_data *obj);
 void assign_triggers(void *i, int type);
+void assign_corpse_triggers(obj_data *corpse, char_data *mob);
 
 /* From dg_variables.c */
 void add_var(struct trig_var_data **var_list, const char *name, const char *value, long id);

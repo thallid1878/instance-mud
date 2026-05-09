@@ -89,6 +89,11 @@ room_rnum obj_room(obj_data *obj)
         return NOWHERE;
 }
 
+static struct room_data *obj_room_data(obj_data *obj)
+{
+    return dg_room_of_obj(obj);
+}
+
 /* returns the real room number, or NOWHERE if not found or invalid */
 static room_rnum find_obj_target_room(obj_data *obj, char *rawroomstr)
 {
@@ -140,18 +145,18 @@ static room_rnum find_obj_target_room(obj_data *obj, char *rawroomstr)
 /* Object commands */
 static OCMD(do_oecho)
 {
-    int room;
+    struct room_data *room;
 
     skip_spaces(&argument);
 
     if (!*argument)
         obj_log(obj, "oecho called with no args");
 
-    else if ((room = obj_room(obj)) != NOWHERE)
+    else if ((room = obj_room_data(obj)) != NULL)
     {
-	  if (ROOM_AT(room)->people) {
-		sub_write(argument, ROOM_AT(room)->people, TRUE, TO_ROOM);
-		sub_write(argument, ROOM_AT(room)->people, TRUE, TO_CHAR);
+	  if (room->people) {
+		sub_write(argument, room->people, TRUE, TO_ROOM);
+		sub_write(argument, room->people, TRUE, TO_CHAR);
 	  }
     }
 
@@ -170,7 +175,7 @@ static OCMD(do_olog)
 static OCMD(do_oforce)
 {
     char_data *ch, *next_ch;
-    int room;
+    struct room_data *room;
     char arg1[MAX_INPUT_LENGTH], *line;
 
     line = one_argument(argument, arg1);
@@ -183,11 +188,11 @@ static OCMD(do_oforce)
 
     if (!str_cmp(arg1, "all"))
     {
-        if ((room = obj_room(obj)) == NOWHERE)
+        if ((room = obj_room_data(obj)) == NULL)
             obj_log(obj, "oforce called by object in NOWHERE");
         else
         {
-            for (ch = ROOM_AT(room)->people; ch; ch = next_ch)
+            for (ch = room->people; ch; ch = next_ch)
             {
                 next_ch = ch->next_in_room;
                 if (valid_dg_target(ch, 0))
@@ -355,20 +360,20 @@ static OCMD(do_opurge)
     char arg[MAX_INPUT_LENGTH];
     char_data *ch, *next_ch;
     obj_data *o, *next_obj;
-    int rm;
+    struct room_data *room;
 
     one_argument(argument, arg);
 
     if (!*arg) {
       /* purge all */
-      if ((rm = obj_room(obj)) != NOWHERE) {
-        for (ch = ROOM_AT(rm)->people; ch; ch = next_ch ) {
+      if ((room = obj_room_data(obj)) != NULL) {
+        for (ch = room->people; ch; ch = next_ch ) {
            next_ch = ch->next_in_room;
            if (IS_NPC(ch))
              extract_char(ch);
         }
 
-        for (o = ROOM_AT(rm)->contents; o; o = next_obj ) {
+        for (o = room->contents; o; o = next_obj ) {
            next_obj = o->next_content;
            if (o != obj)
              extract_obj(o);
@@ -403,6 +408,7 @@ static OCMD(do_oteleport)
 {
     char_data *ch, *next_ch;
     room_rnum target, rm;
+    struct room_data *room;
     char arg1[MAX_INPUT_LENGTH], arg2[MAX_INPUT_LENGTH];
 
     two_arguments(argument, arg1, arg2);
@@ -420,11 +426,16 @@ static OCMD(do_oteleport)
 
     else if (!str_cmp(arg1, "all"))
     {
-        rm = obj_room(obj);
+        room = obj_room_data(obj);
+        rm = room ? room_data_rnum(room) : NOWHERE;
+        if (!room) {
+            obj_log(obj, "oteleport called by object in NOWHERE");
+            return;
+        }
         if (target == rm)
             obj_log(obj, "oteleport target is itself");
 
-        for (ch = ROOM_AT(rm)->people; ch; ch = next_ch)
+        for (ch = room->people; ch; ch = next_ch)
         {
             next_ch = ch->next_in_room;
             if (!valid_dg_target(ch, DG_ALLOW_GODS))
@@ -528,7 +539,10 @@ static OCMD(do_oexitinstance)
 static OCMD(do_dgoload)
 {
     char arg1[MAX_INPUT_LENGTH], arg2[MAX_INPUT_LENGTH];
-    int number = 0, room;
+    int number = 0;
+    room_rnum room;
+    struct room_data *room_data;
+    int instance_id;
     char_data *mob;
     obj_data *object;
     char *target;
@@ -544,11 +558,14 @@ static OCMD(do_dgoload)
         return;
     }
 
-    if ((room = obj_room(obj)) == NOWHERE)
+    room_data = obj_room_data(obj);
+    if (room_data == NULL)
     {
         obj_log(obj, "oload: object in NOWHERE trying to load");
         return;
     }
+    room = room_data_rnum(room_data);
+    instance_id = room_data->instance_id;
 
     /* load mob to target room - Jamie Nelson, April 13 2004 */
     if (is_abbrev(arg1, "mob")) {
@@ -566,6 +583,7 @@ static OCMD(do_dgoload)
         obj_log(obj, "oload: bad mob vnum");
         return;
       }
+      mob->instance_id = (!target || !*target) ? instance_id : 0;
       char_to_room(mob, rnum);
 
       if (SCRIPT(obj)) { /* It _should_ have, but it might be detached. */
@@ -591,6 +609,7 @@ static OCMD(do_dgoload)
 
       /* special handling to make objects able to load on a person/in a container/worn etc. */
       if (!target || !*target) {
+        object->instance_id = instance_id;
         obj_to_room(object, room);
         load_otrigger(object);
         return;
@@ -615,6 +634,7 @@ static OCMD(do_dgoload)
       	return;
       }
       /* neither char nor container found - just dump it in room */
+      object->instance_id = instance_id;
       obj_to_room(object, room);
       load_otrigger(object);
       return;
@@ -650,7 +670,7 @@ static OCMD(do_odamage) {
 
 static OCMD(do_oasound)
 {
-  room_rnum room;
+  struct room_data *room, *to_room;
   int door;
 
   skip_spaces(&argument);
@@ -660,18 +680,19 @@ static OCMD(do_oasound)
     return;
   }
 
-  if ((room = obj_room(obj)) == NOWHERE) {
+  if ((room = obj_room_data(obj)) == NULL) {
     obj_log(obj, "oasound called by object in NOWHERE");
     return;
   }
 
   for (door = 0; door < DIR_COUNT; door++) {
-    if (W_EXIT(room, door) != NULL &&
-       W_EXIT(room, door)->to_room != NOWHERE &&
-       W_EXIT(room, door)->to_room != room &&
-        ROOM_AT(W_EXIT(room, door)->to_room)->people) {
-      sub_write(argument, ROOM_AT(W_EXIT(room, door)->to_room)->people, TRUE, TO_ROOM);
-      sub_write(argument, ROOM_AT(W_EXIT(room, door)->to_room)->people, TRUE, TO_CHAR); 
+    if (R_EXIT(room, door) != NULL &&
+       R_EXIT(room, door)->to_room != NOWHERE &&
+       R_EXIT(room, door)->to_room != room_data_rnum(room) &&
+       (to_room = room_by_rnum_instance(R_EXIT(room, door)->to_room, room->instance_id)) != NULL &&
+       to_room->people) {
+      sub_write(argument, to_room->people, TRUE, TO_ROOM);
+      sub_write(argument, to_room->people, TRUE, TO_CHAR);
     }
   }
 }

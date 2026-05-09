@@ -376,6 +376,13 @@ void point_update(void)
 	GET_OBJ_TIMER(j)--;
 
       if (!GET_OBJ_TIMER(j)) {
+	long corpse_id = obj_script_id(j);
+
+	timer_otrigger(j);
+	if (!has_obj_by_uid_in_lookup_table(corpse_id))
+	  continue;
+	if (GET_OBJ_TIMER(j) > 0)
+	  continue;
 
 	if (j->carried_by)
 	  act("$p decays in your hands.", FALSE, j->carried_by, j, 0, TO_CHAR);

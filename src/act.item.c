@@ -208,7 +208,7 @@ static void perform_get_from_container(struct char_data *ch, struct obj_data *ob
   if (mode == FIND_OBJ_INV || can_take_obj(ch, obj)) {
     if (IS_CARRYING_N(ch) >= CAN_CARRY_N(ch))
       act("$p: you can't hold any more items.", FALSE, ch, obj, 0, TO_CHAR);
-    else if (get_otrigger(obj, ch)) {
+    else if (corpse_get_otrigger(cont, obj, ch) && get_otrigger(obj, ch)) {
       obj_from_obj(obj);
       obj_to_char(obj, ch);
       act("You get $p from $P.", FALSE, ch, obj, cont, TO_CHAR);
@@ -1535,6 +1535,8 @@ ACMD(do_sac)
 {
   char arg[MAX_INPUT_LENGTH];
   struct obj_data *j, *jj, *next_thing2;
+  room_rnum sacrifice_room = NOWHERE;
+  int sacrifice_instance = 0;
 
   one_argument(argument, arg);
 
@@ -1551,6 +1553,17 @@ ACMD(do_sac)
   if (!CAN_WEAR(j, ITEM_WEAR_TAKE)) {
     send_to_char(ch, "You can't sacrifice that!\n\r");
     return;
+  }
+
+  if (!sacrifice_otrigger(j, ch))
+    return;
+
+  if (j->carried_by) {
+    sacrifice_room = IN_ROOM(j->carried_by);
+    sacrifice_instance = GET_INSTANCE_ID(j->carried_by);
+  } else if (IN_ROOM(j) != NOWHERE) {
+    sacrifice_room = IN_ROOM(j);
+    sacrifice_instance = GET_INSTANCE_ID(j);
   }
 
    act("$n sacrifices $p.", FALSE, ch, j, 0, TO_ROOM);
@@ -1588,10 +1601,10 @@ ACMD(do_sac)
     next_thing2 = jj->next_content;       /* Next in inventory */
     obj_from_obj(jj);
 
-    if (j->carried_by)
-      obj_to_room(jj, IN_ROOM(j));
-    else if (IN_ROOM(j) != NOWHERE)
-      obj_to_room(jj, IN_ROOM(j));
+    if (sacrifice_room != NOWHERE) {
+      jj->instance_id = sacrifice_instance;
+      obj_to_room(jj, sacrifice_room);
+    }
     else
       assert(FALSE);
   }

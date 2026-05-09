@@ -590,7 +590,7 @@ int leave_mtrigger(char_data *actor, int dir)
   char_data *ch;
   char buf[MAX_INPUT_LENGTH];
 
-  if (!valid_dg_target(actor, DG_ALLOW_GODS))
+  if (!valid_dg_target(actor, 0))
     return 1;
 
   for (ch = GET_ROOM(actor)->people; ch; ch = ch->next_in_room) {
@@ -710,6 +710,37 @@ int get_otrigger(obj_data *obj, char_data *actor)
       /* Don't allow a get to take place, if the actor is killed (the mud
        * would choke on obj_to_char) or the object is purged. */
       if (DEAD(actor) || !obj)
+        return 0;
+      else
+        return ret_val;
+    }
+  }
+
+  return 1;
+}
+
+int corpse_get_otrigger(obj_data *corpse, obj_data *obj, char_data *actor)
+{
+  trig_data *t;
+  char buf[MAX_INPUT_LENGTH];
+  long corpse_id, obj_id;
+  int ret_val;
+
+  if (!corpse || !obj || !IS_CORPSE(corpse) || !SCRIPT_CHECK(corpse, OTRIG_GET))
+    return 1;
+
+  corpse_id = obj_script_id(corpse);
+  obj_id = obj_script_id(obj);
+
+  for (t = TRIGGERS(SCRIPT(corpse)); t; t = t->next) {
+    if (TRIGGER_CHECK(t, OTRIG_GET) && (rand_number(1, 100) <= GET_TRIG_NARG(t))) {
+      ADD_UID_VAR(buf, t, char_script_id(actor), "actor", 0);
+      ADD_UID_VAR(buf, t, obj_id, "object", 0);
+      ret_val = script_driver(&corpse, t, OBJ_TRIGGER, TRIG_NEW);
+      if (DEAD(actor) || !corpse ||
+          !has_obj_by_uid_in_lookup_table(corpse_id) ||
+          !has_obj_by_uid_in_lookup_table(obj_id) ||
+          obj->in_obj != corpse)
         return 0;
       else
         return ret_val;
@@ -990,6 +1021,33 @@ int consume_otrigger(obj_data *obj, char_data *actor, int cmd)
       ret_val = script_driver(&obj, t, OBJ_TRIGGER, TRIG_NEW);
       /* Don't allow a wear to take place, if the object is purged. */
       if (!obj)
+        return 0;
+      else
+        return ret_val;
+    }
+  }
+
+  return 1;
+}
+
+int sacrifice_otrigger(obj_data *obj, char_data *actor)
+{
+  trig_data *t;
+  char buf[MAX_INPUT_LENGTH];
+  int ret_val;
+
+  if (!SCRIPT_CHECK(obj, OTRIG_SACRIFICE))
+    return 1;
+
+  if (!valid_dg_target(actor, DG_ALLOW_GODS))
+    return 1;
+
+  for (t = TRIGGERS(SCRIPT(obj)); t; t = t->next) {
+    if (TRIGGER_CHECK(t, OTRIG_SACRIFICE) &&
+        (rand_number(1, 100) <= GET_TRIG_NARG(t))) {
+      ADD_UID_VAR(buf, t, char_script_id(actor), "actor", 0);
+      ret_val = script_driver(&obj, t, OBJ_TRIGGER, TRIG_NEW);
+      if (DEAD(actor) || !obj)
         return 0;
       else
         return ret_val;

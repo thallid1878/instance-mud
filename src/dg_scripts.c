@@ -364,9 +364,9 @@ char_data *get_char_near_obj(obj_data *obj, char *name)
     if (ch && valid_dg_target(ch, DG_ALLOW_GODS))
       return ch;
   } else {
-    room_rnum num;
-    if ((num = obj_room(obj)) != NOWHERE)
-      for (ch = ROOM_AT(num)->people; ch; ch = ch->next_in_room)
+    struct room_data *room = dg_room_of_obj(obj);
+    if (room)
+      for (ch = room->people; ch; ch = ch->next_in_room)
         if (isname(name, ch->player.name) &&
             valid_dg_target(ch, DG_ALLOW_GODS))
           return ch;
@@ -415,7 +415,7 @@ obj_data *get_obj_near_obj(obj_data *obj, char *name)
 {
   obj_data *i = NULL;
   char_data *ch;
-  int rm;
+  struct room_data *room;
   long id;
 
   if (!str_cmp(name, "self") || !str_cmp(name, "me"))
@@ -442,13 +442,13 @@ obj_data *get_obj_near_obj(obj_data *obj, char *name)
   else if (obj->carried_by &&
           (i = get_obj_in_list(name, obj->carried_by->carrying)))
     return i;
-  else if ((rm = obj_room(obj)) != NOWHERE) {
+  else if ((room = dg_room_of_obj(obj)) != NULL) {
     /* check the floor */
-    if ((i = get_obj_in_list(name, ROOM_AT(rm)->contents)))
+    if ((i = get_obj_in_list(name, room->contents)))
       return i;
 
     /* check peoples' inventory */
-    for (ch = ROOM_AT(rm)->people;ch ; ch = ch->next_in_room)
+    for (ch = room->people;ch ; ch = ch->next_in_room)
       if ((i = get_object_in_equip(ch, name)))
         return i;
   }
@@ -546,7 +546,7 @@ char_data *get_char_by_room(room_data *room, char *name)
 obj_data *get_obj_by_obj(obj_data *obj, char *name)
 {
   obj_data *i = NULL;
-  int rm;
+  struct room_data *room;
 
   if (*name == UID_CHAR)
     return find_obj(atoi(name + 1));
@@ -567,8 +567,8 @@ obj_data *get_obj_by_obj(obj_data *obj, char *name)
      (i = get_obj_in_list(name, obj->carried_by->carrying)))
     return i;
 
-  if (((rm = obj_room(obj)) != NOWHERE) &&
-      (i = get_obj_in_list(name, ROOM_AT(rm)->contents)))
+  if (((room = dg_room_of_obj(obj)) != NULL) &&
+      (i = get_obj_in_list(name, room->contents)))
     return i;
 
   return get_obj(name);
@@ -800,6 +800,9 @@ static void do_stat_trigger(struct char_data *ch, trig_data *trig)
     } else if (trig->attach_type==WLD_TRIGGER) {
       len += snprintf(sb + len, sizeof(sb)-len, "Trigger Intended Assignment: Rooms\r\n");
       sprintbit(GET_TRIG_TYPE(trig), wtrig_types, buf, sizeof(buf));
+    } else if (trig->attach_type==CORPSE_TRIGGER) {
+      len += snprintf(sb + len, sizeof(sb)-len, "Trigger Intended Assignment: Corpses\r\n");
+      sprintbit(GET_TRIG_TYPE(trig), corpse_trig_types, buf, sizeof(buf));
     } else {
       len += snprintf(sb + len, sizeof(sb)-len, "Trigger Intended Assignment: Mobiles\r\n");
       sprintbit(GET_TRIG_TYPE(trig), trig_types, buf, sizeof(buf));
@@ -875,6 +878,9 @@ static void script_stat (char_data *ch, struct script_data *sc)
     } else if (t->attach_type==WLD_TRIGGER) {
       send_to_char(ch, "  Trigger Intended Assignment: Rooms\r\n");
       sprintbit(GET_TRIG_TYPE(t), wtrig_types, buf1, sizeof(buf1));
+    } else if (t->attach_type==CORPSE_TRIGGER) {
+      send_to_char(ch, "  Trigger Intended Assignment: Corpses\r\n");
+      sprintbit(GET_TRIG_TYPE(t), corpse_trig_types, buf1, sizeof(buf1));
     } else {
       send_to_char(ch, "  Trigger Intended Assignment: Mobiles\r\n");
       sprintbit(GET_TRIG_TYPE(t), trig_types, buf1, sizeof(buf1));

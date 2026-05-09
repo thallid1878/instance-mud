@@ -51,3 +51,6 @@ understanding the test infrastructure.
 
 See [doc/customizing-start-and-death.md](doc/customizing-start-and-death.md)
 for changing the new character starter instance and player death room.
+
+See [doc/dg-scripts-guide.md](doc/dg-scripts-guide.md) for current DG script
+behavior, including instance commands and mob death trigger warnings.

@@ -4124,7 +4124,8 @@ static void trg_checkload(struct char_data *ch, trig_vnum tvnum)
 
   send_to_char(ch, "Checking load info for the %s trigger '%s':\r\n",
                     trig_index[trnum]->proto->attach_type == MOB_TRIGGER ? "mobile" :
-                    (trig_index[trnum]->proto->attach_type == OBJ_TRIGGER ? "object" : "room"),
+                    (trig_index[trnum]->proto->attach_type == OBJ_TRIGGER ? "object" :
+                    (trig_index[trnum]->proto->attach_type == CORPSE_TRIGGER ? "corpse" : "room")),
                     trig_index[trnum]->proto->name);
 
   for (zone=0; zone <= top_of_zone_table; zone++) {
@@ -4186,9 +4187,14 @@ static void trg_checkload(struct char_data *ch, trig_vnum tvnum)
 
     for (tpl = mob_proto[i].proto_script;tpl;tpl = tpl->next)
       if (tpl->vnum == tvnum) {
-        send_to_char(ch, "mob [%5d] %s\r\n",
-                         mob_index[i].vnum,
-                         mob_proto[i].player.short_descr);
+        if (trig_index[trnum]->proto->attach_type == CORPSE_TRIGGER)
+          send_to_char(ch, "corpse of mob [%5d] %s\r\n",
+                           mob_index[i].vnum,
+                           mob_proto[i].player.short_descr);
+        else
+          send_to_char(ch, "mob [%5d] %s\r\n",
+                           mob_index[i].vnum,
+                           mob_proto[i].player.short_descr);
         found = 1;
       }
   }

@@ -290,7 +290,9 @@ static void make_corpse(struct char_data *ch)
   IS_CARRYING_N(ch) = 0;
   IS_CARRYING_W(ch) = 0;
 
+  assign_corpse_triggers(corpse, ch);
   obj_to_room(corpse, IN_ROOM(ch));
+  load_otrigger(corpse);
 }
 
 /* When ch kills victim */

@@ -51,6 +51,7 @@ extern int drink_aff[][3];
 extern const char *trig_types[];
 extern const char *otrig_types[];
 extern const char *wtrig_types[];
+extern const char *corpse_trig_types[];
 extern const char *history_types[];
 extern const char *ibt_bits[];
 extern size_t room_bits_count;
