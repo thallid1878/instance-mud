@@ -49,3 +49,5 @@ report via the `dorny/test-reporter` action.
 See [doc/testing.md](doc/testing.md) for full details on adding new tests and
 understanding the test infrastructure.
 
+See [doc/customizing-start-and-death.md](doc/customizing-start-and-death.md)
+for changing the new character starter instance and player death room.
