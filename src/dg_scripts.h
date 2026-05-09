@@ -372,6 +372,8 @@ ACMD(do_mdamage);
 ACMD(do_mdoor);
 ACMD(do_mecho);
 ACMD(do_mechoaround);
+ACMD(do_menterinstance);
+ACMD(do_mexitinstance);
 ACMD(do_mfollow);
 ACMD(do_mforce);
 ACMD(do_mforget);
@@ -452,8 +454,7 @@ void wld_command_interpreter(room_data *room, char *argument);
 // id helpers
 extern long char_script_id(char_data *ch);
 extern long obj_script_id(obj_data *obj);
+extern long room_script_id(room_data *room);
 extern int has_obj_by_uid_in_lookup_table(long uid);
-
-#define room_script_id(room)  ((long)(room)->number + ROOM_ID_BASE)
 
 #endif /* _DG_SCRIPTS_H_ */

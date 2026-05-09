@@ -20,6 +20,8 @@
 #include "constants.h"
 #include "genzon.h" /* for access to real_zone_by_thing */
 #include "fight.h" /* for die() */
+#include "act.h"
+#include "instance.h"
 
 
 
@@ -38,6 +40,8 @@ static OCMD(do_otimer);
 static OCMD(do_otransform);
 static OCMD(do_opurge);
 static OCMD(do_oteleport);
+static OCMD(do_oenterinstance);
+static OCMD(do_oexitinstance);
 static OCMD(do_dgoload);
 static OCMD(do_odamage);
 static OCMD(do_oasound);
@@ -425,9 +429,10 @@ static OCMD(do_oteleport)
             next_ch = ch->next_in_room;
             if (!valid_dg_target(ch, DG_ALLOW_GODS))
               continue;
-            char_from_room(ch);
-            char_to_room(ch, target);
-            enter_wtrigger(GET_ROOM(ch), ch, -1);
+            if (instance_teleport_to_room(ch, target))
+                enter_wtrigger(GET_ROOM(ch), ch, -1);
+            else
+                obj_log(obj, "oteleport failed for target %s", GET_NAME(ch));
         }
     }
 
@@ -435,15 +440,89 @@ static OCMD(do_oteleport)
     {
         if ((ch = get_char_by_obj(obj, arg1))) {
           if (valid_dg_target(ch, DG_ALLOW_GODS)) {
-            char_from_room(ch);
-            char_to_room(ch, target);
-            enter_wtrigger(GET_ROOM(ch), ch, -1);
+            if (instance_teleport_to_room(ch, target))
+              enter_wtrigger(GET_ROOM(ch), ch, -1);
+            else
+              obj_log(obj, "oteleport failed for target %s", GET_NAME(ch));
           }
         }
 
         else
             obj_log(obj, "oteleport: no target found");
     }
+}
+
+static OCMD(do_oenterinstance)
+{
+    char_data *ch;
+    zone_rnum zone;
+    int id;
+    char arg1[MAX_INPUT_LENGTH], arg2[MAX_INPUT_LENGTH];
+
+    two_arguments(argument, arg1, arg2);
+
+    if (!*arg1 || !*arg2 || !is_number(arg2)) {
+        obj_log(obj, "oenterinstance called with bad syntax");
+        return;
+    }
+
+    zone = real_zone(atoi(arg2));
+    if (zone == NOWHERE || !ZONE_FLAGGED(zone, ZONE_DUNGEON)) {
+        obj_log(obj, "oenterinstance target is not a valid dungeon zone");
+        return;
+    }
+
+    if (!(ch = get_char_by_obj(obj, arg1))) {
+        obj_log(obj, "oenterinstance: no target found");
+        return;
+    }
+
+    if (!valid_dg_target(ch, DG_ALLOW_GODS))
+        return;
+
+    if (!instance_enter_zone(ch, zone, IN_ROOM(ch), NULL, NULL, &id, NULL)) {
+        obj_log(obj, "oenterinstance failed for target %s", GET_NAME(ch));
+        return;
+    }
+
+    enter_wtrigger(GET_ROOM(ch), ch, -1);
+    look_at_room(ch, 0);
+}
+
+static OCMD(do_oexitinstance)
+{
+    char_data *ch;
+    room_rnum target;
+    char arg1[MAX_INPUT_LENGTH], arg2[MAX_INPUT_LENGTH];
+
+    two_arguments(argument, arg1, arg2);
+
+    if (!*arg1 || !*arg2 || !is_number(arg2)) {
+        obj_log(obj, "oexitinstance called with bad syntax");
+        return;
+    }
+
+    target = real_room(atoi(arg2));
+    if (target == NOWHERE || instance_room_is_template(target)) {
+        obj_log(obj, "oexitinstance target is an invalid real-world room");
+        return;
+    }
+
+    if (!(ch = get_char_by_obj(obj, arg1))) {
+        obj_log(obj, "oexitinstance: no target found");
+        return;
+    }
+
+    if (!valid_dg_target(ch, DG_ALLOW_GODS))
+        return;
+
+    if (!instance_exit_to_room(ch, target)) {
+        obj_log(obj, "oexitinstance failed for target %s", GET_NAME(ch));
+        return;
+    }
+
+    enter_wtrigger(GET_ROOM(ch), ch, -1);
+    look_at_room(ch, 0);
 }
 
 static OCMD(do_dgoload)
@@ -815,6 +894,8 @@ static const struct obj_command_info obj_cmd_info[] = {
     { "odamage "    , do_odamage,   0 },
     { "oecho "      , do_oecho    , 0 },
     { "oechoaround ", do_osend    , SCMD_OECHOAROUND },
+    { "oenterinstance ", do_oenterinstance, 0 },
+    { "oexitinstance ", do_oexitinstance, 0 },
     { "oforce "     , do_oforce   , 0 },
     { "oload "      , do_dgoload  , 0 },
     { "opurge "     , do_opurge   , 0 },

@@ -18,11 +18,13 @@
 #include "genshp.h"
 #include "constants.h"
 #include "act.h"
+#include "fight.h"
 #include "lists.h"
 #include "instance.h"
 
 #define INSTANCE_BLOCK_SIZE 100
 #define INSTANCE_MAX_ROOM_SLOT ((IDXTYPE_MAX - (INSTANCE_BLOCK_SIZE - 1)) / INSTANCE_BLOCK_SIZE)
+#define INSTANCE_ROOM_SCRIPT_BASE 1000000L
 
 struct instance_obj_ref {
   struct obj_data *obj;
@@ -80,6 +82,7 @@ static void queue_instance_room_chars(struct instance_data *inst, room_rnum room
 static void track_obj(struct instance_obj_ref **list, struct obj_data *obj);
 static struct obj_data *find_tracked_obj(struct instance_obj_ref *list, obj_rnum rnum);
 static void free_tracked_objs(struct instance_obj_ref *list);
+static int runtime_room_index(struct room_data *room);
 
 static int izone_index(zone_rnum rnum)
 {
@@ -109,6 +112,26 @@ static struct shop_data *ishop_slot(int shop)
   return (idx >= 0 && ishop_index) ? &ishop_index[idx] : NULL;
 }
 
+static int runtime_room_index(struct room_data *room)
+{
+  struct instance_data *inst;
+  int offset;
+
+  if (!room || !iworld)
+    return -1;
+
+  for (inst = instance_list; inst; inst = inst->next) {
+    for (offset = 0; offset < INSTANCE_BLOCK_SIZE; offset++) {
+      int index = inst->room_start + offset;
+
+      if (index <= top_of_runtime_world && &iworld[index] == room)
+        return index;
+    }
+  }
+
+  return -1;
+}
+
 struct room_data *room_by_rnum(room_rnum rnum)
 {
   if (rnum == NOWHERE)
@@ -134,6 +157,91 @@ struct room_data *room_by_rnum_instance(room_rnum rnum, int instance_id)
   }
 
   return room_by_rnum(rnum);
+}
+
+room_rnum room_data_rnum(struct room_data *room)
+{
+  room_rnum rnum;
+  int index = runtime_room_index(room);
+
+  if (index >= 0)
+    return index % INSTANCE_BLOCK_SIZE;
+
+  if (!room)
+    return NOWHERE;
+
+  for (rnum = 0; rnum <= top_of_world; rnum++)
+    if (&world[rnum] == room)
+      return rnum;
+
+  return real_room(room->number);
+}
+
+struct room_data *room_by_vnum_instance(room_vnum vnum, int instance_id)
+{
+  struct instance_data *inst;
+  int i;
+
+  if (instance_id > 0 && (inst = instance_by_id(instance_id)) != NULL) {
+    for (i = 0; i < inst->room_count; i++) {
+      struct room_data *template_room = ROOM_AT(inst->template_rooms[i]);
+
+      if (template_room && template_room->number == vnum)
+        return instance_room_at(inst, inst->rooms[i]);
+    }
+  }
+
+  return room_by_rnum(real_room(vnum));
+}
+
+room_rnum room_rnum_by_vnum_instance(room_vnum vnum, int instance_id)
+{
+  struct instance_data *inst;
+  int i;
+
+  if (instance_id > 0 && (inst = instance_by_id(instance_id)) != NULL) {
+    for (i = 0; i < inst->room_count; i++) {
+      struct room_data *template_room = ROOM_AT(inst->template_rooms[i]);
+
+      if (template_room && template_room->number == vnum)
+        return inst->rooms[i];
+    }
+  }
+
+  return real_room(vnum);
+}
+
+struct room_data *room_by_script_id(long id)
+{
+  long room_id = id - ROOM_ID_BASE;
+
+  if (id < ROOM_ID_BASE || id >= OBJ_ID_BASE)
+    return NULL;
+
+  if (room_id >= INSTANCE_ROOM_SCRIPT_BASE) {
+    long index = room_id - INSTANCE_ROOM_SCRIPT_BASE;
+
+    if (iworld && index >= 0 && index <= top_of_runtime_world &&
+        iworld[index].instance_id > 0)
+      return &iworld[index];
+
+    return NULL;
+  }
+
+  return room_by_rnum(real_room((room_vnum)room_id));
+}
+
+long room_script_id(struct room_data *room)
+{
+  int index = runtime_room_index(room);
+
+  if (!room)
+    return ROOM_ID_BASE;
+
+  if (index >= 0)
+    return ROOM_ID_BASE + INSTANCE_ROOM_SCRIPT_BASE + index;
+
+  return (long)room->number + ROOM_ID_BASE;
 }
 
 struct zone_data *zone_by_rnum(zone_rnum rnum)
@@ -955,6 +1063,149 @@ int instance_create(zone_rnum template_zone, room_rnum return_room, long owner_i
   return inst->id;
 }
 
+int instance_create_at_room(zone_rnum template_zone, room_rnum template_room,
+  room_rnum return_room, long owner_id, room_rnum *entry_room)
+{
+  struct instance_data *inst;
+  room_rnum mapped_room = NOWHERE;
+  int id;
+
+  id = instance_create(template_zone, return_room, owner_id, &mapped_room);
+  if (!id)
+    return 0;
+
+  inst = instance_by_id(id);
+  mapped_room = instance_room_for_template(inst, template_room);
+  if (mapped_room == NOWHERE) {
+    mudlog(BRF, LVL_IMPL, TRUE,
+      "Unable to use room %d as instance entry for zone %d.",
+      template_room != NOWHERE ? ROOM_AT(template_room)->number : NOWHERE,
+      template_zone != NOWHERE ? ZONE_AT(template_zone)->number : NOWHERE);
+    destroy_instance(inst);
+    return 0;
+  }
+
+  if (entry_room)
+    *entry_room = mapped_room;
+  return id;
+}
+
+int instance_exit_to_room(struct char_data *ch, room_rnum target)
+{
+  struct char_data *fighter, *next_fighter;
+
+  if (!ch || !valid_room_rnum(target) || instance_room_is_template(target))
+    return FALSE;
+
+  if (FIGHTING(ch))
+    stop_fighting(ch);
+
+  for (fighter = combat_list; fighter; fighter = next_fighter) {
+    next_fighter = fighter->next_fighting;
+    if (FIGHTING(fighter) == ch)
+      stop_fighting(fighter);
+  }
+
+  if (IN_ROOM(ch) != NOWHERE)
+    char_from_room(ch);
+
+  ch->instance_id = 0;
+  ch->instance_return_room = NOWHERE;
+  GET_WAS_IN(ch) = NOWHERE;
+  if (GET_POS(ch) == POS_FIGHTING && !FIGHTING(ch))
+    GET_POS(ch) = POS_STANDING;
+
+  char_to_room(ch, target);
+  return TRUE;
+}
+
+int instance_teleport_to_room(struct char_data *ch, room_rnum target)
+{
+  struct instance_data *inst = NULL;
+  room_rnum mapped_room = NOWHERE;
+
+  if (!ch || !valid_room_rnum(target))
+    return FALSE;
+
+  if (GET_INSTANCE_ID(ch) > 0) {
+    inst = instance_by_id(GET_INSTANCE_ID(ch));
+    if (instance_room_at(inst, target))
+      mapped_room = target;
+    else if (inst)
+      mapped_room = instance_room_for_template(inst, target);
+
+    if (mapped_room == NOWHERE)
+      return instance_exit_to_room(ch, target);
+
+    target = mapped_room;
+  } else if (instance_room_is_template(target))
+    return FALSE;
+
+  if (IN_ROOM(ch) != NOWHERE)
+    char_from_room(ch);
+  char_to_room(ch, target);
+  return TRUE;
+}
+
+int instance_enter_zone(struct char_data *ch, zone_rnum zone, room_rnum return_room,
+  const char *leave_msg, const char *enter_msg, int *instance_id,
+  const char **action)
+{
+  struct instance_data *group_inst = NULL, *owned_inst = NULL, *target_inst = NULL;
+  const char *entry_action = "Created";
+  room_rnum entry = NOWHERE;
+  int id;
+
+  if (instance_id)
+    *instance_id = 0;
+  if (action)
+    *action = entry_action;
+
+  if (!ch || zone == NOWHERE || !ZONE_FLAGGED(zone, ZONE_DUNGEON) ||
+      GET_INSTANCE_ID(ch))
+    return FALSE;
+
+  if (!valid_room_rnum(return_room) || instance_room_is_template(return_room))
+    return_room = valid_room_rnum(r_mortal_start_room) ? r_mortal_start_room : 0;
+
+  owned_inst = instance_owned_by_char(ch, zone);
+  group_inst = instance_group_instance(ch, zone);
+  if (owned_inst) {
+    target_inst = owned_inst;
+    entry_action = "Rejoined your";
+  } else if (group_inst) {
+    target_inst = group_inst;
+    entry_action = "Joined your group's";
+  }
+
+  if (target_inst) {
+    id = target_inst->id;
+    entry = instance_entry_room(target_inst);
+    target_inst->empty_since = 0;
+  } else {
+    id = instance_create(zone, return_room, IS_NPC(ch) ? 0 : GET_IDNUM(ch), &entry);
+  }
+
+  if (!id || entry == NOWHERE)
+    return FALSE;
+
+  if (leave_msg)
+    act(leave_msg, TRUE, ch, 0, 0, TO_ROOM);
+  if (IN_ROOM(ch) != NOWHERE)
+    char_from_room(ch);
+  ch->instance_id = id;
+  char_to_room(ch, entry);
+  ch->instance_return_room = valid_room_rnum(return_room) ? return_room : r_mortal_start_room;
+  if (enter_msg)
+    act(enter_msg, TRUE, ch, 0, 0, TO_ROOM);
+
+  if (instance_id)
+    *instance_id = id;
+  if (action)
+    *action = entry_action;
+  return TRUE;
+}
+
 int instance_leave(struct char_data *ch)
 {
   struct instance_data *inst = instance_by_id(GET_INSTANCE_ID(ch));
@@ -966,10 +1217,8 @@ int instance_leave(struct char_data *ch)
   target = instance_safe_return_room(ch);
 
   act("$n vanishes through a shimmering tear in the air.", TRUE, ch, 0, 0, TO_ROOM);
-  char_from_room(ch);
-  ch->instance_id = 0;
-  char_to_room(ch, target);
-  ch->instance_return_room = NOWHERE;
+  if (!instance_exit_to_room(ch, target))
+    return FALSE;
   act("$n steps out of a shimmering tear in the air.", TRUE, ch, 0, 0, TO_ROOM);
   look_at_room(ch, 0);
   return TRUE;
@@ -1169,10 +1418,9 @@ void instance_list_to_char(struct char_data *ch)
 ACMD(do_instance)
 {
   char arg[MAX_INPUT_LENGTH], subarg[MAX_INPUT_LENGTH];
-  struct instance_data *group_inst = NULL, *owned_inst = NULL, *target_inst = NULL;
-  const char *action = "Created";
+  const char *action = NULL;
   zone_rnum zone;
-  room_rnum entry = NOWHERE, return_room;
+  room_rnum return_room;
   int id;
 
   two_arguments(argument, arg, subarg);
@@ -1213,35 +1461,14 @@ ACMD(do_instance)
   }
 
   return_room = IN_ROOM(ch);
-  owned_inst = instance_owned_by_char(ch, zone);
-  group_inst = instance_group_instance(ch, zone);
-  if (owned_inst) {
-    target_inst = owned_inst;
-    action = "Rejoined your";
-  } else if (group_inst) {
-    target_inst = group_inst;
-    action = "Joined your group's";
-  }
-
-  if (target_inst) {
-    id = target_inst->id;
-    entry = instance_entry_room(target_inst);
-    target_inst->empty_since = 0;
-  } else {
-    id = instance_create(zone, return_room, GET_IDNUM(ch), &entry);
-  }
-
-  if (!id || entry == NOWHERE) {
+  if (!instance_enter_zone(ch, zone, return_room,
+      "$n opens a shimmering tear in the air and steps through.",
+      "$n steps out of a shimmering tear in the air.",
+      &id, &action)) {
     send_to_char(ch, "Unable to create an instance from that zone.\r\n");
     return;
   }
 
-  act("$n opens a shimmering tear in the air and steps through.", TRUE, ch, 0, 0, TO_ROOM);
-  char_from_room(ch);
-  ch->instance_id = id;
-  char_to_room(ch, entry);
-  ch->instance_return_room = valid_room_rnum(return_room) ? return_room : r_mortal_start_room;
-  act("$n steps out of a shimmering tear in the air.", TRUE, ch, 0, 0, TO_ROOM);
   send_to_char(ch, "%s dungeon instance #%d.\r\n", action, id);
   look_at_room(ch, 0);
 }

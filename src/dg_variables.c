@@ -26,8 +26,17 @@
 #include "quest.h"
 #include "act.h"
 #include "genobj.h"
+#include "instance.h"
 
 /* Utility functions */
+
+static struct room_data *dg_room_exit_room(struct room_data *room, int dir)
+{
+  if (!room || !R_EXIT(room, dir) || R_EXIT(room, dir)->to_room == NOWHERE)
+    return NULL;
+
+  return room_by_rnum_instance(R_EXIT(room, dir)->to_room, room->instance_id);
+}
 
 /* Thanks to James Long for his assistance in plugging the memory leak that
  * used to be here. - Welcor */
@@ -262,6 +271,8 @@ void find_replacement(void *go, struct script_data *sc, trig_data *trig,
   char *echo_cmd[]       = {"mecho ",       "oecho ",       "wecho "      };
   char *echoaround_cmd[] = {"mechoaround ", "oechoaround ", "wechoaround "};
   char *door[]           = {"mdoor ",       "odoor ",       "wdoor "      };
+  char *enterinstance[]  = {"menterinstance ","oenterinstance ","wenterinstance "};
+  char *exitinstance[]   = {"mexitinstance ","oexitinstance ","wexitinstance "};
   char *force[]          = {"mforce ",      "oforce ",      "wforce "     };
   char *load[]           = {"mload ",       "oload ",       "wload "      };
   char *purge[]          = {"mpurge ",      "opurge ",      "wpurge "     };
@@ -316,6 +327,10 @@ void find_replacement(void *go, struct script_data *sc, trig_data *trig,
       }
       else if (!str_cmp(var, "door"))
         snprintf(str, slen, "%s", door[type]);
+      else if (!str_cmp(var, "enterinstance"))
+        snprintf(str, slen, "%s", enterinstance[type]);
+      else if (!str_cmp(var, "exitinstance"))
+        snprintf(str, slen, "%s", exitinstance[type]);
       else if (!str_cmp(var, "force"))
         snprintf(str, slen, "%s", force[type]);
       else if (!str_cmp(var, "load"))
@@ -550,8 +565,9 @@ void find_replacement(void *go, struct script_data *sc, trig_data *trig,
 
           switch (type) {
             case WLD_TRIGGER:
-              in_room = real_room(((struct room_data *) go)->number);
               room = (struct room_data *) go;
+              in_room = room_data_rnum(room);
+              instance_id = room->instance_id;
               break;
             case OBJ_TRIGGER:
               in_room = obj_room((struct obj_data *) go);
@@ -1300,8 +1316,12 @@ void find_replacement(void *go, struct script_data *sc, trig_data *trig,
           break;
         case 'r':
           if (!str_cmp(field, "room")) {
-            if (obj_room(o) != NOWHERE)
-              snprintf(str, slen,"%c%ld",UID_CHAR, room_script_id(world + obj_room(o)));
+            room_rnum obj_room_rnum = obj_room(o);
+            struct room_data *obj_room_data = room_by_rnum_instance(obj_room_rnum,
+              GET_INSTANCE_ID(o));
+
+            if (obj_room_data)
+              snprintf(str, slen,"%c%ld",UID_CHAR, room_script_id(obj_room_data));
             else
               *str = '\0';
           }
@@ -1443,11 +1463,7 @@ void find_replacement(void *go, struct script_data *sc, trig_data *trig,
           *str = '\0';
       }
       else if (!str_cmp(field, "id")) {
-        room_rnum rnum = real_room(r->number);
-        if (rnum != NOWHERE)
-          snprintf(str, slen, "%ld", room_script_id(world + rnum));
-        else
-          *str = '\0';
+        snprintf(str, slen, "%ld", room_script_id(r));
       }
       else if (!str_cmp(field, "weather")) {
         const char *sky_look[] = {
@@ -1476,8 +1492,7 @@ void find_replacement(void *go, struct script_data *sc, trig_data *trig,
         snprintf(str, slen, "%s",  ZONE_AT(r->zone)->name);
       else if (!str_cmp(field, "roomflag")) {
         if (subfield && *subfield) {
-          room_rnum thisroom = real_room(r->number);
-          if (check_flags_by_name_ar(ROOM_FLAGS(thisroom), NUM_ROOM_FLAGS, subfield, room_bits) == TRUE)
+          if (check_flags_by_name_ar(r->room_flags, NUM_ROOM_FLAGS, subfield, room_bits) == TRUE)
             snprintf(str, slen, "1");
           else
             snprintf(str, slen, "0");
@@ -1486,16 +1501,18 @@ void find_replacement(void *go, struct script_data *sc, trig_data *trig,
       }
       else if (!str_cmp(field, "north")) {
         if (R_EXIT(r, NORTH)) {
+          struct room_data *to_room = dg_room_exit_room(r, NORTH);
+
           if (subfield && *subfield) {
             if (!str_cmp(subfield, "vnum"))
-              snprintf(str, slen, "%d", GET_ROOM_VNUM(R_EXIT(r, NORTH)->to_room));
+              snprintf(str, slen, "%d", to_room ? to_room->number : NOWHERE);
             else if (!str_cmp(subfield, "key"))
               snprintf(str, slen, "%d", R_EXIT(r, NORTH)->key);
             else if (!str_cmp(subfield, "bits"))
               sprintbit(R_EXIT(r, NORTH)->exit_info ,exit_bits, str, slen);
             else if (!str_cmp(subfield, "room")) {
-              if (R_EXIT(r, NORTH)->to_room != NOWHERE)
-                snprintf(str, slen, "%c%ld", UID_CHAR, room_script_id(world + R_EXIT(r, NORTH)->to_room));
+              if (to_room)
+                snprintf(str, slen, "%c%ld", UID_CHAR, room_script_id(to_room));
               else
                 *str = '\0';
             }
@@ -1506,16 +1523,18 @@ void find_replacement(void *go, struct script_data *sc, trig_data *trig,
       }
       else if (!str_cmp(field, "east")) {
         if (R_EXIT(r, EAST)) {
+          struct room_data *to_room = dg_room_exit_room(r, EAST);
+
           if (subfield && *subfield) {
             if (!str_cmp(subfield, "vnum"))
-              snprintf(str, slen, "%d", GET_ROOM_VNUM(R_EXIT(r, EAST)->to_room));
+              snprintf(str, slen, "%d", to_room ? to_room->number : NOWHERE);
             else if (!str_cmp(subfield, "key"))
               snprintf(str, slen, "%d", R_EXIT(r, EAST)->key);
             else if (!str_cmp(subfield, "bits"))
               sprintbit(R_EXIT(r, EAST)->exit_info ,exit_bits, str, slen);
             else if (!str_cmp(subfield, "room")) {
-              if (R_EXIT(r, EAST)->to_room != NOWHERE)
-                snprintf(str, slen, "%c%ld", UID_CHAR, room_script_id(world + R_EXIT(r, EAST)->to_room));
+              if (to_room)
+                snprintf(str, slen, "%c%ld", UID_CHAR, room_script_id(to_room));
               else
                 *str = '\0';
             }
@@ -1526,16 +1545,18 @@ void find_replacement(void *go, struct script_data *sc, trig_data *trig,
       }
       else if (!str_cmp(field, "south")) {
         if (R_EXIT(r, SOUTH)) {
+          struct room_data *to_room = dg_room_exit_room(r, SOUTH);
+
           if (subfield && *subfield) {
             if (!str_cmp(subfield, "vnum"))
-              snprintf(str, slen, "%d", GET_ROOM_VNUM(R_EXIT(r, SOUTH)->to_room));
+              snprintf(str, slen, "%d", to_room ? to_room->number : NOWHERE);
             else if (!str_cmp(subfield, "key"))
               snprintf(str, slen, "%d", R_EXIT(r, SOUTH)->key);
             else if (!str_cmp(subfield, "bits"))
               sprintbit(R_EXIT(r, SOUTH)->exit_info ,exit_bits, str, slen);
             else if (!str_cmp(subfield, "room")) {
-              if (R_EXIT(r, SOUTH)->to_room != NOWHERE)
-                snprintf(str, slen, "%c%ld", UID_CHAR, room_script_id(world + R_EXIT(r, SOUTH)->to_room));
+              if (to_room)
+                snprintf(str, slen, "%c%ld", UID_CHAR, room_script_id(to_room));
               else
                 *str = '\0';
             }
@@ -1546,16 +1567,18 @@ void find_replacement(void *go, struct script_data *sc, trig_data *trig,
       }
       else if (!str_cmp(field, "west")) {
         if (R_EXIT(r, WEST)) {
+          struct room_data *to_room = dg_room_exit_room(r, WEST);
+
           if (subfield && *subfield) {
             if (!str_cmp(subfield, "vnum"))
-              snprintf(str, slen, "%d", GET_ROOM_VNUM(R_EXIT(r, WEST)->to_room));
+              snprintf(str, slen, "%d", to_room ? to_room->number : NOWHERE);
             else if (!str_cmp(subfield, "key"))
               snprintf(str, slen, "%d", R_EXIT(r, WEST)->key);
             else if (!str_cmp(subfield, "bits"))
               sprintbit(R_EXIT(r, WEST)->exit_info ,exit_bits, str, slen);
             else if (!str_cmp(subfield, "room")) {
-              if (R_EXIT(r, WEST)->to_room != NOWHERE)
-                snprintf(str, slen, "%c%ld", UID_CHAR, room_script_id(world + R_EXIT(r, WEST)->to_room));
+              if (to_room)
+                snprintf(str, slen, "%c%ld", UID_CHAR, room_script_id(to_room));
               else
                 *str = '\0';
             }
@@ -1566,16 +1589,18 @@ void find_replacement(void *go, struct script_data *sc, trig_data *trig,
       }
       else if (!str_cmp(field, "up")) {
         if (R_EXIT(r, UP)) {
+          struct room_data *to_room = dg_room_exit_room(r, UP);
+
           if (subfield && *subfield) {
             if (!str_cmp(subfield, "vnum"))
-              snprintf(str, slen, "%d", GET_ROOM_VNUM(R_EXIT(r, UP)->to_room));
+              snprintf(str, slen, "%d", to_room ? to_room->number : NOWHERE);
             else if (!str_cmp(subfield, "key"))
               snprintf(str, slen, "%d", R_EXIT(r, UP)->key);
             else if (!str_cmp(subfield, "bits"))
               sprintbit(R_EXIT(r, UP)->exit_info ,exit_bits, str, slen);
             else if (!str_cmp(subfield, "room")) {
-              if (R_EXIT(r, UP)->to_room != NOWHERE)
-                snprintf(str, slen, "%c%ld", UID_CHAR, room_script_id(world + R_EXIT(r, UP)->to_room));
+              if (to_room)
+                snprintf(str, slen, "%c%ld", UID_CHAR, room_script_id(to_room));
               else
                 *str = '\0';
             }
@@ -1586,16 +1611,18 @@ void find_replacement(void *go, struct script_data *sc, trig_data *trig,
       }
       else if (!str_cmp(field, "down")) {
         if (R_EXIT(r, DOWN)) {
+          struct room_data *to_room = dg_room_exit_room(r, DOWN);
+
           if (subfield && *subfield) {
             if (!str_cmp(subfield, "vnum"))
-              snprintf(str, slen, "%d", GET_ROOM_VNUM(R_EXIT(r, DOWN)->to_room));
+              snprintf(str, slen, "%d", to_room ? to_room->number : NOWHERE);
             else if (!str_cmp(subfield, "key"))
               snprintf(str, slen, "%d", R_EXIT(r, DOWN)->key);
             else if (!str_cmp(subfield, "bits"))
               sprintbit(R_EXIT(r, DOWN)->exit_info ,exit_bits, str, slen);
             else if (!str_cmp(subfield, "room")) {
-              if (R_EXIT(r, DOWN)->to_room != NOWHERE)
-                snprintf(str, slen, "%c%ld", UID_CHAR, room_script_id(world + R_EXIT(r, DOWN)->to_room));
+              if (to_room)
+                snprintf(str, slen, "%c%ld", UID_CHAR, room_script_id(to_room));
               else
                 *str = '\0';
             }

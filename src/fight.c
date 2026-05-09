@@ -26,6 +26,8 @@
 #include "shop.h"
 #include "quest.h"
 
+#define PLAYER_DEATH_ROOM 59900
+
 
 /* locally defined global variables, used externally */
 /* head of l-list of fighting chars */
@@ -63,6 +65,7 @@ static void solo_gain(struct char_data *ch, struct char_data *victim);
 /** @todo refactor this function name */
 static char *replace_string(const char *str, const char *weapon_singular, const char *weapon_plural);
 #define IS_WEAPON(type) (((type) >= TYPE_HIT) && ((type) < TYPE_SUFFERING))
+static void move_player_to_death_room(struct char_data *ch);
 static bool show_combat_info(struct char_data *ch);
 static bool uses_physical_damage_bonus(int attacktype);
 static int perform_damage(struct char_data *ch, struct char_data *victim, int dam, int attacktype, bool add_physical_bonus);
@@ -313,9 +316,25 @@ void death_cry(struct char_data *ch)
 void raw_kill(struct char_data * ch, struct char_data * killer)
 {
 struct char_data *i;
+struct char_data *k, *temp;
 
   if (FIGHTING(ch))
     stop_fighting(ch);
+
+  for (k = combat_list; k; k = temp) {
+    temp = k->next_fighting;
+    if (FIGHTING(k) == ch)
+      stop_fighting(k);
+  }
+
+  for (temp = character_list; temp; temp = temp->next) {
+    if (!IS_NPC(temp))
+      continue;
+    if (HUNTING(temp) == ch)
+      HUNTING(temp) = NULL;
+    if (!IS_NPC(ch) && MEMORY(temp))
+      forget(temp, ch);
+  }
 
   while (ch->affected)
     affect_remove(ch, ch->affected);
@@ -345,7 +364,10 @@ struct char_data *i;
   update_pos(ch);
 
   make_corpse(ch);
-  extract_char(ch);
+  if (IS_NPC(ch))
+    extract_char(ch);
+  else
+    move_player_to_death_room(ch);
 
   if (killer) {
     autoquest_trigger_check(killer, NULL, NULL, AQ_MOB_SAVE);
@@ -361,6 +383,36 @@ void die(struct char_data * ch, struct char_data * killer)
     REMOVE_BIT_AR(PLR_FLAGS(ch), PLR_THIEF);
   }
   raw_kill(ch, killer);
+}
+
+static void move_player_to_death_room(struct char_data *ch)
+{
+  room_rnum death_room = real_room(PLAYER_DEATH_ROOM);
+
+  if (death_room == NOWHERE) {
+    mudlog(BRF, LVL_IMPL, TRUE,
+      "Death room %d is missing; using mortal start room for %s.",
+      PLAYER_DEATH_ROOM, GET_NAME(ch));
+    death_room = valid_room_rnum(r_mortal_start_room) ? r_mortal_start_room : 0;
+  }
+
+  char_from_furniture(ch);
+  if (ch->followers || ch->master)
+    die_follower(ch);
+  if (GROUP(ch))
+    leave_group(ch);
+
+  if (IN_ROOM(ch) != NOWHERE)
+    char_from_room(ch);
+  ch->instance_id = 0;
+  ch->instance_return_room = NOWHERE;
+  GET_WAS_IN(ch) = NOWHERE;
+  GET_HIT(ch) = 1;
+  GET_POS(ch) = POS_STANDING;
+  char_to_room(ch, death_room);
+  enter_wtrigger(GET_ROOM(ch), ch, -1);
+  save_char(ch);
+  look_at_room(ch, 0);
 }
 
 static void perform_group_gain(struct char_data *ch, int base,

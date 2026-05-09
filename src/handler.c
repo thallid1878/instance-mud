@@ -605,6 +605,7 @@ void equip_char(struct char_data *ch, struct obj_data *obj, int pos)
   GET_EQ(ch, pos) = obj;
   obj->worn_by = ch;
   obj->worn_on = pos;
+  obj->instance_id = GET_INSTANCE_ID(ch);
 
   if (GET_OBJ_TYPE(obj) == ITEM_ARMOR)
     GET_AC(ch) -= apply_ac(ch, pos);

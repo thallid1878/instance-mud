@@ -329,6 +329,7 @@ const char *connected_types[] = {
   "IBT edit",
   "Message edit",
   "Protocol Detection",
+  "New character MOTD",
   "\n"
 };
 

@@ -339,6 +339,7 @@
 #define CON_IBTEDIT      30 /**< OLC mode - idea/bug/typo edit */
 #define CON_MSGEDIT      31 /**< OLC mode - message editor */
 #define CON_GET_PROTOCOL 32 /**< Used at log-in while attempting to get protocols > */
+#define CON_NEW_RMOTD    33 /**< New character reading the message of the day */
 
 /* OLC States range - used by IS_IN_OLC and IS_PLAYING */
 #define FIRST_OLC_STATE CON_OEDIT     /**< The first CON_ state that is an OLC */

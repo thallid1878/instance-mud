@@ -22,6 +22,7 @@
 #include "genzon.h" /* for real_zone_by_thing */
 #include "act.h"
 #include "fight.h"
+#include "instance.h"
 
 
 /* Local file scope functions. */
@@ -621,9 +622,10 @@ ACMD(do_mteleport)
       next_ch = vict->next_in_room;
 
       if (valid_dg_target(vict, DG_ALLOW_GODS)) {
-        char_from_room(vict);
-        char_to_room(vict, target);
-        enter_wtrigger(GET_ROOM(vict), vict, -1);
+        if (instance_teleport_to_room(vict, target))
+          enter_wtrigger(GET_ROOM(vict), vict, -1);
+        else
+          mob_log(ch, "mteleport failed for target %s", GET_NAME(vict));
       }
     }
   } else {
@@ -638,11 +640,109 @@ ACMD(do_mteleport)
     }
 
     if (valid_dg_target(vict, DG_ALLOW_GODS)) {
-      char_from_room(vict);
-      char_to_room(vict, target);
-      enter_wtrigger(GET_ROOM(vict), vict, -1);
+      if (instance_teleport_to_room(vict, target))
+        enter_wtrigger(GET_ROOM(vict), vict, -1);
+      else
+        mob_log(ch, "mteleport failed for target %s", GET_NAME(vict));
     }
   }
+}
+
+ACMD(do_menterinstance)
+{
+  char arg1[MAX_INPUT_LENGTH], arg2[MAX_INPUT_LENGTH];
+  zone_rnum zone;
+  int id;
+  char_data *vict;
+
+  if (!MOB_OR_IMPL(ch)) {
+    send_to_char(ch, "%s", CONFIG_HUH);
+    return;
+  }
+
+  if (AFF_FLAGGED(ch, AFF_CHARM))
+    return;
+
+  two_arguments(argument, arg1, arg2);
+  if (!*arg1 || !*arg2 || !is_number(arg2)) {
+    mob_log(ch, "menterinstance: bad syntax");
+    return;
+  }
+
+  zone = real_zone(atoi(arg2));
+  if (zone == NOWHERE || !ZONE_FLAGGED(zone, ZONE_DUNGEON)) {
+    mob_log(ch, "menterinstance target is not a valid dungeon zone");
+    return;
+  }
+
+  if (*arg1 == UID_CHAR) {
+    if (!(vict = get_char(arg1))) {
+      mob_log(ch, "menterinstance: victim (%s) does not exist", arg1);
+      return;
+    }
+  } else if (!(vict = get_char_vis(ch, arg1, NULL, FIND_CHAR_WORLD))) {
+    mob_log(ch, "menterinstance: victim (%s) does not exist", arg1);
+    return;
+  }
+
+  if (!valid_dg_target(vict, DG_ALLOW_GODS))
+    return;
+
+  if (!instance_enter_zone(vict, zone, IN_ROOM(vict), NULL, NULL, &id, NULL)) {
+    mob_log(ch, "menterinstance failed for target %s", GET_NAME(vict));
+    return;
+  }
+
+  enter_wtrigger(GET_ROOM(vict), vict, -1);
+  look_at_room(vict, 0);
+}
+
+ACMD(do_mexitinstance)
+{
+  char arg1[MAX_INPUT_LENGTH], arg2[MAX_INPUT_LENGTH];
+  room_rnum target;
+  char_data *vict;
+
+  if (!MOB_OR_IMPL(ch)) {
+    send_to_char(ch, "%s", CONFIG_HUH);
+    return;
+  }
+
+  if (AFF_FLAGGED(ch, AFF_CHARM))
+    return;
+
+  two_arguments(argument, arg1, arg2);
+  if (!*arg1 || !*arg2 || !is_number(arg2)) {
+    mob_log(ch, "mexitinstance: bad syntax");
+    return;
+  }
+
+  target = real_room(atoi(arg2));
+  if (target == NOWHERE || instance_room_is_template(target)) {
+    mob_log(ch, "mexitinstance target is an invalid real-world room");
+    return;
+  }
+
+  if (*arg1 == UID_CHAR) {
+    if (!(vict = get_char(arg1))) {
+      mob_log(ch, "mexitinstance: victim (%s) does not exist", arg1);
+      return;
+    }
+  } else if (!(vict = get_char_vis(ch, arg1, NULL, FIND_CHAR_WORLD))) {
+    mob_log(ch, "mexitinstance: victim (%s) does not exist", arg1);
+    return;
+  }
+
+  if (!valid_dg_target(vict, DG_ALLOW_GODS))
+    return;
+
+  if (!instance_exit_to_room(vict, target)) {
+    mob_log(ch, "mexitinstance failed for target %s", GET_NAME(vict));
+    return;
+  }
+
+  enter_wtrigger(GET_ROOM(vict), vict, -1);
+  look_at_room(vict, 0);
 }
 
 ACMD(do_mdamage) {

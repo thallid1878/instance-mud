@@ -20,6 +20,8 @@
 #include "constants.h"
 #include "genzon.h" /* for zone_rnum real_zone_by_thing */
 #include "fight.h"  /* for die() */
+#include "act.h"
+#include "instance.h"
 
 /* Local functions, macros, defines and structs */
 
@@ -39,12 +41,18 @@ struct wld_command_info {
 
 void wld_log(room_data *room, const char *format, ...);
 void act_to_room(char *str, room_data *room);
+static int wld_room_instance(room_data *room);
+static room_rnum wld_current_rnum(room_data *room);
+static struct room_data *wld_room_by_vnum(room_data *room, room_vnum vnum);
+static room_rnum wld_rnum_by_vnum(room_data *room, room_vnum vnum);
 WCMD(do_wasound);
 WCMD(do_wecho);
 WCMD(do_wsend);
 WCMD(do_wzoneecho);
 WCMD(do_wrecho);
 WCMD(do_wdoor);
+WCMD(do_wenterinstance);
+WCMD(do_wexitinstance);
 WCMD(do_wteleport);
 WCMD(do_wforce);
 WCMD(do_wpurge);
@@ -82,6 +90,26 @@ void act_to_room(char *str, room_data *room)
     act(str, FALSE, room->people, 0, 0, TO_CHAR);
 }
 
+static int wld_room_instance(room_data *room)
+{
+    return room ? room->instance_id : 0;
+}
+
+static room_rnum wld_current_rnum(room_data *room)
+{
+    return room_data_rnum(room);
+}
+
+static struct room_data *wld_room_by_vnum(room_data *room, room_vnum vnum)
+{
+    return room_by_vnum_instance(vnum, wld_room_instance(room));
+}
+
+static room_rnum wld_rnum_by_vnum(room_data *room, room_vnum vnum)
+{
+    return room_rnum_by_vnum_instance(vnum, wld_room_instance(room));
+}
+
 /* World commands */
 /* prints the argument to all the rooms aroud the room */
 WCMD(do_wasound)
@@ -98,9 +126,12 @@ WCMD(do_wasound)
     for (door = 0; door < DIR_COUNT; door++) {
         struct room_direction_data *newexit;
 
-        if ((newexit = room->dir_option[door]) && (newexit->to_room != NOWHERE) &&
-            room != ROOM_AT(newexit->to_room))
-            act_to_room(argument, ROOM_AT(newexit->to_room));
+        if ((newexit = room->dir_option[door]) && (newexit->to_room != NOWHERE)) {
+            struct room_data *to_room = room_by_rnum_instance(newexit->to_room, wld_room_instance(room));
+
+            if (to_room && room != to_room)
+                act_to_room(argument, to_room);
+        }
     }
 }
 
@@ -289,7 +320,7 @@ WCMD(do_wdoor)
             strcpy(newexit->keyword, value);
             break;
         case 5:  /* room        */
-            if ((to_room = real_room(atoi(value))) != NOWHERE)
+            if ((to_room = wld_rnum_by_vnum(room, atoi(value))) != NOWHERE)
                 newexit->to_room = to_room;
             else {
                 newexit->to_room = NOWHERE;
@@ -304,6 +335,7 @@ WCMD(do_wteleport)
 {
     char_data *ch, *next_ch;
     room_rnum target, nr;
+    struct room_data *target_room;
     char arg1[MAX_INPUT_LENGTH], arg2[MAX_INPUT_LENGTH];
 
     two_arguments(argument, arg1, arg2);
@@ -314,7 +346,8 @@ WCMD(do_wteleport)
     }
 
     nr = atoi(arg2);
-    target = real_room(nr);
+    target_room = wld_room_by_vnum(room, nr);
+    target = room_data_rnum(target_room);
 
     if (target == NOWHERE)
         wld_log(room, "wteleport target is an invalid room");
@@ -330,9 +363,10 @@ WCMD(do_wteleport)
             next_ch = ch->next_in_room;
             if (!valid_dg_target(ch, DG_ALLOW_GODS))
               continue;
-            char_from_room(ch);
-            char_to_room(ch, target);
-            enter_wtrigger(GET_ROOM(ch), ch, -1);
+            if (instance_teleport_to_room(ch, target))
+                enter_wtrigger(GET_ROOM(ch), ch, -1);
+            else
+                wld_log(room, "wteleport failed for target %s", GET_NAME(ch));
         }
     }
 
@@ -340,9 +374,10 @@ WCMD(do_wteleport)
     {
         if ((ch = get_char_by_room(room, arg1))) {
           if (valid_dg_target(ch, DG_ALLOW_GODS)) {
-            char_from_room(ch);
-            char_to_room(ch, target);
-            enter_wtrigger(GET_ROOM(ch), ch, -1);
+            if (instance_teleport_to_room(ch, target))
+              enter_wtrigger(GET_ROOM(ch), ch, -1);
+            else
+              wld_log(room, "wteleport failed for target %s", GET_NAME(ch));
           }
         }
 
@@ -465,10 +500,14 @@ WCMD(do_wload)
     /* load mob to target room - Jamie Nelson, April 13 2004 */
     if (is_abbrev(arg1, "mob")) {
       room_rnum rnum;
+      struct room_data *target_room;
       if (!target || !*target) {
-        rnum = real_room(room->number);
+        target_room = room;
+        rnum = wld_current_rnum(room);
       } else {
-        if (!isdigit(*target) || (rnum = real_room(atoi(target))) == NOWHERE) {
+        target_room = isdigit(*target) ? wld_room_by_vnum(room, atoi(target)) : NULL;
+        rnum = room_data_rnum(target_room);
+        if (!target_room || rnum == NOWHERE) {
           wld_log(room, "wload: room target vnum doesn't exist (loading mob vnum %d to room %s)", number, target);
           return;
         }
@@ -477,6 +516,7 @@ WCMD(do_wload)
         wld_log(room, "mload: bad mob vnum");
         return;
       }
+      mob->instance_id = target_room->instance_id;
       char_to_room(mob, rnum);
       if (SCRIPT(room)) { /* It _should_ have, but it might be detached. */
         char buf[MAX_INPUT_LENGTH];
@@ -493,7 +533,8 @@ WCMD(do_wload)
       }
       /* special handling to make objects able to load on a person/in a container/worn etc. */
       if (!target || !*target) {
-        obj_to_room(object, real_room(room->number));
+        object->instance_id = wld_room_instance(room);
+        obj_to_room(object, wld_current_rnum(room));
         if (SCRIPT(room)) { /* It _should_ have, but it might be detached. */
           char buf[MAX_INPUT_LENGTH];
           sprintf(buf, "%c%ld", UID_CHAR, obj_script_id(object));
@@ -523,7 +564,8 @@ WCMD(do_wload)
       	return;
       }
       /* neither char nor container found - just dump it in room */
-      obj_to_room(object, real_room(room->number));
+      object->instance_id = wld_room_instance(room);
+      obj_to_room(object, wld_current_rnum(room));
       load_otrigger(object);
       return;
     }
@@ -556,9 +598,93 @@ WCMD(do_wdamage) {
   script_damage(ch, dam);
 }
 
+WCMD(do_wenterinstance)
+{
+  char arg1[MAX_INPUT_LENGTH], arg2[MAX_INPUT_LENGTH];
+  struct char_data *vict = NULL;
+  zone_rnum zone;
+  int id;
+
+  two_arguments(argument, arg1, arg2);
+
+  if (!*arg1 || !*arg2 || !is_number(arg2)) {
+    wld_log(room, "wenterinstance called with bad syntax");
+    return;
+  }
+
+  zone = real_zone(atoi(arg2));
+  if (zone == NOWHERE || !ZONE_FLAGGED(zone, ZONE_DUNGEON)) {
+    wld_log(room, "wenterinstance target is not a valid dungeon zone");
+    return;
+  }
+
+  if (*arg1 == UID_CHAR)
+    vict = get_char(arg1);
+  else
+    vict = get_char_by_room(room, arg1);
+
+  if (!vict) {
+    wld_log(room, "wenterinstance: no target found");
+    return;
+  }
+
+  if (!valid_dg_target(vict, DG_ALLOW_GODS))
+    return;
+
+  if (!instance_enter_zone(vict, zone, IN_ROOM(vict), NULL, NULL, &id, NULL)) {
+    wld_log(room, "wenterinstance failed for target %s", GET_NAME(vict));
+    return;
+  }
+
+  enter_wtrigger(GET_ROOM(vict), vict, -1);
+  look_at_room(vict, 0);
+}
+
+WCMD(do_wexitinstance)
+{
+  char arg1[MAX_INPUT_LENGTH], arg2[MAX_INPUT_LENGTH];
+  struct char_data *vict = NULL;
+  room_rnum target;
+
+  two_arguments(argument, arg1, arg2);
+
+  if (!*arg1 || !*arg2 || !is_number(arg2)) {
+    wld_log(room, "wexitinstance called with bad syntax");
+    return;
+  }
+
+  target = real_room(atoi(arg2));
+  if (target == NOWHERE || instance_room_is_template(target)) {
+    wld_log(room, "wexitinstance target is an invalid real-world room");
+    return;
+  }
+
+  if (*arg1 == UID_CHAR)
+    vict = get_char(arg1);
+  else
+    vict = get_char_by_room(room, arg1);
+
+  if (!vict) {
+    wld_log(room, "wexitinstance: no target found");
+    return;
+  }
+
+  if (!valid_dg_target(vict, DG_ALLOW_GODS))
+    return;
+
+  if (!instance_exit_to_room(vict, target)) {
+    wld_log(room, "wexitinstance failed for target %s", GET_NAME(vict));
+    return;
+  }
+
+  enter_wtrigger(GET_ROOM(vict), vict, -1);
+  look_at_room(vict, 0);
+}
+
 WCMD(do_wat)     
 {
   room_rnum loc = NOWHERE;
+  struct room_data *target_room = NULL;
   struct char_data *ch;
   char arg[MAX_INPUT_LENGTH], *command; 
 
@@ -576,20 +702,27 @@ WCMD(do_wat)
     return;
   }
 
-  if (isdigit(*arg)) loc = real_room(atoi(arg));
-  else if ((ch = get_char_by_room(room, arg))) loc = IN_ROOM(ch);
+  if (isdigit(*arg)) {
+    target_room = wld_room_by_vnum(room, atoi(arg));
+    loc = room_data_rnum(target_room);
+  } else if ((ch = get_char_by_room(room, arg))) {
+    target_room = GET_ROOM(ch);
+    loc = IN_ROOM(ch);
+  }
   
   if (loc == NOWHERE) {
     wld_log(room, "wat: location not found (%s)", arg);
     return;
   }
-  wld_command_interpreter(ROOM_AT(loc), command);
+  wld_command_interpreter(target_room ? target_room :
+    room_by_rnum_instance(loc, wld_room_instance(room)), command);
 }
 
 WCMD(do_wmove)
 {
     obj_data *obj, *next_obj;
     room_rnum target, nr;
+    struct room_data *target_room;
     char arg1[MAX_INPUT_LENGTH], arg2[MAX_INPUT_LENGTH];
 
     two_arguments(argument, arg1, arg2);
@@ -600,7 +733,8 @@ WCMD(do_wmove)
     }
 
     nr = atoi(arg2);
-    target = real_room(nr);
+    target_room = wld_room_by_vnum(room, nr);
+    target = room_data_rnum(target_room);
 
     if (target == NOWHERE) {
         wld_log(room, "wmove target is an invalid room");
@@ -614,6 +748,7 @@ WCMD(do_wmove)
         {
             next_obj = obj->next_content;
             obj_from_room(obj);
+            obj->instance_id = target_room->instance_id;
             obj_to_room(obj, target);
         }
     }
@@ -622,6 +757,7 @@ WCMD(do_wmove)
     {
         if ((obj = get_obj_by_room(room, arg1))) {
             obj_from_room(obj);
+            obj->instance_id = target_room->instance_id;
             obj_to_room(obj, target);
         }
 
@@ -637,6 +773,8 @@ static const struct wld_command_info wld_cmd_info[] = {
     { "wdoor "      , do_wdoor     , 0 },
     { "wecho "      , do_wecho     , 0 },
     { "wechoaround ", do_wsend     , SCMD_WECHOAROUND },
+    { "wenterinstance ", do_wenterinstance, 0 },
+    { "wexitinstance ", do_wexitinstance, 0 },
     { "wforce "     , do_wforce    , 0 },
     { "wload "      , do_wload     , 0 },
     { "wpurge "     , do_wpurge    , 0 },

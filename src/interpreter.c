@@ -37,6 +37,10 @@
 #include "prefedit.h"
 #include "ibt.h"
 #include "mud_event.h"
+#include "instance.h"
+
+#define STARTER_INSTANCE_ZONE 23
+#define STARTER_INSTANCE_ROOM 2300
 
 /* local (file scope) functions */
 static int perform_dupe_check(struct descriptor_data *d);
@@ -44,6 +48,8 @@ static struct alias_data *find_alias(struct alias_data *alias_list, char *str);
 static int perform_complex_alias(struct txt_q *input_q, char *orig, struct alias_data *a);
 static int _parse_name(char *arg, char *name);
 static bool perform_new_char_dupe_check(struct descriptor_data *d);
+static bool move_new_player_to_starter_instance(struct char_data *ch);
+static void enter_player_gameplay(struct descriptor_data *d, bool new_player);
 /* sort_commands utility */
 static int sort_commands_helper(const void *a, const void *b);
 
@@ -386,6 +392,8 @@ static const struct mob_script_command_t mob_script_commands[] = {
   { "mecho"    , do_mecho    , 0 },
   { "mrecho"   , do_mrecho   , 0 },
   { "mechoaround", do_mechoaround , 0 },
+  { "menterinstance", do_menterinstance, 0 },
+  { "mexitinstance", do_mexitinstance, 0 },
   { "msend"    , do_msend    , 0 },
   { "mload"    , do_mload    , 0 },
   { "mpurge"   , do_mpurge   , 0 },
@@ -1308,6 +1316,84 @@ int enter_player_game (struct descriptor_data *d)
   return load_result;
 }
 
+static bool move_new_player_to_starter_instance(struct char_data *ch)
+{
+  zone_rnum zone = real_zone(STARTER_INSTANCE_ZONE);
+  room_rnum template_room = real_room(STARTER_INSTANCE_ROOM);
+  room_rnum entry_room = NOWHERE;
+  int id;
+
+  if (!ch || GET_LEVEL(ch) >= LVL_IMMORT)
+    return TRUE;
+
+  if (zone == NOWHERE || template_room == NOWHERE) {
+    mudlog(BRF, LVL_IMPL, TRUE,
+      "Unable to place new player %s in starter instance: zone %d or room %d is missing.",
+      GET_NAME(ch), STARTER_INSTANCE_ZONE, STARTER_INSTANCE_ROOM);
+    return FALSE;
+  }
+
+  id = instance_create_at_room(zone, template_room, r_mortal_start_room,
+    GET_IDNUM(ch), &entry_room);
+  if (!id || entry_room == NOWHERE) {
+    mudlog(BRF, LVL_IMPL, TRUE,
+      "Unable to create starter instance for new player %s.", GET_NAME(ch));
+    return FALSE;
+  }
+
+  if (IN_ROOM(ch) != NOWHERE)
+    char_from_room(ch);
+  ch->instance_id = id;
+  char_to_room(ch, entry_room);
+  ch->instance_return_room = valid_room_rnum(r_mortal_start_room) ?
+    r_mortal_start_room : NOWHERE;
+  enter_wtrigger(GET_ROOM(ch), ch, -1);
+  login_wtrigger(GET_ROOM(ch), ch);
+  return TRUE;
+}
+
+static void enter_player_gameplay(struct descriptor_data *d, bool new_player)
+{
+  int load_result = enter_player_game(d);
+
+  send_to_char(d->character, "%s", CONFIG_WELC_MESSG);
+
+  /* Clear their load room if it's not persistant. */
+  if (!PLR_FLAGGED(d->character, PLR_LOADROOM))
+    GET_LOADROOM(d->character) = NOWHERE;
+
+  if (GET_LEVEL(d->character) == 0) {
+    do_start(d->character);
+    send_to_char(d->character, "%s", CONFIG_START_MESSG);
+  }
+
+  STATE(d) = CON_PLAYING;
+  MXPSendTag(d, "<VERSION>");
+
+  if (new_player && !move_new_player_to_starter_instance(d->character))
+    send_to_char(d->character,
+      "Unable to create your starter instance. You have been placed at the mortal start room.\r\n");
+
+  save_char(d->character);
+  if (new_player)
+    Crash_crashsave(d->character);
+
+  greet_mtrigger(d->character, -1);
+  greet_memory_mtrigger(d->character);
+
+  act("$n has entered the game.", TRUE, d->character, 0, 0, TO_ROOM);
+
+  look_at_room(d->character, 0);
+  if (has_mail(GET_IDNUM(d->character)))
+    send_to_char(d->character, "You have mail waiting.\r\n");
+  if (load_result == 2) {
+    send_to_char(d->character, "\r\n\007You could not afford your rent!\r\n"
+      "Your possesions have been donated to the Salvation Army!\r\n");
+  }
+  d->has_prompt = 0;
+  REMOVE_BIT_AR(PRF_FLAGS(d->character), PRF_BUILDWALK);
+}
+
 EVENTFUNC(get_protocols)
 {
   struct descriptor_data *d;
@@ -1644,8 +1730,6 @@ void nanny(struct descriptor_data *d, char *arg)
     init_char(d->character);
     save_char(d->character);
     save_player_index();
-    write_to_output(d, "%s\r\n*** PRESS RETURN: ", motd);
-    STATE(d) = CON_RMOTD;
     /* make sure the last log is updated correctly. */
     GET_PREF(d->character)= rand_number(1, 128000);
     GET_HOST(d->character)= strdup(d->host);
@@ -1657,6 +1741,8 @@ void nanny(struct descriptor_data *d, char *arg)
     {
       mudlog(BRF, MAX(LVL_IMMORT, GET_INVIS_LEV(d->character)), TRUE, "Failure to AddRecentPlayer (returned FALSE).");
     }
+    write_to_output(d, "%s\r\n*** PRESS RETURN: ", motd);
+    STATE(d) = CON_NEW_RMOTD;
     break;
 
   case CON_QCLASS:
@@ -1675,6 +1761,11 @@ void nanny(struct descriptor_data *d, char *arg)
     STATE(d) = CON_MENU;
     break;
 
+  case CON_NEW_RMOTD:
+    add_llog_entry(d->character, LAST_CONNECT);
+    enter_player_gameplay(d, TRUE);
+    break;
+
   case CON_MENU: {		/* get selection from main menu  */
 
     switch (*arg) {
@@ -1685,35 +1776,7 @@ void nanny(struct descriptor_data *d, char *arg)
       break;
 
     case '1':
-      load_result = enter_player_game(d);
-      send_to_char(d->character, "%s", CONFIG_WELC_MESSG);
-
-      /* Clear their load room if it's not persistant. */
-      if (!PLR_FLAGGED(d->character, PLR_LOADROOM))
-        GET_LOADROOM(d->character) = NOWHERE;
-      save_char(d->character);
-
-      greet_mtrigger(d->character, -1);
-      greet_memory_mtrigger(d->character);
-
-      act("$n has entered the game.", TRUE, d->character, 0, 0, TO_ROOM);
-
-      STATE(d) = CON_PLAYING;
-      MXPSendTag( d, "<VERSION>" );
-      if (GET_LEVEL(d->character) == 0) {
-	do_start(d->character);
-	send_to_char(d->character, "%s", CONFIG_START_MESSG);
-      }
-      look_at_room(d->character, 0);
-      if (has_mail(GET_IDNUM(d->character)))
-	send_to_char(d->character, "You have mail waiting.\r\n");
-      if (load_result == 2) {	/* rented items lost */
-	send_to_char(d->character, "\r\n\007You could not afford your rent!\r\n"
-		"Your possesions have been donated to the Salvation Army!\r\n");
-      }
-      d->has_prompt = 0;
-      /* We've updated to 3.1 - some bits might be set wrongly: */
-      REMOVE_BIT_AR(PRF_FLAGS(d->character), PRF_BUILDWALK);
+      enter_player_gameplay(d, FALSE);
       break;
 
     case '2':

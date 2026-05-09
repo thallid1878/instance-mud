@@ -30,6 +30,7 @@
 #include "genzon.h" /* for real_zone_by_thing */
 #include "act.h"
 #include "modify.h"
+#include "instance.h"
 
 #define PULSES_PER_MUD_HOUR     (SECS_PER_MUD_HOUR*PASSES_PER_SEC)
 
@@ -317,17 +318,7 @@ static obj_data *find_obj(long n)
  */
 static room_data *find_room(long n)
 {
-  room_rnum rnum;
-
-  n -= ROOM_ID_BASE;
-  if (n<0)
-    return NULL;
-  rnum = real_room((room_vnum)n);
-
-  if (rnum != NOWHERE)
-    return ROOM_AT(rnum);
-
-  return NULL;
+  return room_by_script_id(n);
 }
 
 /* Generic searches based only on name. */
@@ -628,7 +619,7 @@ void script_trigger_check(void)
   char_data *ch;
   obj_data *obj;
   struct room_data *room=NULL;
-  room_rnum nr;
+  int nr;
   struct script_data *sc;
 
   for (ch = character_list; ch; ch = ch->next) {
@@ -660,6 +651,20 @@ void script_trigger_check(void)
           (!is_empty(room->zone) ||
            IS_SET(SCRIPT_TYPES(sc), WTRIG_GLOBAL)))
         random_wtrigger(room);
+    }
+  }
+
+  if (iworld && top_of_runtime_world != NOWHERE) {
+    for (nr = 0; nr <= top_of_runtime_world; nr++) {
+      if (iworld[nr].instance_id > 0 && SCRIPT(&iworld[nr])) {
+        room = &iworld[nr];
+        sc = SCRIPT(room);
+
+        if (IS_SET(SCRIPT_TYPES(sc), WTRIG_RANDOM) &&
+            (!is_empty(room->zone) ||
+             IS_SET(SCRIPT_TYPES(sc), WTRIG_GLOBAL)))
+          random_wtrigger(room);
+      }
     }
   }
 }
@@ -703,6 +708,20 @@ void check_time_triggers(void)
         time_wtrigger(room);
     }
   }
+
+  if (iworld && top_of_runtime_world != NOWHERE) {
+    for (nr = 0; nr <= top_of_runtime_world; nr++) {
+      if (iworld[nr].instance_id > 0 && SCRIPT(&iworld[nr])) {
+        room = &iworld[nr];
+        sc = SCRIPT(room);
+
+        if (IS_SET(SCRIPT_TYPES(sc), WTRIG_TIME) &&
+            (!is_empty(room->zone) ||
+             IS_SET(SCRIPT_TYPES(sc), WTRIG_GLOBAL)))
+          time_wtrigger(room);
+      }
+    }
+  }
 }
 
 static EVENTFUNC(trig_wait_event)
@@ -737,6 +756,10 @@ static EVENTFUNC(trig_wait_event)
       for (i = 0;i<top_of_world && !found;i++)
         if (&world[i] == (struct room_data *)go)
           found = TRUE;
+      if (iworld && top_of_runtime_world != NOWHERE)
+        for (i = 0;i<=top_of_runtime_world && !found;i++)
+          if (iworld[i].instance_id > 0 && &iworld[i] == (struct room_data *)go)
+            found = TRUE;
     }
     if (!found) {
       log("Trigger restarted on unknown entity. Vnum: %d", GET_TRIG_VNUM(trig));
@@ -2036,20 +2059,25 @@ static void makeuid_var(void *go, struct script_data *sc, trig_data *trig,
       if (o)
         snprintf(uid, sizeof(uid), "%c%ld", UID_CHAR, obj_script_id(o));
     } else if (is_abbrev(arg, "room")) {
-      room_rnum r = NOWHERE;
+      struct room_data *r = NULL;
       switch (type) {
         case WLD_TRIGGER:
-          r = real_room(((struct room_data *) go)->number);
+          r = (struct room_data *)go;
           break;
         case OBJ_TRIGGER:
-          r = obj_room((struct obj_data *)go);
+          {
+            obj_data *obj = (obj_data *)go;
+            room_rnum obj_room_rnum = obj_room(obj);
+
+            r = room_by_rnum_instance(obj_room_rnum, GET_INSTANCE_ID(obj));
+          }
           break;
         case MOB_TRIGGER:
-          r = IN_ROOM((struct char_data *)go);
+          r = GET_ROOM((struct char_data *)go);
           break;
       }
-      if (r != NOWHERE)
-        snprintf(uid, sizeof(uid), "%c%ld", UID_CHAR, room_script_id(world + r));
+      if (r)
+        snprintf(uid, sizeof(uid), "%c%ld", UID_CHAR, room_script_id(r));
     } else {
       script_log("Trigger: %s, VNum %d. makeuid syntax error: '%s'",
             GET_TRIG_NAME(trig), GET_TRIG_VNUM(trig), cmd);
