@@ -46,6 +46,12 @@ static void perform_remove(struct char_data *ch, int pos);
 /* do_wear utility functions */
 static void perform_wear(struct char_data *ch, struct obj_data *obj, int where);
 static void wear_message(struct char_data *ch, struct obj_data *obj, int where);
+static int first_free_sheath(struct char_data *ch);
+static int first_used_sheath(struct char_data *ch);
+static int find_active_weapon_pos(struct char_data *ch, char *arg);
+static int find_sheathed_weapon_pos(struct char_data *ch, char *arg);
+static int move_equipped_obj(struct char_data *ch, int from, int to, int block_cursed, int run_remove_trigger);
+static int perform_sheath_weapon(struct char_data *ch, int from);
 
 
 
@@ -1234,7 +1240,19 @@ static void wear_message(struct char_data *ch, struct obj_data *obj, int where)
     "You wield $p."},
 
     {"$n grabs $p.",
-    "You grab $p."}
+    "You grab $p."},
+
+    {"$n sheathes $p.",
+    "You sheathe $p."},
+
+    {"$n sheathes $p.",
+    "You sheathe $p."},
+
+    {"$n sheathes $p.",
+    "You sheathe $p."},
+
+    {"$n sheathes $p.",
+    "You sheathe $p."}
   };
 
   act(wear_messages[where][0], TRUE, ch, obj, 0, TO_ROOM);
@@ -1254,7 +1272,8 @@ static void perform_wear(struct char_data *ch, struct obj_data *obj, int where)
     ITEM_WEAR_NECK, ITEM_WEAR_BODY, ITEM_WEAR_HEAD, ITEM_WEAR_LEGS,
     ITEM_WEAR_FEET, ITEM_WEAR_HANDS, ITEM_WEAR_ARMS, ITEM_WEAR_SHIELD,
     ITEM_WEAR_ABOUT, ITEM_WEAR_WAIST, ITEM_WEAR_WRIST, ITEM_WEAR_WRIST,
-    ITEM_WEAR_WIELD, ITEM_WEAR_TAKE
+    ITEM_WEAR_WIELD, ITEM_WEAR_TAKE, ITEM_WEAR_WIELD, ITEM_WEAR_WIELD,
+    ITEM_WEAR_WIELD, ITEM_WEAR_WIELD
   };
 
   const char *already_wearing[] = {
@@ -1275,10 +1294,19 @@ static void perform_wear(struct char_data *ch, struct obj_data *obj, int where)
     "YOU SHOULD NEVER SEE THIS MESSAGE.  PLEASE REPORT.\r\n",
     "You're already wearing something around both of your wrists.\r\n",
     "You're already wielding a weapon.\r\n",
-    "You're already holding something.\r\n"
+    "You're already holding something.\r\n",
+    "YOU SHOULD NEVER SEE THIS MESSAGE.  PLEASE REPORT.\r\n",
+    "YOU SHOULD NEVER SEE THIS MESSAGE.  PLEASE REPORT.\r\n",
+    "YOU SHOULD NEVER SEE THIS MESSAGE.  PLEASE REPORT.\r\n",
+    "All of your sheathes are already full.\r\n"
   };
 
   /* first, make sure that the wear position is valid. */
+  if (where < 0 || where >= NUM_WEARS) {
+    log("SYSERR: perform_wear: invalid wear position %d.", where);
+    return;
+  }
+
   if (!CAN_WEAR(obj, wear_bitvectors[where])) {
     act("You can't wear $p there.", FALSE, ch, obj, 0, TO_CHAR);
     return;
@@ -1287,6 +1315,20 @@ static void perform_wear(struct char_data *ch, struct obj_data *obj, int where)
   if ((where == WEAR_FINGER_R) || (where == WEAR_NECK_1) || (where == WEAR_WRIST_R))
     if (GET_EQ(ch, where))
       where++;
+
+  if (where == WEAR_SHEATH_1)
+    while (where < WEAR_SHEATH_4 && GET_EQ(ch, where))
+      where++;
+
+  if (where == WEAR_SHIELD && GET_EQ(ch, WEAR_HOLD)) {
+    send_to_char(ch, "You can't use a shield while holding something in your off hand.\r\n");
+    return;
+  }
+
+  if (where == WEAR_HOLD && GET_EQ(ch, WEAR_SHIELD)) {
+    send_to_char(ch, "You can't hold something in your off hand while using a shield.\r\n");
+    return;
+  }
 
   if (GET_EQ(ch, where)) {
     send_to_char(ch, "%s", already_wearing[where]);
@@ -1322,6 +1364,10 @@ int find_eq_pos(struct char_data *ch, struct obj_data *obj, char *arg)
     "about",
     "waist",
     "wrist",
+    "!RESERVED!",
+    "!RESERVED!",
+    "!RESERVED!",
+    "sheathed",
     "!RESERVED!",
     "!RESERVED!",
     "!RESERVED!",
@@ -1457,11 +1503,225 @@ ACMD(do_grab)
 	  GET_OBJ_TYPE(obj) != ITEM_POTION)
 	send_to_char(ch, "You can't hold that.\r\n");
       else if (!IS_NPC(ch) && GET_OBJ_TYPE(obj) == ITEM_WEAPON &&
-	  GET_SKILL(ch, SKILL_DUAL_WIELD) <= 0)
+	  GET_SKILL_RANK(ch, SKILL_DUAL_WIELD) <= 0)
 	send_to_char(ch, "You need to learn dual wield before holding an off-hand weapon.\r\n");
       else
 	perform_wear(ch, obj, WEAR_HOLD);
     }
+  }
+}
+
+static int first_free_sheath(struct char_data *ch)
+{
+  int pos;
+
+  for (pos = WEAR_SHEATH_1; pos <= WEAR_SHEATH_4; pos++)
+    if (!GET_EQ(ch, pos))
+      return pos;
+
+  return -1;
+}
+
+static int first_used_sheath(struct char_data *ch)
+{
+  int pos;
+
+  for (pos = WEAR_SHEATH_1; pos <= WEAR_SHEATH_4; pos++)
+    if (GET_EQ(ch, pos))
+      return pos;
+
+  return -1;
+}
+
+static int find_active_weapon_pos(struct char_data *ch, char *arg)
+{
+  if (!arg || !*arg)
+    return -1;
+
+  if (is_abbrev(arg, "held") || is_abbrev(arg, "hold") ||
+      is_abbrev(arg, "offhand") || is_abbrev(arg, "off-hand"))
+    return WEAR_HOLD;
+  if (is_abbrev(arg, "wielded") || is_abbrev(arg, "wield") ||
+      is_abbrev(arg, "mainhand") || is_abbrev(arg, "main"))
+    return WEAR_WIELD;
+
+  if (GET_EQ(ch, WEAR_HOLD) && CAN_SEE_OBJ(ch, GET_EQ(ch, WEAR_HOLD)) &&
+      isname(arg, GET_EQ(ch, WEAR_HOLD)->name))
+    return WEAR_HOLD;
+  if (GET_EQ(ch, WEAR_WIELD) && CAN_SEE_OBJ(ch, GET_EQ(ch, WEAR_WIELD)) &&
+      isname(arg, GET_EQ(ch, WEAR_WIELD)->name))
+    return WEAR_WIELD;
+
+  return -1;
+}
+
+static int find_sheathed_weapon_pos(struct char_data *ch, char *arg)
+{
+  int pos, sheath_num;
+
+  if (!arg || !*arg)
+    return first_used_sheath(ch);
+
+  if (is_number(arg)) {
+    sheath_num = atoi(arg);
+    if (sheath_num >= 1 && sheath_num <= 4)
+      return WEAR_SHEATH_1 + sheath_num - 1;
+    return -1;
+  }
+
+  if (!str_cmp(arg, "sheath1"))
+    return WEAR_SHEATH_1;
+  if (!str_cmp(arg, "sheath2"))
+    return WEAR_SHEATH_2;
+  if (!str_cmp(arg, "sheath3"))
+    return WEAR_SHEATH_3;
+  if (!str_cmp(arg, "sheath4"))
+    return WEAR_SHEATH_4;
+
+  for (pos = WEAR_SHEATH_1; pos <= WEAR_SHEATH_4; pos++)
+    if (GET_EQ(ch, pos) && CAN_SEE_OBJ(ch, GET_EQ(ch, pos)) &&
+        isname(arg, GET_EQ(ch, pos)->name))
+      return pos;
+
+  return -1;
+}
+
+static int move_equipped_obj(struct char_data *ch, int from, int to, int block_cursed, int run_remove_trigger)
+{
+  struct obj_data *obj = GET_EQ(ch, from);
+
+  if (!obj)
+    return FALSE;
+
+  if (block_cursed && OBJ_FLAGGED(obj, ITEM_NODROP) && !PRF_FLAGGED(ch, PRF_NOHASSLE)) {
+    act("You can't move $p, it must be CURSED!", FALSE, ch, obj, 0, TO_CHAR);
+    return FALSE;
+  }
+
+  if (run_remove_trigger && !remove_otrigger(obj, ch))
+    return FALSE;
+
+  if (!wear_otrigger(obj, ch, to))
+    return FALSE;
+
+  obj = unequip_char(ch, from);
+  if (!obj)
+    return FALSE;
+
+  equip_char(ch, obj, to);
+  return TRUE;
+}
+
+static int perform_sheath_weapon(struct char_data *ch, int from)
+{
+  struct obj_data *obj = GET_EQ(ch, from);
+  int to;
+
+  if (!obj)
+    return FALSE;
+
+  if (GET_OBJ_TYPE(obj) != ITEM_WEAPON || !CAN_WEAR(obj, ITEM_WEAR_WIELD)) {
+    act("You can only sheath weapons.", FALSE, ch, 0, 0, TO_CHAR);
+    return FALSE;
+  }
+
+  if ((to = first_free_sheath(ch)) < 0) {
+    send_to_char(ch, "All of your sheathes are already full.\r\n");
+    return FALSE;
+  }
+
+  if (!move_equipped_obj(ch, from, to, TRUE, TRUE))
+    return FALSE;
+
+  act("You sheathe $p.", FALSE, ch, GET_EQ(ch, to), 0, TO_CHAR);
+  act("$n sheathes $p.", TRUE, ch, GET_EQ(ch, to), 0, TO_ROOM);
+  return TRUE;
+}
+
+ACMD(do_sheath)
+{
+  char arg[MAX_INPUT_LENGTH];
+  int pos;
+
+  one_argument(argument, arg);
+
+  if (*arg) {
+    pos = find_active_weapon_pos(ch, arg);
+    if (pos < 0 || !GET_EQ(ch, pos)) {
+      send_to_char(ch, "You aren't wielding or holding that.\r\n");
+      return;
+    }
+    perform_sheath_weapon(ch, pos);
+    return;
+  }
+
+  if (GET_EQ(ch, WEAR_HOLD)) {
+    perform_sheath_weapon(ch, WEAR_HOLD);
+    return;
+  }
+
+  if (GET_EQ(ch, WEAR_WIELD)) {
+    perform_sheath_weapon(ch, WEAR_WIELD);
+    return;
+  }
+
+  send_to_char(ch, "You aren't wielding or holding a weapon.\r\n");
+}
+
+ACMD(do_draw)
+{
+  char arg[MAX_INPUT_LENGTH];
+  struct obj_data *obj;
+  int from, to = -1;
+
+  one_argument(argument, arg);
+
+  from = find_sheathed_weapon_pos(ch, arg);
+  if (from < 0) {
+    send_to_char(ch, "You don't have that weapon sheathed.\r\n");
+    return;
+  }
+
+  if (!(obj = GET_EQ(ch, from))) {
+    send_to_char(ch, "That sheath is empty.\r\n");
+    return;
+  }
+
+  if (!CAN_WEAR(obj, ITEM_WEAR_WIELD)) {
+    act("You can't wield $p.", FALSE, ch, obj, 0, TO_CHAR);
+    return;
+  }
+
+  if (!GET_EQ(ch, WEAR_WIELD)) {
+    if (GET_OBJ_WEIGHT(obj) > str_app[STRENGTH_APPLY_INDEX(ch)].wield_w) {
+      act("$p is too heavy for you to wield.", FALSE, ch, obj, 0, TO_CHAR);
+      return;
+    }
+    to = WEAR_WIELD;
+  } else if (GET_EQ(ch, WEAR_HOLD)) {
+    send_to_char(ch, "Your hands are already full.\r\n");
+    return;
+  } else if (GET_EQ(ch, WEAR_SHIELD)) {
+    send_to_char(ch, "You can't draw an off-hand weapon while using a shield.\r\n");
+    return;
+  } else if (!CAN_WEAR(obj, ITEM_WEAR_HOLD)) {
+    act("You can't use $p in your off hand.", FALSE, ch, obj, 0, TO_CHAR);
+    return;
+  } else if (!IS_NPC(ch) && GET_SKILL_RANK(ch, SKILL_DUAL_WIELD) <= 0) {
+    send_to_char(ch, "You need to learn dual wield before drawing an off-hand weapon.\r\n");
+    return;
+  } else
+    to = WEAR_HOLD;
+
+  if (!move_equipped_obj(ch, from, to, FALSE, FALSE))
+    return;
+
+  if (to == WEAR_WIELD) {
+    act("You draw $p.", FALSE, ch, GET_EQ(ch, to), 0, TO_CHAR);
+    act("$n draws $p.", TRUE, ch, GET_EQ(ch, to), 0, TO_ROOM);
+  } else {
+    act("You draw $p into your off hand.", FALSE, ch, GET_EQ(ch, to), 0, TO_CHAR);
+    act("$n draws $p into $s off hand.", TRUE, ch, GET_EQ(ch, to), 0, TO_ROOM);
   }
 }
 

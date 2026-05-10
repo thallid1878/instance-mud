@@ -66,55 +66,6 @@ bitvector_t find_class_bitvector(const char *arg)
   return 0;
 }
 
-/* These are definitions which control the guildmasters for each class.
- * The  first field (top line) controls the highest percentage skill level a
- * character of the class is allowed to attain in any skill.  (After this
- * level, attempts to practice will say "You are already learned in this area."
- *
- * The second line controls the maximum percent gain in learnedness a character
- * is allowed per practice -- in other words, if the random die throw comes out
- * higher than this number, the gain will only be this number instead.
- *
- * The third line controls the minimu percent gain in learnedness a character
- * is allowed per practice -- in other words, if the random die throw comes
- * out below this number, the gain will be set up to this number.
- *
- * The fourth line simply sets whether the character knows 'spells' or 'skills'.
- * This does not affect anything except the message given to the character when
- * trying to practice (i.e. "You know of the following spells" vs. "You know of
- * the following skills" */
-
-#define SPELL	0
-#define SKILL	1
-
-/* #define LEARNED_LEVEL	0  % known which is considered "learned" */
-/* #define MAX_PER_PRAC		1  max percent gain in skill per practice */
-/* #define MIN_PER_PRAC		2  min percent gain in skill per practice */
-/* #define PRAC_TYPE		3  should it say 'spell' or 'skill'?	*/
-
-int prac_params[4][NUM_CLASSES] = {
-  /* Classless */
-  { 100, 100, 100, 100, 100 },	/* learned level */
-  { 100, 100, 100, 100, 100 },	/* max per practice */
-  { 0, 0, 0, 0, 0 },	/* min per practice */
-  { SKILL, SKILL, SKILL, SKILL, SKILL },	/* prac name */
-};
-
-/* The appropriate rooms for each guildmaster/guildguard; controls which types
- * of people the various guildguards let through.  i.e., the first line shows
- * that from room 3017, only MAGIC_USERS are allowed to go south. Don't forget
- * to visit spec_assign.c if you create any new mobiles that should be a guild
- * master or guard so they can act appropriately. If you "recycle" the
- * existing mobs that are used in other guilds for your new guild, then you
- * don't have to change that file, only here. Guildguards are now implemented
- * via triggers. This code remains as an example. */
-struct guild_info_type guild_info[] = {
-
-/* Midgaard */
-/* this must go last -- add new guards above! */
-  { -1, NOWHERE, -1}
-};
-
 /* Saving throws for : MCTW : PARA, ROD, PETRI, BREATH, SPELL. Levels 0-40. Do
  * not forget to change extern declaration in magic.c if you add to this. */
 byte saving_throws(int class_num, int type, int level)
@@ -1462,24 +1413,21 @@ void advance_level(struct char_data *ch)
   save_char(ch);
 }
 
-/* This simply calculates the backstab multiplier based on a character's level.
- * This used to be an array, but was changed to be a function so that it would
- * be easier to add more levels to your MUD.  This doesn't really create a big
- * performance hit because it's not used very often. */
-int backstab_mult(int level)
+/* This calculates the backstab multiplier from learned rank. */
+int backstab_mult(int rank)
 {
-  if (level <= 7)
-    return 2;	  /* level 1 - 7 */
-  else if (level <= 13)
-    return 3;	  /* level 8 - 13 */
-  else if (level <= 20)
-    return 4;	  /* level 14 - 20 */
-  else if (level <= 28)
-    return 5;	  /* level 21 - 28 */
-  else if (level < LVL_IMMORT)
-    return 6;	  /* all remaining mortal levels */
+  if (rank <= 0)
+    return 1;
+  else if (rank <= 2)
+    return 2;
+  else if (rank <= 4)
+    return 3;
+  else if (rank <= 6)
+    return 4;
+  else if (rank <= 8)
+    return 5;
   else
-    return 20;	  /* immortals */
+    return 6;
 }
 
 /* invalid_class is used by handler.c to determine if a piece of equipment is

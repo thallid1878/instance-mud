@@ -1669,7 +1669,7 @@ ACMD(do_advance)
     SET_BIT_AR(PRF_FLAGS(victim), PRF_SHOWVNUMS);
     SET_BIT_AR(PRF_FLAGS(victim), PRF_AUTOEXIT);
         for (i = 1; i <= MAX_SKILLS; i++)
-          SET_SKILL(victim, i, 100);
+          SET_SKILL_RANK(victim, i, 10);
    GET_OLC_ZONE(victim) = NOWHERE;
    GET_COND(victim, HUNGER) = -1;
    GET_COND(victim, THIRST) = -1;
@@ -1722,7 +1722,7 @@ ACMD(do_restore)
     if (!IS_NPC(vict) && GET_LEVEL(ch) >= LVL_GRGOD) {
       if (GET_LEVEL(vict) >= LVL_IMMORT)
         for (i = 1; i <= MAX_SKILLS; i++)
-          SET_SKILL(vict, i, 100);
+          SET_SKILL_RANK(vict, i, 10);
 
       if (GET_LEVEL(vict) >= LVL_GRGOD) {
 	vict->real_abils.intel = 25;

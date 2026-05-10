@@ -992,20 +992,6 @@ static bool uses_physical_damage_bonus(int attacktype)
   }
 }
 
-static int dual_wield_rank(struct char_data *ch)
-{
-  int percent;
-
-  if (!ch || IS_NPC(ch))
-    return 0;
-
-  percent = GET_SKILL(ch, SKILL_DUAL_WIELD);
-  if (percent <= 0)
-    return 0;
-
-  return MIN(10, MAX(1, (percent + 9) / 10));
-}
-
 static int weapon_attack_type(struct obj_data *weapon)
 {
   int attack_type;
@@ -1038,7 +1024,7 @@ static void perform_dual_wield_attack(struct char_data *ch, struct char_data *vi
   if (!SAME_ROOM(ch, victim) || GET_POS(victim) <= POS_DEAD)
     return;
 
-  rank = dual_wield_rank(ch);
+  rank = GET_SKILL_RANK(ch, SKILL_DUAL_WIELD);
   if (rank <= 0)
     return;
 
@@ -1142,7 +1128,7 @@ void hit(struct char_data *ch, struct char_data *victim, int type)
     dam = MAX(1, dam);
 
     if (type == SKILL_BACKSTAB)
-      damage(ch, victim, dam * backstab_mult(GET_LEVEL(ch)), SKILL_BACKSTAB);
+      damage(ch, victim, dam * backstab_mult(GET_SKILL_RANK(ch, SKILL_BACKSTAB)), SKILL_BACKSTAB);
     else {
       damage_result = damage(ch, victim, dam, w_type);
       if (damage_result != -1)

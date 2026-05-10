@@ -1,827 +1,2114 @@
 #2300
-An empty void~
-There is nothingness all around you but a faint light appears below you as your float here.
-~
-23 0 0 0 0 0
-D5
-~
-~
-0 0 2301
-S
-T 2399
-#2301
-A never ending meadow~
-Waist high grass is all around you as far as the eye can see, the only spot with any opening is a hole in the ground right in front of your feet.
-~
-23 4 0 0 0 2
-D0
-~
-~
-0 0 2306
-D1
-~
-~
-0 0 2308
-D2
-~
-~
-0 0 2307
-D3
-~
-~
-0 0 2309
-D5
-~
-~
-0 0 2302
-S
-#2302
-Inside the cavern~
-You find yourself in a large open cave, there is another way down at your feet, and rocky ledges all around it to explore.
+An Empty Place Between Worlds~
+Nothing here has fully decided to exist. A pale light hangs below you, steady as a lantern under dark water, and the air carries the clean silence of a place made for beginnings.
 ~
 23 4 0 0 0 0
-D0
-~
-~
-0 0 2314
-D1
-~
-~
-0 0 2316
-D2
-~
-~
-0 0 2315
-D3
-~
-~
-0 0 2317
-D4
-~
-~
-0 0 2301
 D5
+The pale light falls toward a meadow below.
 ~
-~
-0 0 2303
-S
-#2303
-Deeper in the cavern~
-Deeper into the cavern, you are starting to feel a sense of dread.
-~
-23 4 0 0 0 0
-D0
-~
-~
-0 0 2322
-D1
-~
-~
-0 0 2324
-D2
-~
-~
-0 0 2323
-D3
-~
-~
-0 0 2325
-D4
-~
-~
-0 0 2302
-D5
-~
-~
-0 0 2304
-S
-#2304
-on a shelf above a lake in the cave~
-Even deeper in the cave, you can now see a lake shore on the level below you, perhaps you should explore this area a bit more before climbing down further.
-~
-23 4 0 0 0 0
-D0
-~
-~
-0 0 2330
-D1
-~
-~
-0 0 2332
-D2
-~
-~
-0 0 2331
-D3
-~
-~
-0 0 2333
-D4
-~
-~
-0 0 2303
-D5
-~
-~
-0 0 2305
-S
-#2305
-By the lake shore inside the cavern~
-You look out and see a crystal clear late ahead of you, this beach area might is littered with the bones of dead fish and other things. Something strong must lurk down here.
-~
-23 4 0 0 0 0
-D0
-~
-~
-0 0 2338
-D1
-~
-~
-0 0 2340
-D2
-~
-~
-0 0 2339
-D3
-~
-~
-0 0 2341
-D4
-~
-~
-0 0 2304
-D5
-~
-~
-0 0 2346
-S
-#2306
-A never ending meadow~
-Waist high grass is all around you as far as the eye can see.
-~
-23 0 0 0 0 0
-D1
-~
-~
-0 0 2310
-D2
-~
-~
-0 0 2301
-D3
-~
-~
-0 0 2311
-S
-#2307
-A never ending meadow~
-Waist high grass is all around you as far as the eye can see.
-~
-23 0 0 0 0 0
-D0
-~
-~
-0 0 2301
-D1
-~
-~
-0 0 2312
-D3
-~
+
 ~
 0 0 2313
 S
-#2308
-A never ending meadow~
-Waist high grass is all around you as far as the eye can see.
+T 2399
+#2301
+A Wind-Bent Edge of Grass~
+Tall grass leans away from a cold draft rising from somewhere below. The meadow stretches farther than it should, but the ground here feels solid enough for a first step.
 ~
-23 0 0 0 0 0
-D0
+23 0 0 0 0 2
+D1
+
 ~
+
 ~
-0 0 2310
+0 0 2302
 D2
+
 ~
+
 ~
-0 0 2312
+0 0 2305
+S
+#2302
+The Pale Seed Patch~
+Pale seed heads nod above the grass, each one faintly glowing when the air moves. Small tracks vanish between the stems.
+~
+23 0 0 0 0 2
+D1
+
+~
+
+~
+0 0 2303
+D2
+
+~
+
+~
+0 0 2306
 D3
+
 ~
+
 ~
 0 0 2301
 S
-#2309
-A never ending meadow~
-Waist high grass is all around you as far as the eye can see.
+#2303
+A Ring of Bent Stalks~
+The grass has been pressed flat in a wide ring. Something soft and heavy has rolled through here often enough to leave a path.
 ~
-23 0 0 0 0 0
-D0
-~
-~
-0 0 2311
+23 0 0 0 0 2
 D1
+
 ~
+
+~
+0 0 2304
+D2
+
+~
+
+~
+0 0 2307
+D3
+
+~
+
+~
+0 0 2302
+S
+#2304
+The First Descent~
+At the northeast edge of the meadow, the grass thins around a dark break in the earth. Cool air breathes from below, carrying the smell of stone.
+~
+23 4 0 0 0 2
+D2
+
+~
+
+~
+0 0 2308
+D3
+
+~
+
+~
+0 0 2303
+D5
+A narrow sinkhole drops into a quiet root-lit chamber.
+~
+
+~
+0 0 2317
+S
+#2305
+The Grass-Tunnel Bend~
+The meadow closes around you in walls of green. A narrow path threads through the stalks, made more by crawling things than by feet.
+~
+23 0 0 0 0 2
+D0
+
+~
+
 ~
 0 0 2301
-D2
+D1
+
 ~
+
+~
+0 0 2306
+D2
+
+~
+
+~
+0 0 2309
+S
+#2306
+A Patch of Blue Slime~
+The grass here shines with a faint blue glaze. It quivers in places even when the wind stops.
+~
+23 0 0 0 0 2
+D0
+
+~
+
+~
+0 0 2302
+D1
+
+~
+
+~
+0 0 2307
+D2
+
+~
+
+~
+0 0 2310
+D3
+
+~
+
+~
+0 0 2305
+S
+#2307
+The Swaying Middle~
+Every direction looks open until you move, then the grass folds back into hidden corridors. The meadow feels like it is gently testing your nerve.
+~
+23 0 0 0 0 2
+D0
+
+~
+
+~
+0 0 2303
+D1
+
+~
+
+~
+0 0 2308
+D2
+
+~
+
+~
+0 0 2311
+D3
+
+~
+
+~
+0 0 2306
+S
+#2308
+A Fallen Marker Stone~
+A flat stone lies half-buried under grass. Its surface is scratched by old claws and newer boot heels.
+~
+23 0 0 0 0 2
+D0
+
+~
+
+~
+0 0 2304
+D2
+
+~
+
+~
+0 0 2312
+D3
+
+~
+
+~
+0 0 2307
+S
+#2309
+The Quiet South Grass~
+The meadow grows softer here, muffling your steps. Small bubbles of blue slime cling to the undersides of leaves.
+~
+23 0 0 0 0 2
+D0
+
+~
+
+~
+0 0 2305
+D1
+
+~
+
+~
+0 0 2310
+D2
+
+~
+
 ~
 0 0 2313
 S
 #2310
-A never ending meadow~
-Waist high grass is all around you as far as the eye can see.
+A Humming Clover Bed~
+Clover and tiny white flowers hum underfoot. The sound is too low to be music and too steady to be insects.
 ~
-23 0 0 0 0 0
-D2
+23 0 0 0 0 2
+D0
+
 ~
-~
-0 0 2308
-D3
-~
+
 ~
 0 0 2306
+D1
+
+~
+
+~
+0 0 2311
+D2
+
+~
+
+~
+0 0 2314
+D3
+
+~
+
+~
+0 0 2309
 S
 #2311
-A never ending meadow~
-Waist high grass is all around you as far as the eye can see.
+A Trail of Slick Grass~
+A faint trail glistens through the grass. Whatever left it had no bones and no concern for dignity.
 ~
-23 0 0 0 0 0
+23 0 0 0 0 2
+D0
+
+~
+
+~
+0 0 2307
 D1
+
 ~
+
 ~
-0 0 2306
+0 0 2312
 D2
+
 ~
+
 ~
-0 0 2309
+0 0 2315
+D3
+
+~
+
+~
+0 0 2310
 S
 #2312
-A never ending meadow~
-Waist high grass is all around you as far as the eye can see.
+The Far Meadow Pocket~
+The grass opens into a small pocket of clear ground. The sky above looks real until you stare at it for too long.
 ~
-23 0 0 0 0 0
+23 0 0 0 0 2
 D0
+
 ~
+
 ~
 0 0 2308
+D2
+
+~
+
+~
+0 0 2316
 D3
+
 ~
+
 ~
-0 0 2307
+0 0 2311
 S
 #2313
-A never ending meadow~
-Waist high grass is all around you as far as the eye can see.
+The Arrival Hollow~
+The grass dips into a shallow hollow beneath the light above. This feels like the place the dungeon wanted you to land.
 ~
-23 0 0 0 0 0
+23 4 0 0 0 2
 D0
+
 ~
+
 ~
 0 0 2309
 D1
+
 ~
+
 ~
-0 0 2307
+0 0 2314
+D4
+
+~
+
+~
+0 0 2300
 S
 #2314
-Inside the cavern~
-As you move through the cave you can see many small rocks laying around, a perfect hiding place for something to pop out at you.
+A Broken Sapling~
+A young tree has been bent nearly flat, its leaves coated in blue slime. The trunk twitches when the wind changes.
 ~
-23 0 0 0 0 0
+23 0 0 0 0 2
+D0
+
+~
+
+~
+0 0 2310
 D1
+
 ~
+
 ~
-0 0 2318
-D2
-~
-~
-0 0 2302
+0 0 2315
 D3
+
 ~
+
 ~
-0 0 2319
+0 0 2313
 S
 #2315
-Inside the cavern~
-As you move through the cave you can see many small rocks laying around, a perfect hiding place for something to pop out at you.
+The South Meadow Turn~
+The meadow curls back on itself here. Grass knots together in thick ropes along the ground.
 ~
-23 0 0 0 0 0
+23 0 0 0 0 2
 D0
+
 ~
+
 ~
-0 0 2302
+0 0 2311
 D1
+
 ~
+
 ~
-0 0 2320
+0 0 2316
 D3
+
 ~
+
 ~
-0 0 2321
+0 0 2314
 S
 #2316
-Inside the cavern~
-As you move through the cave you can see many small rocks laying around, a perfect hiding place for something to pop out at you.
+The Last Warm Grass~
+The air is warmer here, but the warmth fades toward the northeast. The meadow seems to hold its breath before the first drop.
 ~
-23 0 0 0 0 0
+23 0 0 0 0 2
 D0
+
 ~
+
 ~
-0 0 2318
-D2
-~
-~
-0 0 2320
+0 0 2312
 D3
+
 ~
+
 ~
-0 0 2302
+0 0 2315
 S
 #2317
-Inside the cavern~
-As you move through the cave you can see many small rocks laying around, a perfect hiding place for something to pop out at you.
+A Root-Lit Breathing Room~
+Roots curl around this small chamber like the ribs of a wooden lantern. The air is still, the floor is clear, and the way down waits below.
 ~
-23 0 0 0 0 0
-D0
+23 20 0 0 0 0
+D4
+
 ~
+
 ~
-0 0 2319
-D1
+0 0 2304
+D5
+A webbed passage continues deeper into the second floor.
 ~
-~
-0 0 2302
-D2
-~
+
 ~
 0 0 2321
 S
 #2318
-Inside the cavern~
-As you move through the cave you can see many small rocks laying around, a perfect hiding place for something to pop out at you.
+A Ceiling of Old Roots~
+Roots pierce the ceiling like brown fingers, drinking from the meadow above. Webbing gathers between them in grey curtains.
 ~
 23 0 0 0 0 0
+D1
+
+~
+
+~
+0 0 2319
 D2
+
 ~
+
 ~
-0 0 2316
-D3
-~
-~
-0 0 2314
+0 0 2322
 S
 #2319
-Inside the cavern~
-As you move through the cave you can see many small rocks laying around, a perfect hiding place for something to pop out at you.
+The Dry Web Corner~
+Dusty web strands stitch the walls together. The floor is scattered with beetle shells and the brittle legs of things that struggled.
 ~
 23 0 0 0 0 0
 D1
+
 ~
+
 ~
-0 0 2314
+0 0 2320
 D2
+
 ~
+
 ~
-0 0 2317
+0 0 2323
+D3
+
+~
+
+~
+0 0 2318
 S
 #2320
-Inside the cavern~
-As you move through the cave you can see many small rocks laying around, a perfect hiding place for something to pop out at you.
+A Root-Cracked Shelf~
+A thick root has split the stone and made a narrow shelf along the wall. Something has scratched grooves into the dirt below it.
 ~
 23 0 0 0 0 0
-D0
+D1
+
 ~
+
 ~
-0 0 2316
+0 0 2321
+D2
+
+~
+
+~
+0 0 2324
 D3
+
 ~
+
 ~
-0 0 2315
+0 0 2319
 S
 #2321
-Inside the cavern~
-As you move through the cave you can see many small rocks laying around, a perfect hiding place for something to pop out at you.
+The Upper Web Shaft~
+The tunnel rises toward the safe room above, but webbing clings to the stone around the opening. The air smells of soil and old silk.
 ~
-23 0 0 0 0 0
-D0
+23 4 0 0 0 0
+D2
+
 ~
+
+~
+0 0 2325
+D3
+
+~
+
+~
+0 0 2320
+D4
+
+~
+
 ~
 0 0 2317
-D1
-~
-~
-0 0 2315
 S
 #2322
-Deeper in the cavern~
-As you move through the cave you can see many small rocks laying around, a perfect hiding place for something to pop out at you.
+The Split Root Passage~
+Two huge roots twist through the floor, forcing the path to bend. The space between them is dark enough for too many legs.
 ~
 23 0 0 0 0 0
-D1
+D0
+
 ~
+
+~
+0 0 2318
+D1
+
+~
+
+~
+0 0 2323
+D2
+
+~
+
 ~
 0 0 2326
-D2
-~
-~
-0 0 2303
-D3
-~
-~
-0 0 2327
 S
 #2323
-Deeper in the cavern~
-As you move through the cave you can see many small rocks laying around, a perfect hiding place for something to pop out at you.
+A Cocooned Alcove~
+Small cocoons hang from the wall like dull white fruit. Most are empty, and that is somehow worse.
 ~
 23 0 0 0 0 0
 D0
+
 ~
+
 ~
-0 0 2303
+0 0 2319
 D1
+
 ~
+
 ~
-0 0 2328
+0 0 2324
+D2
+
+~
+
+~
+0 0 2327
 D3
+
 ~
+
 ~
-0 0 2329
+0 0 2322
 S
 #2324
-Deeper in the cavern~
-As you move through the cave you can see many small rocks laying around, a perfect hiding place for something to pop out at you.
+The Trembling Web~
+A sheet of webbing trembles across the stone. The motion travels through it in quick little pulses.
 ~
 23 0 0 0 0 0
 D0
+
 ~
+
 ~
-0 0 2326
+0 0 2320
+D1
+
+~
+
+~
+0 0 2325
 D2
+
 ~
+
 ~
 0 0 2328
 D3
+
 ~
+
 ~
-0 0 2303
+0 0 2323
 S
 #2325
-Deeper in the cavern~
-As you move through the cave you can see many small rocks laying around, a perfect hiding place for something to pop out at you.
+A Damp Root Knot~
+Water drips down a knot of roots and pools in the dust. Tiny spider tracks circle the puddle without touching it.
 ~
 23 0 0 0 0 0
 D0
+
 ~
+
+~
+0 0 2321
+D2
+
+~
+
+~
+0 0 2329
+D3
+
+~
+
+~
+0 0 2324
+S
+#2326
+The Narrow Silk Run~
+The tunnel narrows until your shoulders nearly brush the webbed walls. Loose stones crunch beneath your feet.
+~
+23 0 0 0 0 0
+D0
+
+~
+
+~
+0 0 2322
+D1
+
+~
+
+~
+0 0 2327
+D2
+
+~
+
+~
+0 0 2330
+S
+#2327
+A Hollow Under the Roots~
+The roots above have formed a low ceiling, creating a cramped hollow where the air is stale and warm.
+~
+23 0 0 0 0 0
+D0
+
+~
+
+~
+0 0 2323
+D1
+
+~
+
+~
+0 0 2328
+D2
+
+~
+
+~
+0 0 2331
+D3
+
+~
+
+~
+0 0 2326
+S
+#2328
+The Spider's Side Path~
+The path angles away from the main cavern. Webbing grows thicker here, layered and repaired many times.
+~
+23 0 0 0 0 0
+D0
+
+~
+
+~
+0 0 2324
+D1
+
+~
+
+~
+0 0 2329
+D2
+
+~
+
+~
+0 0 2332
+D3
+
+~
+
+~
+0 0 2327
+S
+#2329
+A Dead Lantern Niche~
+An old lantern sits in a wall niche, its glass wrapped in silk. Something small moves behind the cracked pane.
+~
+23 0 0 0 0 0
+D0
+
+~
+
+~
+0 0 2325
+D2
+
+~
+
+~
+0 0 2333
+D3
+
+~
+
+~
+0 0 2328
+S
+#2330
+The Lower Root Drop~
+The stone drops away toward darker caverns. Webs cling to the edges, torn where something large descended.
+~
+23 4 0 0 0 0
+D0
+
+~
+
+~
+0 0 2326
+D1
+
+~
+
+~
+0 0 2331
+D5
+A rough drop leads to a quiet shelf of stone.
+~
+
+~
+0 0 2334
+S
+#2331
+A Webbed Stone Rib~
+A curved rib of stone rises from floor to ceiling. Webbing stretches from it in heavy ropes.
+~
+23 0 0 0 0 0
+D0
+
+~
+
 ~
 0 0 2327
 D1
+
 ~
+
 ~
-0 0 2303
-D2
-~
-~
-0 0 2329
-S
-#2326
-Deeper in the cavern~
-As you move through the cave you can see many small rocks laying around, a perfect hiding place for something to pop out at you.
-~
-23 0 0 0 0 0
-D2
-~
-~
-0 0 2324
+0 0 2332
 D3
+
 ~
+
 ~
-0 0 2322
-S
-#2327
-Deeper in the cavern~
-As you move through the cave you can see many small rocks laying around, a perfect hiding place for something to pop out at you.
-~
-23 0 0 0 0 0
-D1
-~
-~
-0 0 2322
-D2
-~
-~
-0 0 2325
-S
-#2328
-Deeper in the cavern~
-As you move through the cave you can see many small rocks laying around, a perfect hiding place for something to pop out at you.
-~
-23 0 0 0 0 0
-D0
-~
-~
-0 0 2324
-D3
-~
-~
-0 0 2323
-S
-#2329
-Deeper in the cavern~
-As you move through the cave you can see many small rocks laying around, a perfect hiding place for something to pop out at you.
-~
-23 0 0 0 0 0
-D0
-~
-~
-0 0 2325
-D1
-~
-~
-0 0 2323
-S
-#2330
-on a shelf above a lake in the cave~
-Even deeper in the cave, you can now see a lake shore on the level below you, perhaps you should explore this area a bit more before climbing down further.
-~
-23 0 0 0 0 0
-D1
-~
-~
-0 0 2334
-D2
-~
-~
-0 0 2304
-D3
-~
-~
-0 0 2335
-S
-#2331
-on a shelf above a lake in the cave~
-Even deeper in the cave, you can now see a lake shore on the level below you, perhaps you should explore this area a bit more before climbing down further.
-~
-23 0 0 0 0 0
-D0
-~
-~
-0 0 2304
-D1
-~
-~
-0 0 2336
-D3
-~
-~
-0 0 2337
+0 0 2330
 S
 #2332
-on a shelf above a lake in the cave~
-Even deeper in the cave, you can now see a lake shore on the level below you, perhaps you should explore this area a bit more before climbing down further.
+The Dirt-Floored Pocket~
+The stone gives way to packed earth. It is marked with shallow furrows where many legs dragged something heavy.
 ~
 23 0 0 0 0 0
 D0
+
 ~
+
 ~
-0 0 2334
-D2
+0 0 2328
+D1
+
 ~
+
 ~
-0 0 2336
+0 0 2333
 D3
+
 ~
+
 ~
-0 0 2304
+0 0 2331
 S
 #2333
-on a shelf above a lake in the cave~
-Even deeper in the cave, you can now see a lake shore on the level below you, perhaps you should explore this area a bit more before climbing down further.
+The Last Rooted Ledge~
+The roots thin here, replaced by colder stone. The webbing ends in ragged strands leading back the way you came.
 ~
 23 0 0 0 0 0
 D0
+
 ~
+
+~
+0 0 2329
+D3
+
+~
+
+~
+0 0 2332
+S
+#2334
+A Quiet Shelf of Stone~
+The tunnel widens into a still stone shelf. The sounds of snakes fade above and a colder throat opens below.
+~
+23 20 0 0 0 0
+D4
+
+~
+
+~
+0 0 2330
+D5
+A warm stone throat continues deeper.
+~
+
+~
+0 0 2347
+S
+#2335
+A Warm Stone Mouth~
+The passage opens into warm stone that seems to hold the heat of some hidden body. Shed scales lie curled against the wall.
+~
+23 0 0 0 0 0
+D1
+
+~
+
+~
+0 0 2336
+D2
+
+~
+
+~
+0 0 2339
+S
+#2336
+The Split Scale Bend~
+The tunnel forks around a slab of stone marked with long scrape lines. A translucent strip of shed skin hangs from one edge.
+~
+23 0 0 0 0 0
+D1
+
+~
+
+~
+0 0 2337
+D2
+
+~
+
+~
+0 0 2340
+D3
+
+~
+
+~
+0 0 2335
+S
+#2337
+A Low Serpent Crawl~
+The ceiling dips so low that the tunnel feels built for crawling things. Dust has been pushed aside in broad winding tracks.
+~
+23 0 0 0 0 0
+D1
+
+~
+
+~
+0 0 2338
+D2
+
+~
+
+~
+0 0 2341
+D3
+
+~
+
+~
+0 0 2336
+S
+#2338
+The Northeastern Stone Throat~
+The stone climbs toward the safe chamber above. Warm air rises from cracks around your feet.
+~
+23 4 0 0 0 0
+D2
+
+~
+
+~
+0 0 2342
+D3
+
+~
+
+~
+0 0 2337
+D5
+A vertical crack descends into a still ledge.
+~
+
+~
+0 0 2351
+S
+#2339
+The Ribbed Passage~
+Layers of stone ripple along the walls like ribs. Each ridge is polished smooth by something sliding past.
+~
+23 0 0 0 0 0
+D0
+
+~
+
 ~
 0 0 2335
 D1
+
 ~
+
 ~
-0 0 2304
+0 0 2340
 D2
+
 ~
-~
-0 0 2337
-S
-#2334
-on a shelf above a lake in the cave~
-Even deeper in the cave, you can now see a lake shore on the level below you, perhaps you should explore this area a bit more before climbing down further.
-~
-23 0 0 0 0 0
-D2
-~
-~
-0 0 2332
-D3
-~
-~
-0 0 2330
-S
-#2335
-on a shelf above a lake in the cave~
-Even deeper in the cave, you can now see a lake shore on the level below you, perhaps you should explore this area a bit more before climbing down further.
-~
-23 0 0 0 0 0
-D1
-~
-~
-0 0 2330
-D2
-~
-~
-0 0 2333
-S
-#2336
-on a shelf above a lake in the cave~
-Even deeper in the cave, you can now see a lake shore on the level below you, perhaps you should explore this area a bit more before climbing down further.
-~
-23 0 0 0 0 0
-D0
-~
-~
-0 0 2332
-D3
-~
-~
-0 0 2331
-S
-#2337
-on a shelf above a lake in the cave~
-Even deeper in the cave, you can now see a lake shore on the level below you, perhaps you should explore this area a bit more before climbing down further.
-~
-23 0 0 0 0 0
-D0
-~
-~
-0 0 2333
-D1
-~
-~
-0 0 2331
-S
-#2338
-By the lake shore inside the cavern~
-You look out and see a crystal clear late ahead of you, this beach area might is littered with the bones of dead fish and other things. Something strong must lurk down here.
-~
-23 0 0 0 0 0
-D1
-~
-~
-0 0 2342
-D2
-~
-~
-0 0 2305
-D3
-~
+
 ~
 0 0 2343
-S
-#2339
-By the lake shore inside the cavern~
-You look out and see a crystal clear late ahead of you, this beach area might is littered with the bones of dead fish and other things. Something strong must lurk down here.
-~
-23 0 0 0 0 0
-D0
-~
-~
-0 0 2305
-D1
-~
-~
-0 0 2344
-D3
-~
-~
-0 0 2345
 S
 #2340
-By the lake shore inside the cavern~
-You look out and see a crystal clear late ahead of you, this beach area might is littered with the bones of dead fish and other things. Something strong must lurk down here.
+A Bowl of Loose Bones~
+A shallow bowl in the floor has collected bones, pebbles, and bits of torn cloth. The bones are too clean.
 ~
 23 0 0 0 0 0
 D0
+
 ~
+
 ~
-0 0 2342
+0 0 2336
+D1
+
+~
+
+~
+0 0 2341
 D2
+
 ~
+
 ~
 0 0 2344
 D3
+
 ~
+
 ~
-0 0 2305
+0 0 2339
 S
 #2341
-By the lake shore inside the cavern~
-You look out and see a crystal clear late ahead of you, this beach area might is littered with the bones of dead fish and other things. Something strong must lurk down here.
+The Breathing Crack~
+A narrow crack in the wall exhales warm, wet air. The sound comes and goes like slow breathing.
 ~
 23 0 0 0 0 0
 D0
+
 ~
+
+~
+0 0 2337
+D1
+
+~
+
+~
+0 0 2342
+D2
+
+~
+
+~
+0 0 2345
+D3
+
+~
+
+~
+0 0 2340
+S
+#2342
+A Shedding Niche~
+Strips of old snakeskin cling to a niche in the wall. They rustle when you pass, though no wind reaches here.
+~
+23 0 0 0 0 0
+D0
+
+~
+
+~
+0 0 2338
+D2
+
+~
+
+~
+0 0 2346
+D3
+
+~
+
+~
+0 0 2341
+S
+#2343
+The Winding Middle~
+The passage curves again and again, hiding each turn before you reach it. Your own footsteps return as soft hisses.
+~
+23 0 0 0 0 0
+D0
+
+~
+
+~
+0 0 2339
+D1
+
+~
+
+~
+0 0 2344
+D2
+
+~
+
+~
+0 0 2347
+S
+#2344
+A Stone Coil Mark~
+The floor bears a circular groove where something heavy rested for a long time. The center is smooth as polished bone.
+~
+23 0 0 0 0 0
+D0
+
+~
+
+~
+0 0 2340
+D1
+
+~
+
+~
+0 0 2345
+D2
+
+~
+
+~
+0 0 2348
+D3
+
+~
+
 ~
 0 0 2343
+S
+#2345
+The Broken Shelf~
+A shelf of stone has cracked under great weight. Fresh fragments crunch underfoot.
+~
+23 0 0 0 0 0
+D0
+
+~
+
+~
+0 0 2341
 D1
+
 ~
+
 ~
-0 0 2305
+0 0 2346
 D2
+
 ~
+
+~
+0 0 2349
+D3
+
+~
+
+~
+0 0 2344
+S
+#2346
+A Narrow Heat Tunnel~
+Heat gathers in this tight tunnel, thick and uncomfortable. The walls are scratched at waist height.
+~
+23 0 0 0 0 0
+D0
+
+~
+
+~
+0 0 2342
+D2
+
+~
+
+~
+0 0 2350
+D3
+
+~
+
 ~
 0 0 2345
 S
-#2342
-By the lake shore inside the cavern~
-You look out and see a crystal clear late ahead of you, this beach area might is littered with the bones of dead fish and other things. Something strong must lurk down here.
-~
-23 0 0 0 0 0
-D2
-~
-~
-0 0 2340
-D3
-~
-~
-0 0 2338
-S
-#2343
-By the lake shore inside the cavern~
-You look out and see a crystal clear late ahead of you, this beach area might is littered with the bones of dead fish and other things. Something strong must lurk down here.
-~
-23 0 0 0 0 0
-D1
-~
-~
-0 0 2338
-D2
-~
-~
-0 0 2341
-S
-#2344
-By the lake shore inside the cavern~
-You look out and see a crystal clear late ahead of you, this beach area might is littered with the bones of dead fish and other things. Something strong must lurk down here.
-~
-23 0 0 0 0 0
-D0
-~
-~
-0 0 2340
-D3
-~
-~
-0 0 2339
-S
-#2345
-By the lake shore inside the cavern~
-You look out and see a crystal clear late ahead of you, this beach area might is littered with the bones of dead fish and other things. Something strong must lurk down here.
-~
-23 0 0 0 0 0
-D0
-~
-~
-0 0 2341
-D1
-~
-~
-0 0 2339
-S
-#2346
-A dark cavern~
-There is a small pile of rocks that looks to be hiding something below you.
-Perhaps you should check it out?
-But maybe now is a good time to buy some stats and skills for what is ahead.
-~
-23 260 0 0 0 0
-D4
-~
-~
-0 0 2305
-D5
-A small pile of rocks.
-~
-small pile rocks~
-1 0 2347
-S
 #2347
-The bosses lair!~
-The cave walls are slick with blood and the floor is littered with bones.
-The smell of rotting meat is enough to make you feel sick.
-Here in this room is the Dungeon Boss, good luck!
+The Southwestern Stone Drop~
+The floor slopes toward the lower safe chamber. A black gap waits at the edge, breathing colder air.
+~
+23 4 0 0 0 0
+D0
+
+~
+
+~
+0 0 2343
+D1
+
+~
+
+~
+0 0 2348
+D4
+
+~
+
+~
+0 0 2334
+S
+#2348
+The Blind Bend~
+The tunnel bends sharply around a blind corner. No sound comes from beyond it, which feels deliberate.
+~
+23 0 0 0 0 0
+D0
+
+~
+
+~
+0 0 2344
+D1
+
+~
+
+~
+0 0 2349
+D3
+
+~
+
+~
+0 0 2347
+S
+#2349
+A Sloughed Skin Crossing~
+A whole skin lies across the floor, long enough to make the tunnel seem suddenly smaller.
+~
+23 0 0 0 0 0
+D0
+
+~
+
+~
+0 0 2345
+D1
+
+~
+
+~
+0 0 2350
+D3
+
+~
+
+~
+0 0 2348
+S
+#2350
+The Cold End of the Stone Gut~
+The warmth fades here. Ahead, the cave begins to open toward ledges and hunting paths.
+~
+23 0 0 0 0 0
+D0
+
+~
+
+~
+0 0 2346
+D3
+
+~
+
+~
+0 0 2349
+S
+#2351
+A Still Ledge Above the Hunt~
+A flat ledge rests between two rough drops. Old claw marks stop at its edge, as if even the predators avoided lingering here.
+~
+23 20 0 0 0 0
+D4
+
+~
+
+~
+0 0 2338
+D5
+A ledge path drops toward the hunting shelf below.
+~
+
+~
+0 0 2355
+S
+#2352
+A High Shelf of Claw Marks~
+The cavern opens onto a shelf above unseen water. Claw marks scar the stone in overlapping trails.
+~
+23 0 0 0 0 0
+D1
+
+~
+
+~
+0 0 2353
+D2
+
+~
+
+~
+0 0 2356
+S
+#2353
+The Broken Den Mouth~
+A shallow den yawns in the wall, lined with fur and old bones. The entrance smells of wet animal hide.
+~
+23 0 0 0 0 0
+D1
+
+~
+
+~
+0 0 2354
+D2
+
+~
+
+~
+0 0 2357
+D3
+
+~
+
+~
+0 0 2352
+S
+#2354
+A Scratched Overlook~
+From here the lower lake glints through darkness. The stone rail is scratched by claws and worn by paws.
+~
+23 0 0 0 0 0
+D1
+
+~
+
+~
+0 0 2355
+D2
+
+~
+
+~
+0 0 2358
+D3
+
+~
+
+~
+0 0 2353
+S
+#2355
+The Northeastern Cliff Path~
+A narrow path climbs toward the safe chamber above. Loose pebbles tick down into the dark whenever you move.
+~
+23 4 0 0 0 0
+D2
+
+~
+
+~
+0 0 2359
+D3
+
+~
+
+~
+0 0 2354
+D4
+
+~
+
+~
+0 0 2351
+S
+#2356
+The Old Kill Circle~
+Bones have been arranged in a rough circle, not by hands but by repeated feeding. The floor is stained dark between them.
+~
+23 0 0 0 0 0
+D0
+
+~
+
+~
+0 0 2352
+D1
+
+~
+
+~
+0 0 2357
+D2
+
+~
+
+~
+0 0 2360
+S
+#2357
+A Fur-Lined Hollow~
+Tufts of grey fur cling to cracks in the rock. The hollow is warm enough to suggest it was recently occupied.
+~
+23 0 0 0 0 0
+D0
+
+~
+
+~
+0 0 2353
+D1
+
+~
+
+~
+0 0 2358
+D2
+
+~
+
+~
+0 0 2361
+D3
+
+~
+
+~
+0 0 2356
+S
+#2358
+The Echoing Shelf~
+Every sound doubles here, then comes back as a low growl from the stone. The lake below catches none of it.
+~
+23 0 0 0 0 0
+D0
+
+~
+
+~
+0 0 2354
+D1
+
+~
+
+~
+0 0 2359
+D2
+
+~
+
+~
+0 0 2362
+D3
+
+~
+
+~
+0 0 2357
+S
+#2359
+A Narrow Ledge Run~
+The ledge narrows to a dangerous path along the wall. Something with claws has crossed it often and quickly.
+~
+23 0 0 0 0 0
+D0
+
+~
+
+~
+0 0 2355
+D2
+
+~
+
+~
+0 0 2363
+D3
+
+~
+
+~
+0 0 2358
+S
+#2360
+The Split Den~
+Two small dens open from the same chamber. One smells of wolves, the other of something older and less mammal.
+~
+23 0 0 0 0 0
+D0
+
+~
+
+~
+0 0 2356
+D1
+
+~
+
+~
+0 0 2361
+D2
+
+~
+
+~
+0 0 2364
+S
+#2361
+A Stone Fang Rise~
+Sharp stones jut from the floor like teeth. Fur and dried blood cling to the points.
+~
+23 0 0 0 0 0
+D0
+
+~
+
+~
+0 0 2357
+D1
+
+~
+
+~
+0 0 2362
+D2
+
+~
+
+~
+0 0 2365
+D3
+
+~
+
+~
+0 0 2360
+S
+#2362
+The Broken Camp Ring~
+The remains of a tiny campfire sit cold against the wall. Whatever camped here did not leave by choice.
+~
+23 0 0 0 0 0
+D0
+
+~
+
+~
+0 0 2358
+D1
+
+~
+
+~
+0 0 2363
+D2
+
+~
+
+~
+0 0 2366
+D3
+
+~
+
+~
+0 0 2361
+S
+#2363
+The Deep Growl Corner~
+The stone vibrates faintly under your boots. It might be distant water, or something growling in its sleep.
+~
+23 0 0 0 0 0
+D0
+
+~
+
+~
+0 0 2359
+D2
+
+~
+
+~
+0 0 2367
+D3
+
+~
+
+~
+0 0 2362
+S
+#2364
+The Southwestern Drop Shelf~
+The shelf breaks downward toward a safe resting ledge. The lake air rises colder here.
+~
+23 4 0 0 0 0
+D0
+
+~
+
+~
+0 0 2360
+D1
+
+~
+
+~
+0 0 2365
+D5
+A steep shelf drops into a milk-pale resting niche.
+~
+
+~
+0 0 2368
+S
+#2365
+A Paw-Worn Turn~
+The stone has been polished smooth by paws rounding this corner. Scratches climb the wall where something slipped.
+~
+23 0 0 0 0 0
+D0
+
+~
+
+~
+0 0 2361
+D1
+
+~
+
+~
+0 0 2366
+D3
+
+~
+
+~
+0 0 2364
+S
+#2366
+A Moonless Overlook~
+The cavern roof opens high above, but no sky shows through. The darkness overhead feels heavy and watchful.
+~
+23 0 0 0 0 0
+D0
+
+~
+
+~
+0 0 2362
+D1
+
+~
+
+~
+0 0 2367
+D3
+
+~
+
+~
+0 0 2365
+S
+#2367
+The Last Hunter's Shelf~
+The ledge widens before it falls away. Tracks overlap here, some wolf-like, some made by too many feet.
+~
+23 0 0 0 0 0
+D0
+
+~
+
+~
+0 0 2363
+D3
+
+~
+
+~
+0 0 2366
+S
+#2368
+A Milk-Pale Resting Niche~
+White mineral streaks run down the walls like spilled milk. The lake air rises from below, but this niche remains strangely calm.
+~
+23 20 0 0 0 0
+D4
+
+~
+
+~
+0 0 2364
+D5
+Cold lake air rises from the darkness below.
+~
+
+~
+0 0 2381
+S
+#2369
+A Shore of Pale Fish Bones~
+The black lake laps against a beach of pale fish bones. The bones click together whenever the water moves.
+~
+23 0 0 0 0 0
+D1
+
+~
+
+~
+0 0 2370
+D2
+
+~
+
+~
+0 0 2373
+S
+#2370
+The Glassy Water Edge~
+The water is so still it looks solid until a ripple crosses it. Something long has dragged itself through the wet sand.
+~
+23 0 0 0 0 0
+D1
+
+~
+
+~
+0 0 2371
+D2
+
+~
+
+~
+0 0 2374
+D3
+
+~
+
+~
+0 0 2369
+S
+#2371
+A Nest of Jointed Tracks~
+Many jointed legs have marked the mud in careful rows. The tracks circle back on themselves beside the water.
+~
+23 0 0 0 0 0
+D1
+
+~
+
+~
+0 0 2372
+D2
+
+~
+
+~
+0 0 2375
+D3
+
+~
+
+~
+0 0 2370
+S
+#2372
+The Northeastern Lake Descent~
+The shore narrows around a dark drop toward the final chamber. Cold mist crawls out of the opening.
+~
+23 4 0 0 0 0
+D2
+
+~
+
+~
+0 0 2376
+D3
+
+~
+
+~
+0 0 2371
+D5
+Mist spills from a narrow drop leading toward the boss chamber.
+~
+
+~
+0 0 2385
+S
+#2373
+The Silted Alcove~
+Fine silt covers the floor and remembers every step. Long body marks cut through it toward the lake.
+~
+23 0 0 0 0 0
+D0
+
+~
+
+~
+0 0 2369
+D1
+
+~
+
+~
+0 0 2374
+D2
+
+~
+
+~
+0 0 2377
+S
+#2374
+A Broken Shell Beach~
+Fragments of chitin crunch underfoot. Some pieces are larger than shields.
+~
+23 0 0 0 0 0
+D0
+
+~
+
+~
+0 0 2370
+D1
+
+~
+
+~
+0 0 2375
+D2
+
+~
+
+~
+0 0 2378
+D3
+
+~
+
+~
+0 0 2373
+S
+#2375
+The Black Reed Pocket~
+Pale reeds grow from cracks in the stone, though no sun reaches them. They rattle softly against one another.
+~
+23 0 0 0 0 0
+D0
+
+~
+
+~
+0 0 2371
+D1
+
+~
+
+~
+0 0 2376
+D2
+
+~
+
+~
+0 0 2379
+D3
+
+~
+
+~
+0 0 2374
+S
+#2376
+A Slime-Slick Crossing~
+The stone here is slick with lake slime. Every surface shines as if freshly polished by a wet body.
+~
+23 0 0 0 0 0
+D0
+
+~
+
+~
+0 0 2372
+D2
+
+~
+
+~
+0 0 2380
+D3
+
+~
+
+~
+0 0 2375
+S
+#2377
+The Drowned Stone Ring~
+A ring of stones vanishes beneath the lake surface. Bubbles rise from the center in slow, patient bursts.
+~
+23 0 0 0 0 0
+D0
+
+~
+
+~
+0 0 2373
+D1
+
+~
+
+~
+0 0 2378
+D2
+
+~
+
+~
+0 0 2381
+S
+#2378
+A Low Arthropleura Run~
+The ceiling drops low and the walls are scraped smooth. This path was worn by something broad and many-legged.
+~
+23 0 0 0 0 0
+D0
+
+~
+
+~
+0 0 2374
+D1
+
+~
+
+~
+0 0 2379
+D2
+
+~
+
+~
+0 0 2382
+D3
+
+~
+
+~
+0 0 2377
+S
+#2379
+The Cold Mud Shelf~
+Cold mud sucks at your boots. Bone splinters and chitin plates lie half-buried in it.
+~
+23 0 0 0 0 0
+D0
+
+~
+
+~
+0 0 2375
+D1
+
+~
+
+~
+0 0 2380
+D2
+
+~
+
+~
+0 0 2383
+D3
+
+~
+
+~
+0 0 2378
+S
+#2380
+A Whispering Lake Bend~
+The lake whispers against the stone in a rhythm that almost sounds like speech. No words survive the echo.
+~
+23 0 0 0 0 0
+D0
+
+~
+
+~
+0 0 2376
+D2
+
+~
+
+~
+0 0 2384
+D3
+
+~
+
+~
+0 0 2379
+S
+#2381
+The Southwestern Lake Landing~
+The safe chamber above gives way to this muddy landing. The air smells of milk, stone, and deep water.
+~
+23 4 0 0 0 0
+D0
+
+~
+
+~
+0 0 2377
+D1
+
+~
+
+~
+0 0 2382
+D4
+
+~
+
+~
+0 0 2368
+S
+#2382
+A Trail of Cracked Chitin~
+A trail of cracked chitin plates leads across the shore. Each plate is split from the inside.
+~
+23 0 0 0 0 0
+D0
+
+~
+
+~
+0 0 2378
+D1
+
+~
+
+~
+0 0 2383
+D3
+
+~
+
+~
+0 0 2381
+S
+#2383
+The Last Dry Stone~
+Dry stone juts into the lake like a small pier. Beyond it, the water swallows light without a ripple.
+~
+23 0 0 0 0 0
+D0
+
+~
+
+~
+0 0 2379
+D1
+
+~
+
+~
+0 0 2384
+D3
+
+~
+
+~
+0 0 2382
+S
+#2384
+The Bossward Shore~
+The shoreline bends toward the northeast, where the cave exhales cold mist. The bones here have been crushed flat.
+~
+23 0 0 0 0 0
+D0
+
+~
+
+~
+0 0 2380
+D3
+
+~
+
+~
+0 0 2383
+S
+#2385
+Before the Bone-Slick Drop~
+A narrow chamber waits below the lake shore. The air is sour with old meat and wet stone, and a sealed drop in the floor leads toward the thing that rules this little dark.
+~
+23 20 0 0 0 0
+D4
+
+~
+
+~
+0 0 2372
+D5
+A rounded stone seal blocks the drop into the reeking lair below.
+~
+stone seal gate
+~
+1 0 2386
+S
+#2386
+The Baby Kraken's Lair~
+The cavern walls are slick with blood and lake water. Bones lie in drifts around a deep pool, and every ripple in that pool feels like a hand reaching for your ankles.
 ~
 23 256 0 0 0 0
+D1
+
+~
+
+~
+0 0 2387
 D4
+
 ~
+
 ~
-0 0 -1
+0 0 2385
+S
+#2387
+A Quiet Chamber Beyond the Lair~
+Past the lair, the cave becomes still. Smooth black stones circle a patch of dry ground where an exit object or reward chest can be placed later.
+~
+23 20 0 0 0 0
+D3
+
+~
+
+~
+0 0 2386
 S
 $~

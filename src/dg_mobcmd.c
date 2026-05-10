@@ -413,7 +413,9 @@ ACMD(do_mload)
       tch = (*arg1 == UID_CHAR) ? get_char(arg1) : get_char_room_vis(ch, arg1, NULL);
       if (tch) {
         if (*arg2 && (pos = find_eq_pos_script(arg2)) >= 0 &&
-            !GET_EQ(tch, pos) && can_wear_on_pos(object, pos)) {
+            !GET_EQ(tch, pos) && can_wear_on_pos(object, pos) &&
+            !(pos == WEAR_SHIELD && GET_EQ(tch, WEAR_HOLD)) &&
+            !(pos == WEAR_HOLD && GET_EQ(tch, WEAR_SHIELD))) {
           object->instance_id = GET_INSTANCE_ID(tch);
           equip_char(tch, object, pos);
           load_otrigger(object);

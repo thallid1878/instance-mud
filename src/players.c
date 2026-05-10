@@ -39,6 +39,8 @@
 /* local functions */
 static void load_affects(FILE *fl, struct char_data *ch);
 static void load_skills(FILE *fl, struct char_data *ch);
+static void load_skill_ranks(FILE *fl, struct char_data *ch);
+static void migrate_skill_ranks_from_legacy(struct char_data *ch);
 static void load_quests(FILE *fl, struct char_data *ch);
 static void load_HMVS(struct char_data *ch, const char *line, int mode);
 static void write_aliases_ascii(FILE *file, struct char_data *ch);
@@ -249,8 +251,10 @@ int load_char(const char *name, struct char_data *ch)
 
     /* Character initializations. Necessary to keep some things straight. */
     ch->affected = NULL;
-    for (i = 1; i <= MAX_SKILLS; i++)
+    for (i = 1; i <= MAX_SKILLS; i++) {
       GET_SKILL(ch, i) = 0;
+      SET_SKILL_RANK(ch, i, 0);
+    }
     GET_SEX(ch) = PFDEF_SEX;
     GET_CLASS(ch) = PFDEF_CLASS;
     GET_LEVEL(ch) = PFDEF_LEVEL;
@@ -430,7 +434,8 @@ int load_char(const char *name, struct char_data *ch)
         break;
 
       case 'R':
-	     if (!strcmp(tag, "Room"))	GET_LOADROOM(ch)	= atoi(line);
+	     if (!strcmp(tag, "Rank"))	load_skill_ranks(fl, ch);
+	else if (!strcmp(tag, "Room"))	GET_LOADROOM(ch)	= atoi(line);
 	break;
 
       case 'S':
@@ -474,6 +479,7 @@ int load_char(const char *name, struct char_data *ch)
     }
   }
 
+  migrate_skill_ranks_from_legacy(ch);
   affect_total(ch);
   GET_CLASS(ch) = CLASS_NONE;
   SET_BIT_AR(PLR_FLAGS(ch), PLR_PLAYER);
@@ -483,7 +489,7 @@ int load_char(const char *name, struct char_data *ch)
   /* initialization for imms */
   if (GET_LEVEL(ch) >= LVL_IMMORT) {
     for (i = 1; i <= MAX_SKILLS; i++)
-      GET_SKILL(ch, i) = 100;
+      SET_SKILL_RANK(ch, i, 10);
     GET_COND(ch, HUNGER) = -1;
     GET_COND(ch, THIRST) = -1;
     GET_COND(ch, DRUNK) = -1;
@@ -679,12 +685,13 @@ void save_char(struct char_data * ch)
    fprintf(fl, "Trig: %d\n",GET_TRIG_VNUM(t));
 }
 
-  /* Save skills */
+  /* Save learned skill/spell ranks.  Legacy Skil percent values are imported
+   * on load but no longer written as the source of truth. */
   if (GET_LEVEL(ch) < LVL_IMMORT) {
-    fprintf(fl, "Skil:\n");
+    fprintf(fl, "Rank:\n");
     for (i = 1; i <= MAX_SKILLS; i++) {
-     if (GET_SKILL(ch, i))
-	fprintf(fl, "%d %d\n", i, GET_SKILL(ch, i));
+     if (GET_SKILL_RANK(ch, i))
+	fprintf(fl, "%d %d\n", i, GET_SKILL_RANK(ch, i));
     }
     fprintf(fl, "0 0\n");
   }
@@ -886,6 +893,29 @@ static void load_skills(FILE *fl, struct char_data *ch)
       if (num != 0)
 	GET_SKILL(ch, num) = num2;
   } while (num != 0);
+}
+
+static void load_skill_ranks(FILE *fl, struct char_data *ch)
+{
+  int num = 0, num2 = 0;
+  char line[MAX_INPUT_LENGTH + 1];
+
+  do {
+    get_line(fl, line);
+    sscanf(line, "%d %d", &num, &num2);
+    if (num != 0)
+      SET_SKILL_RANK(ch, num, num2);
+  } while (num != 0);
+}
+
+static void migrate_skill_ranks_from_legacy(struct char_data *ch)
+{
+  int i;
+
+  for (i = 1; i <= MAX_SKILLS; i++) {
+    if (GET_SKILL_RANK(ch, i) == 0 && GET_SKILL(ch, i) > 0)
+      SET_SKILL_RANK(ch, i, MIN(10, MAX(1, (GET_SKILL(ch, i) + 9) / 10)));
+  }
 }
 
 void load_quests(FILE *fl, struct char_data *ch)

@@ -144,7 +144,7 @@ ACMD(do_backstab)
   char buf[MAX_INPUT_LENGTH];
   struct char_data *vict;
 
-  if (IS_NPC(ch) || !GET_SKILL(ch, SKILL_BACKSTAB)) {
+  if (IS_NPC(ch) || !GET_SKILL_RANK(ch, SKILL_BACKSTAB)) {
     send_to_char(ch, "You have no idea how to do that.\r\n");
     return;
   }
@@ -282,7 +282,7 @@ ACMD(do_bash)
 
   one_argument(argument, arg);
 
-  if (IS_NPC(ch) || !GET_SKILL(ch, SKILL_BASH)) {
+  if (IS_NPC(ch) || !GET_SKILL_RANK(ch, SKILL_BASH)) {
     send_to_char(ch, "You have no idea how.\r\n");
     return;
   }
@@ -335,7 +335,7 @@ ACMD(do_rescue)
   char arg[MAX_INPUT_LENGTH];
   struct char_data *vict, *tmp_ch;
 
-  if (IS_NPC(ch) || !GET_SKILL(ch, SKILL_RESCUE)) {
+  if (IS_NPC(ch) || !GET_SKILL_RANK(ch, SKILL_RESCUE)) {
     send_to_char(ch, "You have no idea how to do that.\r\n");
     return;
   }
@@ -445,7 +445,7 @@ EVENTFUNC(event_whirlwind)
 ACMD(do_whirlwind)
 {
   
-  if (IS_NPC(ch) || !GET_SKILL(ch, SKILL_WHIRLWIND)) {
+  if (IS_NPC(ch) || !GET_SKILL_RANK(ch, SKILL_WHIRLWIND)) {
     send_to_char(ch, "You have no idea how.\r\n");
     return;
   }
@@ -485,7 +485,7 @@ ACMD(do_kick)
   char arg[MAX_INPUT_LENGTH];
   struct char_data *vict;
 
-  if (IS_NPC(ch) || !GET_SKILL(ch, SKILL_KICK)) {
+  if (IS_NPC(ch) || !GET_SKILL_RANK(ch, SKILL_KICK)) {
     send_to_char(ch, "You have no idea how.\r\n");
     return;
   }
@@ -508,7 +508,7 @@ ACMD(do_kick)
   if (!physical_skill_hits(ch, vict)) {
     damage(ch, vict, 0, SKILL_KICK);
   } else
-    damage(ch, vict, GET_LEVEL(ch) / 2, SKILL_KICK);
+    damage(ch, vict, GET_SKILL_RANK(ch, SKILL_KICK) * 2, SKILL_KICK);
 
   WAIT_STATE(ch, PULSE_VIOLENCE * 3);
 }
@@ -518,7 +518,7 @@ ACMD(do_bandage)
   char arg[MAX_INPUT_LENGTH];
   struct char_data * vict;
 
-  if (!GET_SKILL(ch, SKILL_BANDAGE))
+  if (!GET_SKILL_RANK(ch, SKILL_BANDAGE))
   {
     send_to_char(ch, "You are unskilled in the art of bandaging.\r\n");
     return;

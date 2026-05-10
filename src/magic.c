@@ -29,29 +29,19 @@ static int mag_materials(struct char_data *ch, IDXTYPE item0, IDXTYPE item1, IDX
 static void perform_mag_groups(int level, struct char_data *ch, struct char_data *tch, int spellnum, int savetype);
 
 
-/* Negative apply_saving_throw[] values make saving throws better! So do
- * negative modifiers.  Though people may be used to the reverse of that.
- * It's due to the code modifying the target saving throw instead of the
- * random number of the character as in some other systems. */
+/* Saving throws are now stat based. Positive saving throw applies improve the
+ * defender's chance to soften a spell effect. */
 int mag_savingthrow(struct char_data *ch, int type, int modifier)
 {
-  /* NPCs use warrior tables according to some book */
-  int class_sav = CLASS_WARRIOR;
-  int save;
+  int save_chance;
 
-  if (!IS_NPC(ch))
-    class_sav = GET_CLASS(ch);
+  if (ch == NULL)
+    return FALSE;
 
-  save = saving_throws(class_sav, type, GET_LEVEL(ch));
-  save += GET_SAVE(ch, type);
-  save += modifier;
+  save_chance = 10 + (GET_WIS(ch) / 2) + GET_SAVE(ch, type) - modifier;
+  save_chance = MIN(95, MAX(5, save_chance));
 
-  /* Throwing a 0 is always a failure. */
-  if (MAX(1, save) < rand_number(0, 99))
-    return (TRUE);
-
-  /* Oops, failed. Sorry. */
-  return (FALSE);
+  return rand_number(1, 100) <= save_chance;
 }
 
 bool spell_attack_hits(struct char_data *ch, struct char_data *victim, int savetype,
@@ -227,48 +217,78 @@ static int mag_materials(struct char_data *ch, IDXTYPE item0,
 /* Every spell that does damage comes through here.  This calculates the amount
  * of damage, adds in any modifiers, determines what the saves are, tests for
  * save and calls damage(). -1 = dead, otherwise the amount of damage done. */
+static int ranked_spell_damage_bonus(struct char_data *ch, int rank, int power)
+{
+  long long bonus;
+
+  if (ch == NULL || rank <= 0 || power <= 0)
+    return 0;
+
+  bonus = ((long long) MAX(1, GET_INT(ch)) * rank * power) / 10;
+  if (bonus > INT_MAX)
+    return INT_MAX;
+
+  return (int) bonus;
+}
+
 int mag_damage(int level, struct char_data *ch, struct char_data *victim,
 		     int spellnum, int savetype)
 {
   int dam = 0;
+  int rank, power = 0;
+  long long scaled_damage;
 
   if (victim == NULL || ch == NULL)
     return (0);
 
+  rank = MAX(1, GET_EFFECTIVE_SKILL_RANK(ch, spellnum));
+
   switch (spellnum) {
     /* Mostly mages */
   case SPELL_MAGIC_MISSILE:
+    power = 3;
+    if (IS_MAGIC_USER(ch))
+      dam = dice(rank * 3, rank * 8) + rank;
+    else
+      dam = dice(rank * 3, rank * 6) + rank;
+    break;
   case SPELL_CHILL_TOUCH:	/* chill touch also has an affect */
+    power = 3;
     if (IS_MAGIC_USER(ch))
       dam = dice(1, 8) + 1;
     else
       dam = dice(1, 6) + 1;
     break;
   case SPELL_BURNING_HANDS:
+    power = 5;
     if (IS_MAGIC_USER(ch))
       dam = dice(3, 8) + 3;
     else
       dam = dice(3, 6) + 3;
     break;
   case SPELL_SHOCKING_GRASP:
+    power = 7;
     if (IS_MAGIC_USER(ch))
       dam = dice(5, 8) + 5;
     else
       dam = dice(5, 6) + 5;
     break;
   case SPELL_LIGHTNING_BOLT:
+    power = 9;
     if (IS_MAGIC_USER(ch))
       dam = dice(7, 8) + 7;
     else
       dam = dice(7, 6) + 7;
     break;
   case SPELL_COLOR_SPRAY:
+    power = 11;
     if (IS_MAGIC_USER(ch))
       dam = dice(9, 8) + 9;
     else
       dam = dice(9, 6) + 9;
     break;
   case SPELL_FIREBALL:
+    power = 13;
     if (IS_MAGIC_USER(ch))
       dam = dice(11, 8) + 11;
     else
@@ -277,6 +297,7 @@ int mag_damage(int level, struct char_data *ch, struct char_data *victim,
 
     /* Mostly clerics */
   case SPELL_DISPEL_EVIL:
+    power = 11;
     dam = dice(6, 8) + 6;
     if (IS_EVIL(ch)) {
       victim = ch;
@@ -287,6 +308,7 @@ int mag_damage(int level, struct char_data *ch, struct char_data *victim,
     }
     break;
   case SPELL_DISPEL_GOOD:
+    power = 11;
     dam = dice(6, 8) + 6;
     if (IS_GOOD(ch)) {
       victim = ch;
@@ -299,29 +321,33 @@ int mag_damage(int level, struct char_data *ch, struct char_data *victim,
 
 
   case SPELL_CALL_LIGHTNING:
+    power = 9;
     dam = dice(7, 8) + 7;
     break;
 
   case SPELL_HARM:
+    power = 13;
     dam = dice(8, 8) + 8;
     break;
 
   case SPELL_ENERGY_DRAIN:
-    if (GET_LEVEL(victim) <= 2)
-      dam = 100;
-    else
-      dam = dice(1, 10);
+    power = 15;
+    dam = dice(1, 10);
     break;
 
     /* Area spells */
   case SPELL_EARTHQUAKE:
-    dam = dice(2, 8) + level;
+    power = 6;
+    dam = dice(2, 8);
     break;
 
   } /* switch(spellnum) */
 
-  if (dam > 0 && victim != ch)
-    dam += GET_SPELL_DAMAGE_BONUS(ch);
+  if (dam > 0 && victim != ch) {
+    scaled_damage = (long long) dam + GET_SPELL_DAMAGE_BONUS(ch) +
+      ranked_spell_damage_bonus(ch, rank, power);
+    dam = scaled_damage > INT_MAX ? INT_MAX : (int) scaled_damage;
+  }
 
   /* divide damage by two if victim makes his saving throw */
   if (mag_savingthrow(victim, savetype, 0))
@@ -343,11 +369,13 @@ void mag_affects(int level, struct char_data *ch, struct char_data *victim,
   struct affected_type af[MAX_SPELL_AFFECTS];
   bool accum_affect = FALSE, accum_duration = FALSE;
   const char *to_vict = NULL, *to_room = NULL;
-  int i, j;
+  int i, j, rank;
 
 
   if (victim == NULL || ch == NULL)
     return;
+
+  rank = MAX(1, GET_EFFECTIVE_SKILL_RANK(ch, spellnum));
 
   for (i = 0; i < MAX_SPELL_AFFECTS; i++) {
     new_affect(&(af[i]));
@@ -405,12 +433,12 @@ void mag_affects(int level, struct char_data *ch, struct char_data *victim,
 
   case SPELL_CURSE:
     af[0].location = APPLY_HITROLL;
-    af[0].duration = 1 + (GET_LEVEL(ch) / 2);
+    af[0].duration = 1 + rank;
     af[0].modifier = -1;
     SET_BIT_AR(af[0].bitvector, AFF_CURSE);
 
     af[1].location = APPLY_DAMROLL;
-    af[1].duration = 1 + (GET_LEVEL(ch) / 2);
+    af[1].duration = 1 + rank;
     af[1].modifier = -1;
     SET_BIT_AR(af[1].bitvector, AFF_CURSE);
 
@@ -421,21 +449,21 @@ void mag_affects(int level, struct char_data *ch, struct char_data *victim,
     break;
 
   case SPELL_DETECT_ALIGN:
-    af[0].duration = 12 + level;
+    af[0].duration = 12 + (rank * 2);
     SET_BIT_AR(af[0].bitvector, AFF_DETECT_ALIGN);
     accum_duration = TRUE;
     to_vict = "Your eyes tingle.";
     break;
 
   case SPELL_DETECT_INVIS:
-    af[0].duration = 12 + level;
+    af[0].duration = 12 + (rank * 2);
     SET_BIT_AR(af[0].bitvector, AFF_DETECT_INVIS);
     accum_duration = TRUE;
     to_vict = "Your eyes tingle.";
     break;
 
   case SPELL_DETECT_MAGIC:
-    af[0].duration = 12 + level;
+    af[0].duration = 12 + (rank * 2);
     SET_BIT_AR(af[0].bitvector, AFF_DETECT_MAGIC);
     accum_duration = TRUE;
     to_vict = "Your eyes tingle.";
@@ -449,7 +477,7 @@ void mag_affects(int level, struct char_data *ch, struct char_data *victim,
     break;
 
   case SPELL_INFRAVISION:
-    af[0].duration = 12 + level;
+    af[0].duration = 12 + (rank * 2);
     SET_BIT_AR(af[0].bitvector, AFF_INFRAVISION);
     accum_duration = TRUE;
     to_vict = "Your eyes glow red.";
@@ -460,7 +488,7 @@ void mag_affects(int level, struct char_data *ch, struct char_data *victim,
     if (!victim)
       victim = ch;
 
-    af[0].duration = 12 + (GET_LEVEL(ch) / 4);
+    af[0].duration = 12 + rank;
     af[0].modifier = 20;
     af[0].location = APPLY_HITROLL;
     SET_BIT_AR(af[0].bitvector, AFF_INVISIBLE);
@@ -471,7 +499,7 @@ void mag_affects(int level, struct char_data *ch, struct char_data *victim,
 
   case SPELL_POISON:
     af[0].location = APPLY_STR;
-    af[0].duration = GET_LEVEL(ch);
+    af[0].duration = rank;
     af[0].modifier = -2;
     SET_BIT_AR(af[0].bitvector, AFF_POISON);
     to_vict = "You feel very sick.";
@@ -500,7 +528,7 @@ void mag_affects(int level, struct char_data *ch, struct char_data *victim,
     if (MOB_FLAGGED(victim, MOB_NOSLEEP))
       return;
 
-    af[0].duration = 4 + (GET_LEVEL(ch) / 4);
+    af[0].duration = 4 + rank;
     SET_BIT_AR(af[0].bitvector, AFF_SLEEP);
 
     if (GET_POS(victim) > POS_SLEEPING) {
@@ -512,8 +540,8 @@ void mag_affects(int level, struct char_data *ch, struct char_data *victim,
 
   case SPELL_STRENGTH:
     af[0].location = APPLY_STR;
-    af[0].duration = (GET_LEVEL(ch) / 2) + 4;
-    af[0].modifier = 1 + (level > 18);
+    af[0].duration = 4 + (rank * 2);
+    af[0].modifier = 1 + (rank >= 6);
     accum_duration = TRUE;
     accum_affect = TRUE;
     to_vict = "You feel stronger!";
@@ -521,7 +549,7 @@ void mag_affects(int level, struct char_data *ch, struct char_data *victim,
 
   case SPELL_SENSE_LIFE:
     to_vict = "Your feel your awareness improve.";
-    af[0].duration = GET_LEVEL(ch);
+    af[0].duration = 12 + (rank * 2);
     SET_BIT_AR(af[0].bitvector, AFF_SENSE_LIFE);
     accum_duration = TRUE;
     break;
@@ -821,32 +849,50 @@ void mag_summons(int level, struct char_data *ch, struct obj_data *obj,
 /*----------------------------------------------------------------------------*/
 
 
+static long long ranked_percent_heal(struct char_data *victim, int rank, int percent_per_rank)
+{
+  long long healing;
+
+  if (victim == NULL || rank <= 0 || percent_per_rank <= 0 || GET_MAX_HIT(victim) <= 0)
+    return 0;
+
+  healing = (long long) GET_MAX_HIT(victim) * rank * percent_per_rank;
+  return healing / 100;
+}
+
 void mag_points(int level, struct char_data *ch, struct char_data *victim,
 		     int spellnum, int savetype)
 {
-  int healing = 0, move = 0;
+  long long healing = 0;
+  int move = 0;
+  int rank;
 
-  if (victim == NULL)
+  if (victim == NULL || ch == NULL)
     return;
+
+  rank = MAX(1, GET_EFFECTIVE_SKILL_RANK(ch, spellnum));
 
   switch (spellnum) {
   case SPELL_CURE_LIGHT:
-    healing = dice(1, 8) + 1 + (level / 4);
+    healing = dice(1, 8) + 1 + (rank * 4) +
+      ranked_percent_heal(victim, rank, 2);
     send_to_char(victim, "You feel better.\r\n");
     break;
   case SPELL_CURE_CRITIC:
-    healing = dice(3, 8) + 3 + (level / 4);
+    healing = dice(3, 8) + 3 + (rank * 10) +
+      ranked_percent_heal(victim, rank, 4);
     send_to_char(victim, "You feel a lot better!\r\n");
     break;
   case SPELL_HEAL:
-    healing = 100 + dice(3, 8);
+    healing = 100 + dice(3, 8) + (rank * 20) +
+      ranked_percent_heal(victim, rank, 8);
     send_to_char(victim, "A warm feeling floods your body.\r\n");
     break;
   }
   if (healing > 0)
     healing += GET_HEALING_BONUS(ch);
   if (healing > 0) {
-    long long healed = (long long)GET_HIT(victim) + healing;
+    long long healed = (long long) GET_HIT(victim) + healing;
 
     if (healed > GET_MAX_HIT(victim))
       healed = GET_MAX_HIT(victim);
@@ -907,14 +953,17 @@ void mag_alter_objs(int level, struct char_data *ch, struct obj_data *obj,
 		         int spellnum, int savetype)
 {
   const char *to_char = NULL, *to_room = NULL;
+  int rank;
 
-  if (obj == NULL)
+  if (obj == NULL || ch == NULL)
     return;
+
+  rank = MAX(1, GET_EFFECTIVE_SKILL_RANK(ch, spellnum));
 
   switch (spellnum) {
     case SPELL_BLESS:
       if (!OBJ_FLAGGED(obj, ITEM_BLESS) &&
-	  (GET_OBJ_WEIGHT(obj) <= 5 * GET_LEVEL(ch))) {
+	  (GET_OBJ_WEIGHT(obj) <= 5 * rank)) {
 	SET_BIT_AR(GET_OBJ_EXTRA(obj), ITEM_BLESS);
 	to_char = "$p glows briefly.";
       }

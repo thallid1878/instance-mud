@@ -242,6 +242,11 @@ int find_eq_pos_script(char *arg)
     {"waist",    WEAR_WAIST},
     {"rwrist",   WEAR_WRIST_R},
     {"lwrist",   WEAR_WRIST_L},
+    {"sheathed", WEAR_SHEATH_1},
+    {"sheath1",  WEAR_SHEATH_1},
+    {"sheath2",  WEAR_SHEATH_2},
+    {"sheath3",  WEAR_SHEATH_3},
+    {"sheath4",  WEAR_SHEATH_4},
     {"none", -1}
   };
 
@@ -281,6 +286,10 @@ int can_wear_on_pos(struct obj_data *obj, int pos)
     case WEAR_WAIST:    return CAN_WEAR(obj, ITEM_WEAR_WAIST);
     case WEAR_WRIST_R:
     case WEAR_WRIST_L:  return CAN_WEAR(obj, ITEM_WEAR_WRIST);
+    case WEAR_SHEATH_1:
+    case WEAR_SHEATH_2:
+    case WEAR_SHEATH_3:
+    case WEAR_SHEATH_4: return CAN_WEAR(obj, ITEM_WEAR_WIELD);
     default: return FALSE;
   }
 }

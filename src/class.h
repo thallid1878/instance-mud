@@ -14,7 +14,7 @@
 #define _CLASS_H_
 
 /* Functions available through class.c */
-int backstab_mult(int level);
+int backstab_mult(int rank);
 void do_start(struct char_data *ch);
 bitvector_t find_class_bitvector(const char *arg);
 int invalid_class(struct char_data *ch, struct obj_data *obj);
@@ -31,7 +31,5 @@ const char *title_male(int chclass, int level);
 extern const char *class_abbrevs[];
 extern const char *pc_class_types[];
 extern const char *class_menu;
-extern int prac_params[][NUM_CLASSES];
-extern struct guild_info_type guild_info[];
 
 #endif /* _CLASS_H_*/

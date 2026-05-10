@@ -348,13 +348,17 @@ const char *wear_where[] = {
   "<worn on feet>       ",
   "<worn on hands>      ",
   "<worn on arms>       ",
-  "<worn as shield>     ",
+  "<used as shield>     ",
   "<worn about body>    ",
   "<worn about waist>   ",
   "<worn around wrist>  ",
   "<worn around wrist>  ",
   "<wielded>            ",
-  "<held>               "
+  "<held>               ",
+  "<sheathed>           ",
+  "<sheathed>           ",
+  "<sheathed>           ",
+  "<sheathed>           "
 };
 
 /* Describes where an item can be worn.
@@ -372,13 +376,17 @@ const char *equipment_types[] = {
   "Worn on feet",
   "Worn on hands",
   "Worn on arms",
-  "Worn as shield",
+  "Used as shield",
   "Worn about body",
   "Worn around waist",
   "Worn around right wrist",
   "Worn around left wrist",
   "Wielded",
   "Held",
+  "Sheathed",
+  "Sheathed",
+  "Sheathed",
+  "Sheathed",
   "\n"
 };
 

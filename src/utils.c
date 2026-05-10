@@ -63,6 +63,59 @@ int dice(int num, int size)
   return (sum);
 }
 
+int skill_value_to_rank(int value)
+{
+  if (value <= 0)
+    return 0;
+
+  if (value <= 10)
+    return value;
+
+  return MIN(10, MAX(1, (value + 9) / 10));
+}
+
+int skill_rank_to_legacy_percent(int rank)
+{
+  return MIN(100, MAX(0, rank) * 10);
+}
+
+int get_skill_rank(struct char_data *ch, int skill)
+{
+  if (!ch || IS_NPC(ch) || skill < 1 || skill > MAX_SKILLS)
+    return 0;
+
+  return MIN(10, MAX(0, ch->player_specials->saved.skill_ranks[skill]));
+}
+
+int get_effective_skill_rank(struct char_data *ch, int skill)
+{
+  if (!ch || skill < 1 || skill > MAX_SKILLS)
+    return 0;
+
+  if (GET_CAST_RANK_OVERRIDE(ch) > 0)
+    return MIN(10, MAX(1, GET_CAST_RANK_OVERRIDE(ch)));
+
+  if (IS_NPC(ch))
+    return 10;
+
+  return get_skill_rank(ch, skill);
+}
+
+void set_skill_rank(struct char_data *ch, int skill, int rank)
+{
+  if (!ch || IS_NPC(ch) || skill < 1 || skill > MAX_SKILLS)
+    return;
+
+  rank = MIN(10, MAX(0, rank));
+  ch->player_specials->saved.skill_ranks[skill] = rank;
+  ch->player_specials->saved.skills[skill] = skill_rank_to_legacy_percent(rank);
+}
+
+int skill_rank_cost(int rank)
+{
+  return MAX(0, rank) * 1000;
+}
+
 /** Return the smaller number. Original note: Be wary of sign issues with this.
  * @param a The first number.
  * @param b The second number. */

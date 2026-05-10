@@ -145,7 +145,7 @@ ACMD(do_track)
   int dir;
 
   /* The character must have the track skill. */
-  if (IS_NPC(ch) || !GET_SKILL(ch, SKILL_TRACK)) {
+  if (IS_NPC(ch) || !GET_SKILL_RANK(ch, SKILL_TRACK)) {
     send_to_char(ch, "You have no idea how.\r\n");
     return;
   }

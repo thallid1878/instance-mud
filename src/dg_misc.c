@@ -21,18 +21,33 @@
 #include "spells.h"
 #include "constants.h"
 #include "fight.h"
+#include "instance.h"
 
 
 /* copied from spell_parser.c: */
 #define SINFO spell_info[spellnum]
 
+static void extract_dg_cast_proxy(struct char_data *caster)
+{
+  struct char_data *temp;
+
+  if (!caster)
+    return;
+
+  REMOVE_FROM_LIST(caster, character_list, next);
+  caster->next = NULL;
+
+  if (IN_ROOM(caster) != NOWHERE)
+    extract_char_final(caster);
+  else
+    free_char(caster);
+}
 
 /* Cast a spell; can be called by mobiles, objects and rooms, and no level
- * check is required. Note that mobs should generally use the normal 'cast'
- * command (which must be patched to allow mobs to cast spells) as the spell
- * system is designed to have a character caster, and this cast routine may
- * overlook certain issues. LIMITATION: a target MUST exist for the spell unless
- * the spell is set to TAR_IGNORE. Also, group spells are not permitted. */
+ * check is required. Syntax: dg_cast 'spell name' <target> [rank]. If rank is
+ * omitted, the spell is cast at rank 1. LIMITATION: a target MUST exist for
+ * the spell unless the spell is set to TAR_IGNORE. Also, group spells are not
+ * permitted. */
 void do_dg_cast(void *go, struct script_data *sc, trig_data *trig, int type, char *cmd)
 {
   struct char_data *caster = NULL;
@@ -40,8 +55,9 @@ void do_dg_cast(void *go, struct script_data *sc, trig_data *trig, int type, cha
   struct obj_data *tobj = NULL;
   struct room_data *caster_room = NULL;
   char *s, *t;
-  int spellnum, target = 0;
-  char buf2[MAX_STRING_LENGTH], orig_cmd[MAX_INPUT_LENGTH];
+  int spellnum, target = 0, rank = 1, old_rank = 0;
+  char orig_cmd[MAX_INPUT_LENGTH], args[MAX_INPUT_LENGTH];
+  char target_arg[MAX_INPUT_LENGTH], rank_arg[MAX_INPUT_LENGTH];
 
   /* need to get the caster or the room of the temporary caster */
   switch (type) {
@@ -87,16 +103,35 @@ void do_dg_cast(void *go, struct script_data *sc, trig_data *trig, int type, cha
     return;
   }
 
-  /* Find the target */
+  *args = '\0';
+  *target_arg = '\0';
+  *rank_arg = '\0';
   if (t != NULL) {
-    one_argument(strcpy(buf2, t), t);
     skip_spaces(&t);
+    strlcpy(args, t, sizeof(args));
+    if (IS_SET(SINFO.targets, TAR_IGNORE)) {
+      one_argument(args, rank_arg);
+    } else {
+      char *rest = one_argument(args, target_arg);
+
+      one_argument(rest, rank_arg);
+    }
   }
-  if (!IS_SET(SINFO.targets, TAR_IGNORE) && t != NULL && *t) {
+
+  if (*rank_arg) {
+    if (!is_number(rank_arg) || (rank = atoi(rank_arg)) < 1 || rank > 10) {
+      script_log("Trigger: %s, VNum %d. dg_cast: rank must be 1-10 (%s)",
+        GET_TRIG_NAME(trig), GET_TRIG_VNUM(trig), orig_cmd);
+      return;
+    }
+  }
+
+  /* Find the target */
+  if (!IS_SET(SINFO.targets, TAR_IGNORE) && *target_arg) {
     if (!target &&
           (IS_SET(SINFO.targets, TAR_CHAR_ROOM) ||
            IS_SET(SINFO.targets, TAR_CHAR_WORLD))) {
-      if ((tch = get_char(t)) != NULL)
+      if ((tch = get_char(target_arg)) != NULL)
         target = TRUE;
     }
 
@@ -105,7 +140,7 @@ void do_dg_cast(void *go, struct script_data *sc, trig_data *trig, int type, cha
            IS_SET(SINFO.targets, TAR_OBJ_EQUIP) ||
            IS_SET(SINFO.targets, TAR_OBJ_ROOM) ||
            IS_SET(SINFO.targets, TAR_OBJ_WORLD))) {
-      if ((tobj = get_obj(t)) != NULL)
+      if ((tobj = get_obj(target_arg)) != NULL)
         target = TRUE;
     }
 
@@ -114,6 +149,10 @@ void do_dg_cast(void *go, struct script_data *sc, trig_data *trig, int type, cha
         GET_TRIG_NAME(trig), GET_TRIG_VNUM(trig), orig_cmd);
       return;
     }
+  } else if (!IS_SET(SINFO.targets, TAR_IGNORE)) {
+    script_log("Trigger: %s, VNum %d. dg_cast: target required (%s)",
+      GET_TRIG_NAME(trig), GET_TRIG_VNUM(trig), orig_cmd);
+    return;
   }
 
   if (IS_SET(SINFO.routines, MAG_GROUPS)) {
@@ -123,6 +162,14 @@ void do_dg_cast(void *go, struct script_data *sc, trig_data *trig, int type, cha
   }
 
   if (!caster) {
+    room_rnum caster_room_rnum = room_data_rnum(caster_room);
+
+    if (caster_room_rnum == NOWHERE) {
+      script_log("Trigger: %s, VNum %d. dg_cast: invalid caster room (%s)",
+        GET_TRIG_NAME(trig), GET_TRIG_VNUM(trig), orig_cmd);
+      return;
+    }
+
     caster = read_mobile(DG_CASTER_PROXY, VIRTUAL);
     if (!caster) {
       script_log("dg_cast: Cannot load the caster mob!");
@@ -134,13 +181,18 @@ void do_dg_cast(void *go, struct script_data *sc, trig_data *trig, int type, cha
         strdup(((struct obj_data *)go)->short_description);
     else if (type==WLD_TRIGGER)
       caster->player.short_descr = strdup("The gods");
-    caster->next_in_room = caster_room->people;
-    caster_room->people = caster;
-    caster->in_room = real_room(caster_room->number);
-    call_magic(caster, tch, tobj, spellnum, DG_SPELL_LEVEL, CAST_SPELL);
-    extract_char(caster);
-  } else
-    call_magic(caster, tch, tobj, spellnum, GET_LEVEL(caster), CAST_SPELL);
+
+    caster->instance_id = caster_room->instance_id;
+    char_to_room(caster, caster_room_rnum);
+    GET_CAST_RANK_OVERRIDE(caster) = rank;
+    call_magic(caster, tch, tobj, spellnum, rank, CAST_SPELL);
+    extract_dg_cast_proxy(caster);
+  } else {
+    old_rank = GET_CAST_RANK_OVERRIDE(caster);
+    GET_CAST_RANK_OVERRIDE(caster) = rank;
+    call_magic(caster, tch, tobj, spellnum, rank, CAST_SPELL);
+    GET_CAST_RANK_OVERRIDE(caster) = old_rank;
+  }
 }
 
 /* Modify an affection on the target. affections can be of the AFF_x variety

@@ -30,10 +30,7 @@
 
 /* locally defined functions of local (file) scope */
 static int compare_spells(const void *x, const void *y);
-static const char *how_good(int percent);
-static int skill_rank(int percent);
-static int skill_percent_from_rank(int rank);
-static int skill_rank_cost(int rank);
+static const char *how_good_rank(int rank);
 static bool is_practicable_skill(int skill_num);
 static int stat_purchase_cost(int stat);
 static bool find_purchasable_stat(struct char_data *ch, char *argument,
@@ -64,36 +61,17 @@ void sort_spells(void)
   qsort(&spell_sort_info[1], MAX_SKILLS, sizeof(int), compare_spells);
 }
 
-static const char *how_good(int percent)
+static const char *how_good_rank(int rank)
 {
   static char buf[32];
-  int rank = skill_rank(percent);
 
-  if (percent < 0)
+  if (rank < 0)
     return " (error)";
   if (rank == 0)
     return "not learned";
 
   snprintf(buf, sizeof(buf), "rank %d", rank);
   return buf;
-}
-
-static int skill_rank(int percent)
-{
-  if (percent <= 0)
-    return 0;
-
-  return MIN(10, MAX(1, (percent + 9) / 10));
-}
-
-static int skill_percent_from_rank(int rank)
-{
-  return MIN(100, MAX(0, rank) * 10);
-}
-
-static int skill_rank_cost(int rank)
-{
-  return rank * 1000;
 }
 
 static bool is_practicable_skill(int skill_num)
@@ -199,13 +177,13 @@ void list_skills(struct char_data *ch)
   for (sortpos = 1; sortpos <= MAX_SKILLS; sortpos++) {
     i = spell_sort_info[sortpos];
     if (is_practicable_skill(i)) {
-      rank = skill_rank(GET_SKILL(ch, i));
+      rank = GET_SKILL_RANK(ch, i);
       if (rank == 0)
         continue;
 
       learned++;
       ret = snprintf(buf2 + len, sizeof(buf2) - len, "  %-24s %-8s",
-        spell_info[i].name, how_good(GET_SKILL(ch, i)));
+        spell_info[i].name, how_good_rank(rank));
       if (ret < 0 || len + ret >= sizeof(buf2))
         break;
       len += ret;
@@ -233,7 +211,7 @@ void list_skills(struct char_data *ch)
   for (sortpos = 1; sortpos <= MAX_SKILLS; sortpos++) {
     i = spell_sort_info[sortpos];
     if (is_practicable_skill(i)) {
-      rank = skill_rank(GET_SKILL(ch, i));
+      rank = GET_SKILL_RANK(ch, i);
       if (rank > 0)
         continue;
 
@@ -286,7 +264,7 @@ bool practice_purchase(struct char_data *ch, char *argument)
     return TRUE;
   }
 
-  rank = skill_rank(GET_SKILL(ch, skill_num));
+  rank = GET_SKILL_RANK(ch, skill_num);
   if (rank >= 10) {
     send_to_char(ch, "You have already mastered %s.\r\n", spell_info[skill_num].name);
     return TRUE;
@@ -300,7 +278,7 @@ bool practice_purchase(struct char_data *ch, char *argument)
   }
 
   GET_EXP(ch) -= cost;
-  SET_SKILL(ch, skill_num, skill_percent_from_rank(rank + 1));
+  SET_SKILL_RANK(ch, skill_num, rank + 1);
   save_char(ch);
   send_to_char(ch, "You spend %d experience and improve %s to rank %d.\r\n",
     cost, spell_info[skill_num].name, rank + 1);
@@ -309,10 +287,7 @@ bool practice_purchase(struct char_data *ch, char *argument)
 
 SPECIAL(guild)
 {
-  if (IS_NPC(ch) || !CMD_IS("practice"))
-    return (FALSE);
-
-  return practice_purchase(ch, argument);
+  return (FALSE);
 }
 
 SPECIAL(dump)
@@ -571,42 +546,6 @@ SPECIAL(magic_user)
 /* Special procedures for mobiles. */
 SPECIAL(guild_guard) 
 { 
-  int i, direction; 
-  struct char_data *guard = (struct char_data *)me; 
-  const char *buf = "The guard humiliates you, and blocks your way.\r\n"; 
-  const char *buf2 = "The guard humiliates $n, and blocks $s way."; 
-
-  if (!IS_MOVE(cmd) || AFF_FLAGGED(guard, AFF_BLIND)) 
-    return (FALSE); 
-     
-  if (GET_LEVEL(ch) >= LVL_IMMORT) 
-    return (FALSE); 
-   
-  /* find out what direction they are trying to go */ 
-  for (direction = 0; direction < NUM_OF_DIRS; direction++)
-    if (!strcmp(cmd_info[cmd].command, dirs[direction]))
-      for (direction = 0; direction < DIR_COUNT; direction++)
-		if (!strcmp(cmd_info[cmd].command, dirs[direction]) ||
-			!strcmp(cmd_info[cmd].command, autoexits[direction]))
-	      break; 
-
-  for (i = 0; guild_info[i].guild_room != NOWHERE; i++) { 
-    /* Wrong guild. */ 
-    if (IN_ROOM_VNUM(ch) != guild_info[i].guild_room)
-      continue; 
-
-    /* Wrong direction. */ 
-    if (direction != guild_info[i].direction) 
-      continue; 
-
-    /* Allow the people of the guild through. */ 
-    if (!IS_NPC(ch) && GET_CLASS(ch) == guild_info[i].pc_class) 
-      continue; 
-
-    send_to_char(ch, "%s", buf); 
-    act(buf2, FALSE, ch, 0, 0, TO_ROOM); 
-    return (TRUE); 
-  } 
   return (FALSE); 
 } 
 

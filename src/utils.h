@@ -581,6 +581,8 @@ int valid_room_rnum_instance(room_rnum rnum, int instance_id);
 
 /** Current position (standing, sitting) of ch. */
 #define GET_POS(ch)	  ((ch)->char_specials.position)
+/** Temporary spell rank override for scripted or object-driven casts. */
+#define GET_CAST_RANK_OVERRIDE(ch) ((ch)->char_specials.cast_rank_override)
 /** Unique ID of ch. */
 #define GET_IDNUM(ch)	  ((ch)->char_specials.saved.idnum)
 /** Returns contents of id field from x. */
@@ -659,10 +661,23 @@ int valid_room_rnum_instance(room_rnum rnum, int instance_id);
 /** The type of quest ch is currently participating in. */
 #define GET_QUEST_TYPE(ch)      (real_quest(GET_QUEST((ch))) != NOTHING ? aquest_table[real_quest(GET_QUEST((ch)))].type : AQ_UNDEFINED )
 
-/** The current skill level of ch for skill i. */
+int skill_value_to_rank(int value);
+int skill_rank_to_legacy_percent(int rank);
+int get_skill_rank(struct char_data *ch, int skill);
+int get_effective_skill_rank(struct char_data *ch, int skill);
+void set_skill_rank(struct char_data *ch, int skill, int rank);
+int skill_rank_cost(int rank);
+
+/** The legacy percent value of ch for skill i. */
 #define GET_SKILL(ch, i)	CHECK_PLAYER_SPECIAL((ch), ((ch)->player_specials->saved.skills[i]))
 /** Copy the current skill level i of ch to pct. */
 #define SET_SKILL(ch, i, pct)	do { CHECK_PLAYER_SPECIAL((ch), (ch)->player_specials->saved.skills[i]) = pct; } while(0)
+/** The current learned rank of ch for skill i. */
+#define GET_SKILL_RANK(ch, i)	get_skill_rank((ch), (i))
+/** Rank used by potency math. NPCs default to rank 10. */
+#define GET_EFFECTIVE_SKILL_RANK(ch, i)	get_effective_skill_rank((ch), (i))
+/** Set skill i on ch to rank, clamped to the 0-10 range. */
+#define SET_SKILL_RANK(ch, i, rank)	set_skill_rank((ch), (i), (rank))
 
 /** The player's default sector type when buildwalking */
 #define GET_BUILDWALK_SECTOR(ch) CHECK_PLAYER_SPECIAL((ch), ((ch)->player_specials->buildwalk_sector))

@@ -309,12 +309,12 @@ ACMD(do_skillset)
   struct char_data *vict;
   char name[MAX_INPUT_LENGTH];
   char buf[MAX_INPUT_LENGTH], helpbuf[MAX_STRING_LENGTH];
-  int skill, value, i, qend, pc, pl;
+  int skill, value, rank, i, qend;
 
   argument = one_argument(argument, name);
 
   if (!*name) {			/* no arguments. print an informative text */
-    send_to_char(ch, "Syntax: skillset <name> '<skill>' <value>\r\n"
+    send_to_char(ch, "Syntax: skillset <name> '<skill>' <rank>\r\n"
 		"Skill being one of the following:\r\n");
     for (qend = 0, i = 0; i <= TOP_SPELL_DEFINE; i++) {
       if (spell_info[i].name == unused_spellname)	/* This is valid. */
@@ -333,9 +333,6 @@ ACMD(do_skillset)
     return;
   }
   skip_spaces(&argument);
-  pc = GET_CLASS(vict);
-  pl = GET_LEVEL(vict);
-
   /* If there is no chars in argument */
   if (!*argument) {
     send_to_char(ch, "Skill name expected.\r\n");
@@ -364,35 +361,30 @@ ACMD(do_skillset)
   argument = one_argument(argument, buf);
 
   if (!*buf) {
-    send_to_char(ch, "Learned value expected.\r\n");
+    send_to_char(ch, "Rank value expected.\r\n");
     return;
   }
   value = atoi(buf);
   if (value < 0) {
-    send_to_char(ch, "Minimum value for learned is 0.\r\n");
+    send_to_char(ch, "Minimum rank is 0.\r\n");
     return;
   }
   if (value > 100) {
-    send_to_char(ch, "Max value for learned is 100.\r\n");
+    send_to_char(ch, "Max rank value is 10, or 100 for legacy percent input.\r\n");
     return;
   }
   if (IS_NPC(vict)) {
     send_to_char(ch, "You can't set NPC skills.\r\n");
     return;
   }
-  if ((spell_info[skill].min_level[(pc)] >= LVL_IMMORT) && (pl < LVL_IMMORT)) {
-    send_to_char(ch, "%s cannot be learned by mortals.\r\n", spell_info[skill].name);
-    return;
-  } else if (spell_info[skill].min_level[(pc)] > pl) {
-    send_to_char(ch, "%s is a level %d %s.\r\n", GET_NAME(vict), pl, pc_class_types[pc]);
-    send_to_char(ch, "The minimum level for %s is %d for %ss.\r\n", spell_info[skill].name, spell_info[skill].min_level[(pc)], pc_class_types[pc]);
-  }
-
   /* find_skill_num() guarantees a valid spell_info[] index, or -1, and we
    * checked for the -1 above so we are safe here. */
-  SET_SKILL(vict, skill, value);
-  mudlog(BRF, LVL_IMMORT, TRUE, "%s changed %s's %s to %d.", GET_NAME(ch), GET_NAME(vict), spell_info[skill].name, value);
-  send_to_char(ch, "You change %s's %s to %d.\r\n", GET_NAME(vict), spell_info[skill].name, value);
+  rank = skill_value_to_rank(value);
+  SET_SKILL_RANK(vict, skill, rank);
+  mudlog(BRF, LVL_IMMORT, TRUE, "%s changed %s's %s to rank %d.",
+    GET_NAME(ch), GET_NAME(vict), spell_info[skill].name, rank);
+  send_to_char(ch, "You change %s's %s to rank %d.\r\n", GET_NAME(vict),
+    spell_info[skill].name, rank);
 }
 
 /* By Michael Buselli. Traverse down the string until the begining of the next

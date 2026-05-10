@@ -56,7 +56,7 @@ static struct syllable syls[] = { { " ", " " }, { "ar", "abra" },
         "y", "l" }, { "z", "k" }, { "", "" } };
 
 static int mag_manacost(struct char_data *ch, int spellnum) {
-  int rank = MIN(10, MAX(1, (GET_SKILL(ch, spellnum) + 9) / 10));
+  int rank = MAX(1, GET_SKILL_RANK(ch, spellnum));
 
   return MAX(SINFO.mana_max - (SINFO.mana_change * (rank - 1)), SINFO.mana_min);
 }
@@ -540,7 +540,7 @@ ACMD(do_cast) {
     send_to_char(ch, "Cast what?!?\r\n");
     return;
   }
-  if (GET_SKILL(ch, spellnum) == 0) {
+  if (GET_SKILL_RANK(ch, spellnum) == 0) {
     send_to_char(ch, "You are unfamiliar with that spell.\r\n");
     return;
   }

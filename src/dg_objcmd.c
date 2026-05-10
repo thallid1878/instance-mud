@@ -626,7 +626,9 @@ static OCMD(do_dgoload)
       tch = get_char_near_obj(obj, arg1);
       if (tch) {
         if (*arg2 && (pos = find_eq_pos_script(arg2)) >= 0 &&
-            !GET_EQ(tch, pos) && can_wear_on_pos(object, pos)) {
+            !GET_EQ(tch, pos) && can_wear_on_pos(object, pos) &&
+            !(pos == WEAR_SHIELD && GET_EQ(tch, WEAR_HOLD)) &&
+            !(pos == WEAR_HOLD && GET_EQ(tch, WEAR_SHIELD))) {
           equip_char(tch, object, pos);
           load_otrigger(object);
           return;

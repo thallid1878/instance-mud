@@ -368,8 +368,12 @@
 #define WEAR_WRIST_L   15  /**< Equipment Location Left Wrist */
 #define WEAR_WIELD     16  /**< Equipment Location Weapon */
 #define WEAR_HOLD      17  /**< Equipment Location held in offhand */
+#define WEAR_SHEATH_1  18  /**< Equipment Location Sheathed weapon #1 */
+#define WEAR_SHEATH_2  19  /**< Equipment Location Sheathed weapon #2 */
+#define WEAR_SHEATH_3  20  /**< Equipment Location Sheathed weapon #3 */
+#define WEAR_SHEATH_4  21  /**< Equipment Location Sheathed weapon #4 */
 /** Total number of available equipment lcoations */
-#define NUM_WEARS      18
+#define NUM_WEARS      22
 
 /* object-related defines */
 /* Item types: used by obj_data.obj_flags.type_flag */
@@ -938,6 +942,7 @@ struct char_special_data
   struct char_data *next_in_furniture; /**< Next person sitting, else NULL */
 
   byte position; /**< Standing, fighting, sleeping, etc. */
+  byte cast_rank_override; /**< Temporary rank override for scripted casts. */
 
   int carry_weight; /**< Carried weight */
   byte carry_items; /**< Number of items carried */
@@ -950,6 +955,7 @@ struct char_special_data
 struct player_special_data_saved
 {
   byte skills[MAX_SKILLS+1]; /**< Character skills. */
+  byte skill_ranks[MAX_SKILLS+1]; /**< Character skill/spell ranks, 0-10. */
   int wimp_level;         /**< Below this # of hit points, flee! */
   byte freeze_level;      /**< Level of god who froze char, if any */
   sh_int invis_level;     /**< level of invisibility */

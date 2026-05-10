@@ -107,7 +107,7 @@ ACMD(do_sneak)
 {
   struct affected_type af;
 
-  if (IS_NPC(ch) || !GET_SKILL(ch, SKILL_SNEAK)) {
+  if (IS_NPC(ch) || !GET_SKILL_RANK(ch, SKILL_SNEAK)) {
     send_to_char(ch, "You have no idea how to do that.\r\n");
     return;
   }
@@ -124,7 +124,7 @@ ACMD(do_sneak)
 
 ACMD(do_hide)
 {
-  if (IS_NPC(ch) || !GET_SKILL(ch, SKILL_HIDE)) {
+  if (IS_NPC(ch) || !GET_SKILL_RANK(ch, SKILL_HIDE)) {
     send_to_char(ch, "You have no idea how to do that.\r\n");
     return;
   }
@@ -144,7 +144,7 @@ ACMD(do_steal)
   char vict_name[MAX_INPUT_LENGTH], obj_name[MAX_INPUT_LENGTH];
   int gold, eq_pos;
 
-  if (IS_NPC(ch) || !GET_SKILL(ch, SKILL_STEAL)) {
+  if (IS_NPC(ch) || !GET_SKILL_RANK(ch, SKILL_STEAL)) {
     send_to_char(ch, "You have no idea how to do that.\r\n");
     return;
   }

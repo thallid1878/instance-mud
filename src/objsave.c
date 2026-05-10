@@ -212,6 +212,8 @@ static void auto_equip(struct char_data *ch, struct obj_data *obj, int location)
     case WEAR_SHIELD:
       if (!CAN_WEAR(obj, ITEM_WEAR_SHIELD))
         location = LOC_INVENTORY;
+      else if (GET_EQ(ch, WEAR_HOLD))
+        location = LOC_INVENTORY;
       break;
     case WEAR_ABOUT:
       if (!CAN_WEAR(obj, ITEM_WEAR_ABOUT))
@@ -231,11 +233,22 @@ static void auto_equip(struct char_data *ch, struct obj_data *obj, int location)
         location = LOC_INVENTORY;
       break;
     case WEAR_HOLD:
+      if (GET_EQ(ch, WEAR_SHIELD)) {
+        location = LOC_INVENTORY;
+        break;
+      }
       if (CAN_WEAR(obj, ITEM_WEAR_HOLD))
         break;
       if (IS_WARRIOR(ch) && CAN_WEAR(obj, ITEM_WEAR_WIELD) && GET_OBJ_TYPE(obj) == ITEM_WEAPON)
         break;
       location = LOC_INVENTORY;
+      break;
+    case WEAR_SHEATH_1:
+    case WEAR_SHEATH_2:
+    case WEAR_SHEATH_3:
+    case WEAR_SHEATH_4:
+      if (!CAN_WEAR(obj, ITEM_WEAR_WIELD))
+        location = LOC_INVENTORY;
       break;
     default:
       location = LOC_INVENTORY;

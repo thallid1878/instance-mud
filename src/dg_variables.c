@@ -82,8 +82,55 @@ char *skill_percent(struct char_data *ch, char *skill)
   skillnum = find_skill_num(skill);
   if (skillnum<=0) return("unknown skill");
 
-  snprintf(retval, sizeof(retval), "%d", GET_SKILL(ch, skillnum));
+  snprintf(retval, sizeof(retval), "%d", GET_SKILL_RANK(ch, skillnum));
   return retval;
+}
+
+static int parse_skill_rank_argument(const char *argument, char *skillname,
+    size_t skillname_size, int *rank)
+{
+  char work[MAX_INPUT_LENGTH];
+  char *skill_arg, *rank_arg, *end;
+  size_t len;
+
+  if (!argument || !*argument || !skillname || skillname_size == 0 || !rank)
+    return FALSE;
+
+  strlcpy(work, argument, sizeof(work));
+  skill_arg = work;
+  skip_spaces(&skill_arg);
+
+  end = skill_arg + strlen(skill_arg);
+  while (end > skill_arg && isspace((unsigned char) *(end - 1)))
+    end--;
+  *end = '\0';
+
+  rank_arg = end;
+  while (rank_arg > skill_arg && !isspace((unsigned char) *(rank_arg - 1)))
+    rank_arg--;
+
+  if (!*rank_arg || !is_number(rank_arg))
+    return FALSE;
+
+  *rank = atoi(rank_arg);
+
+  while (rank_arg > skill_arg && isspace((unsigned char) *(rank_arg - 1)))
+    rank_arg--;
+  *rank_arg = '\0';
+
+  skip_spaces(&skill_arg);
+  len = strlen(skill_arg);
+  if (len >= 2 && ((*skill_arg == '"' && skill_arg[len - 1] == '"') ||
+      (*skill_arg == '\'' && skill_arg[len - 1] == '\''))) {
+    skill_arg[len - 1] = '\0';
+    skill_arg++;
+  }
+
+  if (!*skill_arg)
+    return FALSE;
+
+  strlcpy(skillname, skill_arg, skillname_size);
+  return TRUE;
 }
 
 /* Search through all the persons items, including containers. 0 if it doesnt
@@ -1081,15 +1128,25 @@ void find_replacement(void *go, struct script_data *sc, trig_data *trig,
             snprintf(str, slen, "%s", skill_percent(c, subfield));
           else if (!str_cmp(field, "skillset")) {
             if (!IS_NPC(c) && subfield && *subfield) {
-              char skillname[MAX_INPUT_LENGTH], *amount;
-              amount = one_word(subfield, skillname);
-              skip_spaces(&amount);
-              if (amount && *amount && is_number(amount)) {
-                int skillnum = find_skill_num(skillname);
-                if (skillnum > 0) {
-                  int new_value = MAX(0, MIN(100, atoi(amount)));
-                  SET_SKILL(c, skillnum, new_value);
+              char skillname[MAX_INPUT_LENGTH];
+              int rank = 0;
+
+              if (parse_skill_rank_argument(subfield, skillname, sizeof(skillname), &rank)) {
+                if (rank < 0 || rank > 10) {
+                  script_log("Trigger: %s, VNum %d. skillset rank must be 0-10.",
+                      GET_TRIG_NAME(trig), GET_TRIG_VNUM(trig));
+                } else {
+                  int skillnum = find_skill_num(skillname);
+
+                  if (skillnum > 0)
+                    SET_SKILL_RANK(c, skillnum, rank);
+                  else
+                    script_log("Trigger: %s, VNum %d. skillset unknown skill '%s'.",
+                        GET_TRIG_NAME(trig), GET_TRIG_VNUM(trig), skillname);
                 }
+              } else {
+                script_log("Trigger: %s, VNum %d. skillset syntax is %%actor.skillset(<skill name> <rank>)%%.",
+                    GET_TRIG_NAME(trig), GET_TRIG_VNUM(trig));
               }
             }
             *str = '\0'; /* so the parser know we recognize 'skillset' as a field */

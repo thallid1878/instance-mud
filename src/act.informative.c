@@ -41,7 +41,6 @@ static void look_at_target(struct char_data *ch, char *arg);
 static void look_in_direction(struct char_data *ch, int dir);
 static void look_in_obj(struct char_data *ch, char *arg);
 static long stat_experience_spent(stat_value_t stat);
-static int score_skill_rank(int percent);
 static bool score_is_buyable_skill(int skill_num);
 static long skill_experience_spent(struct char_data *ch);
 static long character_power_rating(struct char_data *ch);
@@ -419,78 +418,61 @@ static void list_char_to_char(struct char_data *list, struct char_data *ch)
     }
 }
 
-static void do_auto_exits(struct char_data *ch)
+static void show_detailed_exits(struct char_data *ch)
 {
-  int door, slen = 0;
+  int door, found = 0;
 
-  send_to_char(ch, "%s[ Exits: ", CCCYN(ch, C_NRM));
-
-  for (door = 0; door < DIR_COUNT; door++) {
-    if (!EXIT(ch, door) || EXIT(ch, door)->to_room == NOWHERE)
-      continue;
-    if (EXIT_FLAGGED(EXIT(ch, door), EX_CLOSED) && !CONFIG_DISP_CLOSED_DOORS)
-      continue;
-    if (EXIT_FLAGGED(EXIT(ch, door), EX_HIDDEN) && !PRF_FLAGGED(ch, PRF_HOLYLIGHT))
-      continue;
-    if (EXIT_FLAGGED(EXIT(ch, door), EX_CLOSED))
-      send_to_char(ch, "%s(%s)%s ", EXIT_FLAGGED(EXIT(ch, door), EX_HIDDEN) ? CCWHT(ch, C_NRM) : CCRED(ch, C_NRM), autoexits[door], CCCYN(ch, C_NRM));
-    else if (EXIT_FLAGGED(EXIT(ch, door), EX_HIDDEN))
-      send_to_char(ch, "%s%s%s ", CCWHT(ch, C_NRM), autoexits[door], CCCYN(ch, C_NRM));
-    else
-      send_to_char(ch, "\t(%s\t) ", autoexits[door]);
-    slen++;
-  }
-
-  send_to_char(ch, "%s]%s\r\n", slen ? "" : "None!", CCNRM(ch, C_NRM));
-}
-
-ACMD(do_exits)
-{
-  int door, len = 0;
-
-  if (AFF_FLAGGED(ch, AFF_BLIND) && GET_LEVEL(ch) < LVL_IMMORT)
-  {
+  if (AFF_FLAGGED(ch, AFF_BLIND) && GET_LEVEL(ch) < LVL_IMMORT) {
     send_to_char(ch, "You can't see a damned thing, you're blind!\r\n");
     return;
   }
 
   send_to_char(ch, "Obvious exits:\r\n");
 
-  for (door = 0; door < DIR_COUNT; door++)
-  {
-    if (!EXIT(ch, door) || EXIT(ch, door)->to_room == NOWHERE)
+  for (door = 0; door < DIR_COUNT; door++) {
+    struct room_direction_data *exit = EXIT(ch, door);
+    struct room_data *to_room;
+
+    if (!exit || exit->to_room == NOWHERE)
       continue;
-    if (EXIT_FLAGGED(EXIT(ch, door), EX_CLOSED) && !CONFIG_DISP_CLOSED_DOORS)
+    if (EXIT_FLAGGED(exit, EX_CLOSED) && !CONFIG_DISP_CLOSED_DOORS)
       continue;
-    if (EXIT_FLAGGED(EXIT(ch, door), EX_HIDDEN) && !PRF_FLAGGED(ch, PRF_HOLYLIGHT))
+    if (EXIT_FLAGGED(exit, EX_HIDDEN) && !PRF_FLAGGED(ch, PRF_HOLYLIGHT))
       continue;
 
-    len++;
+    found++;
+    to_room = room_by_rnum_instance(exit->to_room, GET_INSTANCE_ID(ch));
 
-    if (!IS_NPC(ch) && PRF_FLAGGED(ch, PRF_SHOWVNUMS) && !EXIT_FLAGGED(EXIT(ch, door), EX_CLOSED))
-    {
-      struct room_data *to_room = room_by_rnum_instance(EXIT(ch, door)->to_room, GET_INSTANCE_ID(ch));
-
-      send_to_char(ch, "%-5s -[%5d]%s %s\r\n", dirs[door], to_room ? to_room->number : NOWHERE,
-        EXIT_FLAGGED(EXIT(ch, door), EX_HIDDEN) ? "[HIDDEN]" : "", to_room ? to_room->name : "Nowhere");
-    }
-    else if (CONFIG_DISP_CLOSED_DOORS && EXIT_FLAGGED(EXIT(ch, door), EX_CLOSED))
-    {
-      /*But we tell them the door is closed */
-      send_to_char(ch, "%-5s - The %s is closed%s\r\n", dirs[door],
-        (EXIT(ch, door)->keyword) ? fname(EXIT(ch, door)->keyword) : "opening",
-        EXIT_FLAGGED(EXIT(ch, door), EX_HIDDEN) ? " and hidden." : ".");
-    }
-    else
-    {
-      struct room_data *to_room = room_by_rnum_instance(EXIT(ch, door)->to_room, GET_INSTANCE_ID(ch));
-
-      send_to_char(ch, "%-5s - %s\r\n", dirs[door], room_data_is_dark(to_room) &&
-        !CAN_SEE_IN_DARK(ch) ? "Too dark to tell." : to_room ? to_room->name : "Nowhere");
+    if (GET_LEVEL(ch) >= LVL_IMMORT) {
+      send_to_char(ch, "%-5s - [%5d]%s %s%s%s%s\r\n", dirs[door],
+        to_room ? to_room->number : NOWHERE,
+        EXIT_FLAGGED(exit, EX_HIDDEN) ? " [HIDDEN]" : "",
+        to_room ? to_room->name : "Nowhere",
+        EXIT_FLAGGED(exit, EX_CLOSED) ? " - CLOSED" : "",
+        EXIT_FLAGGED(exit, EX_LOCKED) ? " - LOCKED" : "",
+        EXIT_FLAGGED(exit, EX_PICKPROOF) ? " - PICKPROOF" : "");
+    } else if (EXIT_FLAGGED(exit, EX_CLOSED)) {
+      send_to_char(ch, "%-5s - The %s is closed.\r\n", dirs[door],
+        exit->keyword ? fname(exit->keyword) : "opening");
+    } else if (to_room && room_data_is_dark(to_room) && !CAN_SEE_IN_DARK(ch)) {
+      send_to_char(ch, "%-5s - Too dark to tell.\r\n", dirs[door]);
+    } else {
+      send_to_char(ch, "%-5s - %s\r\n", dirs[door], to_room ? to_room->name : "Nowhere");
     }
   }
-    if (!len)
-      send_to_char(ch, " None.\r\n");
+
+  if (!found)
+    send_to_char(ch, " None.\r\n");
+}
+
+static void do_auto_exits(struct char_data *ch)
+{
+  show_detailed_exits(ch);
+}
+
+ACMD(do_exits)
+{
+  show_detailed_exits(ch);
 }
 
 void look_at_room(struct char_data *ch, int ignore_brief)
@@ -822,17 +804,9 @@ static long stat_experience_spent(stat_value_t stat)
   return (points_bought * (points_bought + 1) / 2) * 100;
 }
 
-static int score_skill_rank(int percent)
-{
-  if (percent <= 0)
-    return 0;
-
-  return MIN(10, MAX(1, (percent + 9) / 10));
-}
-
 static bool score_is_buyable_skill(int skill_num)
 {
-  if (skill_num <= MAX_SPELLS || skill_num > MAX_SKILLS)
+  if (skill_num < 1 || skill_num > MAX_SKILLS)
     return FALSE;
   if (spell_info[skill_num].name == unused_spellname)
     return FALSE;
@@ -851,9 +825,9 @@ static long skill_experience_spent(struct char_data *ch)
     if (!score_is_buyable_skill(skill_num))
       continue;
 
-    rank = score_skill_rank(GET_SKILL(ch, skill_num));
+    rank = GET_SKILL_RANK(ch, skill_num);
     for (i = 1; i <= rank; i++)
-      total += i * i * 1000;
+      total += skill_rank_cost(i);
   }
 
   return total;
@@ -1057,17 +1031,42 @@ ACMD(do_inventory)
 
 ACMD(do_equipment)
 {
-  int i, found = 0;
+  const int equipment_display_order[] = {
+    WEAR_HEAD,
+    WEAR_NECK_1,
+    WEAR_NECK_2,
+    WEAR_SHEATH_1,
+    WEAR_SHEATH_2,
+    WEAR_ABOUT,
+    WEAR_BODY,
+    WEAR_HANDS,
+    WEAR_ARMS,
+    WEAR_WRIST_R,
+    WEAR_WRIST_L,
+    WEAR_FINGER_R,
+    WEAR_FINGER_L,
+    WEAR_WAIST,
+    WEAR_SHEATH_3,
+    WEAR_SHEATH_4,
+    WEAR_LEGS,
+    WEAR_FEET,
+    WEAR_LIGHT,
+    WEAR_WIELD,
+    WEAR_SHIELD,
+    WEAR_HOLD
+  };
+  int i, pos, found = 0;
 
   send_to_char(ch, "You are using:\r\n");
   for (i = 0; i < NUM_WEARS; i++) {
-    if (GET_EQ(ch, i)) {
+    pos = equipment_display_order[i];
+    if (GET_EQ(ch, pos)) {
       found = TRUE;
-      if (CAN_SEE_OBJ(ch, GET_EQ(ch, i))) {
-        send_to_char(ch, "%s", wear_where[i]);
-        show_obj_to_char(GET_EQ(ch, i), ch, SHOW_OBJ_SHORT);
+      if (CAN_SEE_OBJ(ch, GET_EQ(ch, pos))) {
+        send_to_char(ch, "%s", wear_where[pos]);
+        show_obj_to_char(GET_EQ(ch, pos), ch, SHOW_OBJ_SHORT);
       } else {
-        send_to_char(ch, "%s", wear_where[i]);
+        send_to_char(ch, "%s", wear_where[pos]);
         send_to_char(ch, "Something.\r\n");
       }
     }

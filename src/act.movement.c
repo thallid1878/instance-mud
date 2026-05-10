@@ -611,7 +611,7 @@ static int ok_pick(struct char_data *ch, obj_vnum keynum, int pickproof, int scm
 
   if (keynum == NOTHING)
     send_to_char(ch, "Odd - you can't seem to find a keyhole.\r\n");
-  else if (IS_NPC(ch) || !GET_SKILL(ch, SKILL_PICK_LOCK))
+  else if (IS_NPC(ch) || !GET_SKILL_RANK(ch, SKILL_PICK_LOCK))
     send_to_char(ch, "You have no idea how to pick locks.\r\n");
   else if (pickproof)
     send_to_char(ch, "It resists your attempts to pick it.\r\n");

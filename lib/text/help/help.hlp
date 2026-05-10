@@ -1666,9 +1666,9 @@ saving_petri()  - The actors saving throw for petrification. Subfield adjusts.
 saving_breath() - The actors saving throw for breath weapons. Subfield adjusts.
 saving_spell()  - The actors saving throw for spells. Subfield adjusts.
 sex             - The actor's sex, as a string: MALE, FEMALE, or NEUTRAL.
-skill()         - The percentage of learnedness in the skill subfield.
-skillset("" #)  - Set the actors practiced level any skill or spell (1-100).
-                  %actor.skillset("magic missile" 95)%.
+skill()         - The actor's rank in the skill or spell subfield.
+skillset("" #)  - Set the actor's skill or spell rank (0-10).
+                  %actor.skillset("magic missile" 5)%.
 thirst()        - The actor's thirst. Subfield sets, -1 is off.
 title()         - The actor's title. Subfield sets. Not used for mobs.
 varexists()     - Returns 1 if global variable in subfield exists, 0 if not.
@@ -2578,6 +2578,22 @@ If you lose interest in a carried item, you can drop it on the ground.
   > drop 1000 coins
 
 See also: DONATE, GET, JUNK
+#0
+DRAW
+
+Usage: draw
+       draw <weapon>
+       draw <sheath number>
+
+Draws a weapon from one of your sheathes. If your wielded hand is empty, the
+weapon is drawn there first. If you are already wielding a weapon, draw will
+try to place the weapon in your held/off-hand slot instead.
+
+  > draw
+  > draw dagger
+  > draw 2
+
+See also: SHEATHE, EQUIPMENT, WIELD
 #0
 DRUNK WINE LIQUID-CONTAINERS BEER SPIRITS DRINK-TYPES LIQUOR WHISKEY WHISKY LIQUIDS LIQ-CONTAINERS
 
@@ -8734,6 +8750,20 @@ TIME       Time until reboot/shutdown. Omit to reboot/shutdown right away.
  
 See Also: COPYOVER, AUTOSAVE
 #31
+SHEATHE SHEATH
+
+Usage: sheathe
+       sheathe <weapon>
+
+Sheathes one weapon at a time into the first open sheath slot. With no
+argument, your held/off-hand weapon is sheathed first, then your wielded weapon
+if your off hand is empty. You can also target the weapon keyword directly.
+
+  > sheathe
+  > sheathe dagger
+
+See also: DRAW, EQUIPMENT, WIELD
+#0
 SIGNS
 
    A sign can be made by creating a room extra description with keyword sign or

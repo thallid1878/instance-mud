@@ -114,7 +114,7 @@ ASPELL(spell_summon)
   if (ch == NULL || victim == NULL)
     return;
 
-  if (GET_LEVEL(victim) > MIN(LVL_IMMORT - 1, level + 3)) {
+  if (!IS_NPC(victim) && GET_LEVEL(victim) >= LVL_IMMORT) {
     send_to_char(ch, "%s", SUMMON_FAIL);
     return;
   }
@@ -219,7 +219,7 @@ ASPELL(spell_locate_object)
 {
   struct obj_data *i;
   char name[MAX_INPUT_LENGTH];
-  int j;
+  int j, rank;
 
   if (!obj) {
     send_to_char(ch, "You sense nothing.\r\n");
@@ -229,7 +229,8 @@ ASPELL(spell_locate_object)
   /*  added a global var to catch 2nd arg. */
   sprintf(name, "%s", cast_arg2);
 
-  j = GET_LEVEL(ch) / 2;  /* # items to show = twice char's level */
+  rank = MAX(1, GET_EFFECTIVE_SKILL_RANK(ch, SPELL_LOCATE_OBJECT));
+  j = rank * 2;
 
   for (i = object_list; i && (j > 0); i = i->next) {
     if (!isname_obj(name, i->name))
@@ -255,12 +256,17 @@ ASPELL(spell_locate_object)
 ASPELL(spell_charm)
 {
   struct affected_type af;
+  int rank;
 
   if (victim == NULL || ch == NULL)
     return;
 
+  rank = MAX(1, GET_EFFECTIVE_SKILL_RANK(ch, SPELL_CHARM));
+
   if (victim == ch)
     send_to_char(ch, "You like yourself even better!\r\n");
+  else if (!IS_NPC(victim) && GET_LEVEL(victim) >= LVL_IMMORT)
+    send_to_char(ch, "You fail.\r\n");
   else if (!IS_NPC(victim) && !PRF_FLAGGED(victim, PRF_SUMMONABLE))
     send_to_char(ch, "You fail because SUMMON protection is on!\r\n");
   else if (AFF_FLAGGED(victim, AFF_SANCTUARY))
@@ -269,7 +275,7 @@ ASPELL(spell_charm)
     send_to_char(ch, "Your victim resists!\r\n");
   else if (AFF_FLAGGED(ch, AFF_CHARM))
     send_to_char(ch, "You can't have any followers of your own!\r\n");
-  else if (AFF_FLAGGED(victim, AFF_CHARM) || level < GET_LEVEL(victim))
+  else if (AFF_FLAGGED(victim, AFF_CHARM))
     send_to_char(ch, "You fail.\r\n");
   /* player charming another player - no legal reason for this */
   else if ((CONFIG_PK_SETTING == CONFIG_PK_OFF) && !IS_NPC(victim))
@@ -284,7 +290,7 @@ ASPELL(spell_charm)
 
     new_affect(&af);
     af.spell = SPELL_CHARM;
-    af.duration = 24 * 2;
+    af.duration = 12 + (rank * 6);
     if (GET_CHA(ch))
       af.duration *= GET_CHA(ch);
     if (GET_INT(victim))
@@ -388,10 +394,12 @@ ASPELL(spell_identify)
  * character's hit/dam totals. */
 ASPELL(spell_enchant_weapon)
 {
-  int i;
+  int i, rank;
 
   if (ch == NULL || obj == NULL)
     return;
+
+  rank = MAX(1, GET_EFFECTIVE_SKILL_RANK(ch, SPELL_ENCHANT_WEAPON));
 
   /* Either already enchanted or not a weapon. */
   if (GET_OBJ_TYPE(obj) != ITEM_WEAPON || OBJ_FLAGGED(obj, ITEM_MAGIC))
@@ -405,10 +413,10 @@ ASPELL(spell_enchant_weapon)
   SET_BIT_AR(GET_OBJ_EXTRA(obj), ITEM_MAGIC);
 
   obj->affected[0].location = APPLY_HITROLL;
-  obj->affected[0].modifier = 1 + (level >= 18);
+  obj->affected[0].modifier = 1 + (rank >= 6);
 
   obj->affected[1].location = APPLY_DAMROLL;
-  obj->affected[1].modifier = 1 + (level >= 20);
+  obj->affected[1].modifier = 1 + (rank >= 8);
 
   if (IS_GOOD(ch)) {
     SET_BIT_AR(GET_OBJ_EXTRA(obj), ITEM_ANTI_EVIL);
