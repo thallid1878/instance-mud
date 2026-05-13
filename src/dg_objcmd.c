@@ -40,6 +40,7 @@ static OCMD(do_otimer);
 static OCMD(do_otransform);
 static OCMD(do_opurge);
 static OCMD(do_oteleport);
+static OCMD(do_ocleaninstance);
 static OCMD(do_oenterinstance);
 static OCMD(do_oexitinstance);
 static OCMD(do_dgoload);
@@ -544,6 +545,40 @@ static OCMD(do_oexitinstance)
     look_at_room(ch, 0);
 }
 
+static OCMD(do_ocleaninstance)
+{
+    char_data *ch;
+    zone_rnum zone;
+    int owner_instance, cleaned_id = 0;
+    char arg1[MAX_INPUT_LENGTH], arg2[MAX_INPUT_LENGTH];
+
+    two_arguments(argument, arg1, arg2);
+
+    if (!*arg1 || !*arg2 || !is_number(arg2)) {
+        obj_log(obj, "ocleaninstance called with bad syntax");
+        return;
+    }
+
+    zone = real_zone(atoi(arg2));
+    if (zone == NOWHERE || !ZONE_FLAGGED(zone, ZONE_DUNGEON)) {
+        obj_log(obj, "ocleaninstance target is not a valid dungeon zone");
+        return;
+    }
+
+    if (!(ch = get_char_by_obj(obj, arg1))) {
+        obj_log(obj, "ocleaninstance: no target found");
+        return;
+    }
+
+    if (!valid_dg_target(ch, DG_ALLOW_GODS))
+        return;
+
+    owner_instance = GET_INSTANCE_ID(obj);
+    if (instance_clean_for_char(ch, zone, &cleaned_id) &&
+        owner_instance > 0 && owner_instance == cleaned_id)
+        dg_owner_purged = 1;
+}
+
 static OCMD(do_dgoload)
 {
     char arg1[MAX_INPUT_LENGTH], arg2[MAX_INPUT_LENGTH];
@@ -925,6 +960,7 @@ static const struct obj_command_info obj_cmd_info[] = {
     { "odamage "    , do_odamage,   0 },
     { "oecho "      , do_oecho    , 0 },
     { "oechoaround ", do_osend    , SCMD_OECHOAROUND },
+    { "ocleaninstance ", do_ocleaninstance, 0 },
     { "oenterinstance ", do_oenterinstance, 0 },
     { "oexitinstance ", do_oexitinstance, 0 },
     { "oforce "     , do_oforce   , 0 },

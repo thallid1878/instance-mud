@@ -51,6 +51,7 @@ WCMD(do_wsend);
 WCMD(do_wzoneecho);
 WCMD(do_wrecho);
 WCMD(do_wdoor);
+WCMD(do_wcleaninstance);
 WCMD(do_wenterinstance);
 WCMD(do_wexitinstance);
 WCMD(do_wteleport);
@@ -692,6 +693,45 @@ WCMD(do_wexitinstance)
   look_at_room(vict, 0);
 }
 
+WCMD(do_wcleaninstance)
+{
+  char arg1[MAX_INPUT_LENGTH], arg2[MAX_INPUT_LENGTH];
+  struct char_data *vict = NULL;
+  zone_rnum zone;
+  int owner_instance, cleaned_id = 0;
+
+  two_arguments(argument, arg1, arg2);
+
+  if (!*arg1 || !*arg2 || !is_number(arg2)) {
+    wld_log(room, "wcleaninstance called with bad syntax");
+    return;
+  }
+
+  zone = real_zone(atoi(arg2));
+  if (zone == NOWHERE || !ZONE_FLAGGED(zone, ZONE_DUNGEON)) {
+    wld_log(room, "wcleaninstance target is not a valid dungeon zone");
+    return;
+  }
+
+  if (*arg1 == UID_CHAR)
+    vict = get_char(arg1);
+  else
+    vict = get_char_by_room(room, arg1);
+
+  if (!vict) {
+    wld_log(room, "wcleaninstance: no target found");
+    return;
+  }
+
+  if (!valid_dg_target(vict, DG_ALLOW_GODS))
+    return;
+
+  owner_instance = room->instance_id;
+  if (instance_clean_for_char(vict, zone, &cleaned_id) &&
+      owner_instance > 0 && owner_instance == cleaned_id)
+    dg_owner_purged = 1;
+}
+
 WCMD(do_wat)     
 {
   room_rnum loc = NOWHERE;
@@ -784,6 +824,7 @@ static const struct wld_command_info wld_cmd_info[] = {
     { "wdoor "      , do_wdoor     , 0 },
     { "wecho "      , do_wecho     , 0 },
     { "wechoaround ", do_wsend     , SCMD_WECHOAROUND },
+    { "wcleaninstance ", do_wcleaninstance, 0 },
     { "wenterinstance ", do_wenterinstance, 0 },
     { "wexitinstance ", do_wexitinstance, 0 },
     { "wforce "     , do_wforce    , 0 },

@@ -257,6 +257,7 @@ right mob, object, or room command depending on where the trigger is attached:
 | `%at%` | `mat` | `oat` | `wat` |
 | `%recho%` | `mrecho` | `orecho` | `wrecho` |
 | `%log%` | `mlog` | `olog` | `wlog` |
+| `%cleaninstance%` | `mcleaninstance` | `ocleaninstance` | `wcleaninstance` |
 | `%enterinstance%` | `menterinstance` | `oenterinstance` | `wenterinstance` |
 | `%exitinstance%` | `mexitinstance` | `oexitinstance` | `wexitinstance` |
 
@@ -369,6 +370,7 @@ Instance-MUD adds DG commands for entering and leaving dungeon instances:
 ```text
 %enterinstance% <target> <zone vnum> [entry room vnum]
 %exitinstance% <target> <real room vnum>
+%cleaninstance% <target> <zone vnum>
 ```
 
 Examples:
@@ -377,6 +379,7 @@ Examples:
 %enterinstance% %actor% 23
 %enterinstance% %actor% 23 2307
 %exitinstance% %actor% 3001
+%cleaninstance% %actor% 23
 ```
 
 `%enterinstance%` creates or rejoins the actor's active instance of the dungeon
@@ -387,8 +390,13 @@ is omitted, the target enters the first room in the zone.
 `%exitinstance%` removes the target from instance membership and moves them to a
 real-world room. The destination must not be an instanced/template room.
 
-Both commands make the target look after moving. They also fire room enter
-triggers in the destination room.
+`%cleaninstance%` immediately destroys the target's active or most recently
+exited instance for that dungeon zone if no other players are still inside it.
+If another player is still in the instance, such as a group member, the command
+does nothing and the normal five-minute empty cleanup can still handle it later.
+
+The movement commands make the target look after moving. They also fire room
+enter triggers in the destination room.
 
 Use `%exitinstance%` instead of plain `%teleport%` when a script is intentionally
 ending a dungeon run. Plain teleport is still useful for movement inside the
@@ -420,6 +428,7 @@ Attach this as a room command trigger to an exit room inside the instance:
 if %cmd.mudcommand% == leave || %cmd.mudcommand% == return
   %send% %actor% You leave the dungeon behind.
   %exitinstance% %actor% 3001
+  %cleaninstance% %actor% 23
   return 1
 end
 return 0
@@ -461,6 +470,7 @@ Then use a room command trigger:
 if %cmd.mudcommand% == enter && %arg% /= portal
   if %boss_dead% == 1
     %exitinstance% %actor% 3001
+    %cleaninstance% %actor% 23
     return 1
   else
     %send% %actor% The portal is still sealed.

@@ -318,6 +318,7 @@ void find_replacement(void *go, struct script_data *sc, trig_data *trig,
   char *echo_cmd[]       = {"mecho ",       "oecho ",       "wecho "      };
   char *echoaround_cmd[] = {"mechoaround ", "oechoaround ", "wechoaround "};
   char *door[]           = {"mdoor ",       "odoor ",       "wdoor "      };
+  char *cleaninstance[]  = {"mcleaninstance ","ocleaninstance ","wcleaninstance "};
   char *enterinstance[]  = {"menterinstance ","oenterinstance ","wenterinstance "};
   char *exitinstance[]   = {"mexitinstance ","oexitinstance ","wexitinstance "};
   char *force[]          = {"mforce ",      "oforce ",      "wforce "     };
@@ -374,6 +375,8 @@ void find_replacement(void *go, struct script_data *sc, trig_data *trig,
       }
       else if (!str_cmp(var, "door"))
         snprintf(str, slen, "%s", door[type]);
+      else if (!str_cmp(var, "cleaninstance"))
+        snprintf(str, slen, "%s", cleaninstance[type]);
       else if (!str_cmp(var, "enterinstance"))
         snprintf(str, slen, "%s", enterinstance[type]);
       else if (!str_cmp(var, "exitinstance"))

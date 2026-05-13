@@ -33,6 +33,8 @@ int instance_enter_zone(struct char_data *ch, zone_rnum zone,
   const char *enter_msg, int *instance_id, const char **action);
 int instance_exit_to_room(struct char_data *ch, room_rnum target);
 int instance_teleport_to_room(struct char_data *ch, room_rnum target);
+int instance_clean_for_char(struct char_data *ch, zone_rnum template_zone,
+  int *instance_id);
 int instance_leave(struct char_data *ch);
 int instance_relocate_char(struct char_data *ch);
 void instance_update(void);

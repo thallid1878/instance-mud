@@ -136,6 +136,13 @@ static void show_obj_to_char(struct obj_data *obj, struct char_data *ch, int mod
       send_to_char(ch, "It looks like a drink container.");
       break;
 
+    case ITEM_PORTAL:
+      if (obj->action_description && *obj->action_description)
+        page_string(ch->desc, obj->action_description, TRUE);
+      else
+        send_to_char(ch, "You see nothing special.\r\n");
+      return;
+
     default:
       send_to_char(ch, "You see nothing special..");
       break;

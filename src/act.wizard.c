@@ -762,6 +762,8 @@ static void do_stat_object(struct char_data *ch, struct obj_data *j)
     break;
   case ITEM_KEY: /* Nothing */
     break;
+  case ITEM_PORTAL: /* Nothing */
+    break;
   case ITEM_FOOD:
     send_to_char(ch, "Makes full: %d, Poisoned: %s\r\n", GET_OBJ_VAL(j, 0), YESNO(GET_OBJ_VAL(j, 3)));
     break;
@@ -3860,6 +3862,7 @@ ACMD (do_zcheck)
           GET_OBJ_TYPE(obj) != ITEM_STAFF &&
           GET_OBJ_TYPE(obj) != ITEM_WAND &&
           GET_OBJ_TYPE(obj) != ITEM_SCROLL &&
+          GET_OBJ_TYPE(obj) != ITEM_PORTAL &&
           GET_OBJ_TYPE(obj) != ITEM_NOTE && (found=1))
         len += snprintf(buf + len, sizeof(buf) - len,
                           "- has action_description set, but is inappropriate type.\r\n");

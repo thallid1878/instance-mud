@@ -216,8 +216,8 @@ See @RHELP ROOM-VAR@n
 #31
 %TELEPORT% WTELEPORT OTELEPORT MTELEPORT PORTALS %TRANSPORT% TRIG-TELEPORT
 
-Stock tbaMUD does not have an object type portal. This is instead done with
-trigedit.
+Portals are object type PORTAL. They do not use object values; attach object
+triggers to them to move players into instances or other rooms.
 
  %teleport% <victim> <location>
 
@@ -234,7 +234,33 @@ PORTAL EXAMPLES:
    ROOM: @RTSTAT 101@n
    MOB:  @RTSTAT 102@n
 
-See also: MGOTO, TELEPORT, %MOVE%
+See also: MGOTO, TELEPORT, %MOVE%, %ENTERINSTANCE%, %EXITINSTANCE%, %CLEANINSTANCE%
+#31
+%ENTERINSTANCE% %EXITINSTANCE% %CLEANINSTANCE% ENTERINSTANCE EXITINSTANCE CLEANINSTANCE INSTANCE-SCRIPTS
+
+Instance-MUD provides three DG commands for scripted dungeon movement:
+
+ %enterinstance% <target> <zone vnum> [entry room vnum]
+ %exitinstance% <target> <real room vnum>
+ %cleaninstance% <target> <zone vnum>
+
+%enterinstance% creates or rejoins the target's active instance of the dungeon
+zone. If an entry room is provided, it must be a real room in that dungeon zone.
+
+%exitinstance% removes the target from the instance and moves them to a real
+world room. The destination must not be an instance/template room.
+
+%cleaninstance% immediately destroys the target's active or most recently
+exited instance for that zone if no other players are still inside it. If a
+group member or another player is still inside, it does nothing and the normal
+empty-instance cleanup can handle it later.
+
+Common exit portal pattern:
+
+ %exitinstance% %actor% 3001
+ %cleaninstance% %actor% 23
+
+See also: PORTALS, %TELEPORT%
 #31
 %TRANSFORM% MTRANSFORMS OTRANSFORMS TRANSFORMS MORPHS MTRANSFERS TRIG-MOB-TRANSFORM 
 
@@ -5798,14 +5824,19 @@ Scrolls: Rumble recites <object>.
 Potions: Rumble quaffs <object>.
 
    For readable papers, the Action Description contains the text on the paper.
-@RSo unless your object is a staff, wand, scroll, potion, or note; DO NOT USE.@n
-   I guess this needs to be repeated once more. A-desc does not normally need 
-to be set. Except for the few instances listed above. It is not the object's
-equivalent of the D-desc. If you want someone to see something when they 
-look at the object add it in the extra description menu with the same keywords.
+For portal objects, the Action Description is shown to players when they look
+at or examine the portal.
+@RSo unless your object is a staff, wand, scroll, potion, note, or portal;
+DO NOT USE.@n
+   A-desc does not normally need to be set except for the object types listed
+above. It is not the object's equivalent of the D-desc for ordinary items. If
+you want someone to see something when they look at a non-portal object, add it
+in the extra description menu with the same keywords.
 
-A-desc is not seen by the person using the object. Only by the victim and other
-players in the room. The following variables can be used with it. 
+A-desc on portals is seen by the person looking at or examining the portal.
+A-desc on magical items is not seen by the person using the object, only by the
+victim and other players in the room. The following variables can be used with
+magical item action descriptions.
   
 $e he/she/it person using staff/wand/scroll/potion 
 $E he/she target of staff/wand/scroll/potion 
@@ -6056,6 +6087,7 @@ of value0 through value4 (option C). The Type Flag must be one of the following:
 21   PEN            Item is a pen.
 22   BOAT           Item is a boat; allows you to traverse water (noswim).
 23   FOUNTAIN       Item is a fountain. Set Values to -1 to make it unlimited.
+24   PORTAL         Scripted portal. Values are unused; A-Desc is shown on look.
 
    Good items should be very rare, and hard to get. Lousy items should require 
 much less effort. Give the most powerful items actually to a mob; Thieves and

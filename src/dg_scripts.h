@@ -377,6 +377,7 @@ ACMD(do_mdamage);
 ACMD(do_mdoor);
 ACMD(do_mecho);
 ACMD(do_mechoaround);
+ACMD(do_mcleaninstance);
 ACMD(do_menterinstance);
 ACMD(do_mexitinstance);
 ACMD(do_mfollow);

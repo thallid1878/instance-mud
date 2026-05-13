@@ -395,6 +395,7 @@ static const struct mob_script_command_t mob_script_commands[] = {
   { "mecho"    , do_mecho    , 0 },
   { "mrecho"   , do_mrecho   , 0 },
   { "mechoaround", do_mechoaround , 0 },
+  { "mcleaninstance", do_mcleaninstance, 0 },
   { "menterinstance", do_menterinstance, 0 },
   { "mexitinstance", do_mexitinstance, 0 },
   { "msend"    , do_msend    , 0 },

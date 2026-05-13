@@ -78,6 +78,7 @@ static void reset_instance(struct instance_data *inst);
 static void destroy_instance(struct instance_data *inst);
 static void free_instance_shop_slot(int shop);
 static int instance_player_count(struct instance_data *inst);
+static void remember_instance_for_char(struct char_data *ch, struct instance_data *inst);
 static void queue_instance_room_chars(struct instance_data *inst, room_rnum room);
 static void track_obj(struct instance_obj_ref **list, struct obj_data *obj);
 static struct obj_data *find_tracked_obj(struct instance_obj_ref *list, obj_rnum rnum);
@@ -1100,10 +1101,14 @@ int instance_create_at_room(zone_rnum template_zone, room_rnum template_room,
 
 int instance_exit_to_room(struct char_data *ch, room_rnum target)
 {
+  struct instance_data *inst;
   struct char_data *fighter, *next_fighter;
 
   if (!ch || !valid_room_rnum(target) || instance_room_is_template(target))
     return FALSE;
+
+  inst = instance_by_id(GET_INSTANCE_ID(ch));
+  remember_instance_for_char(ch, inst);
 
   if (FIGHTING(ch))
     stop_fighting(ch);
@@ -1247,10 +1252,14 @@ int instance_leave(struct char_data *ch)
 
 int instance_relocate_char(struct char_data *ch)
 {
+  struct instance_data *inst;
   room_rnum target;
 
   if (!ch)
     return FALSE;
+
+  inst = instance_by_id(GET_INSTANCE_ID(ch));
+  remember_instance_for_char(ch, inst);
 
   target = instance_safe_return_room(ch);
   if (!valid_room_rnum(target))
@@ -1279,6 +1288,84 @@ static int instance_player_count(struct instance_data *inst)
     if (IS_PLAYING(d) && d->character && GET_INSTANCE_ID(d->character) == inst->id)
       count++;
   return count;
+}
+
+static int instance_player_count_except(struct instance_data *inst,
+  struct char_data *except)
+{
+  struct descriptor_data *d;
+  int count = 0;
+
+  for (d = descriptor_list; d; d = d->next)
+    if (IS_PLAYING(d) && d->character &&
+        GET_INSTANCE_ID(d->character) == inst->id &&
+        d->character != except)
+      count++;
+  return count;
+}
+
+static void remember_instance_for_char(struct char_data *ch, struct instance_data *inst)
+{
+  if (!ch || !inst)
+    return;
+
+  ch->last_instance_id = inst->id;
+  ch->last_instance_zone = inst->template_zone;
+}
+
+static struct instance_data *instance_cleanup_target(struct char_data *ch,
+  zone_rnum template_zone)
+{
+  struct instance_data *inst = NULL;
+
+  if (!ch || template_zone == NOWHERE)
+    return NULL;
+
+  if (GET_INSTANCE_ID(ch) > 0) {
+    inst = instance_by_id(GET_INSTANCE_ID(ch));
+    if (inst && inst->template_zone == template_zone)
+      return inst;
+  }
+
+  if (ch->last_instance_id > 0 && ch->last_instance_zone == template_zone) {
+    inst = instance_by_id(ch->last_instance_id);
+    if (inst && inst->template_zone == template_zone)
+      return inst;
+  }
+
+  if (!IS_NPC(ch))
+    return instance_owned_by_char(ch, template_zone);
+
+  return NULL;
+}
+
+int instance_clean_for_char(struct char_data *ch, zone_rnum template_zone,
+  int *instance_id)
+{
+  struct instance_data *inst;
+  int id;
+
+  if (instance_id)
+    *instance_id = 0;
+
+  if (!ch || template_zone == NOWHERE || !ZONE_FLAGGED(template_zone, ZONE_DUNGEON))
+    return FALSE;
+
+  inst = instance_cleanup_target(ch, template_zone);
+  if (!inst)
+    return FALSE;
+
+  if (instance_player_count_except(inst, ch) > 0)
+    return FALSE;
+
+  id = inst->id;
+  if (instance_id)
+    *instance_id = id;
+
+  remember_instance_for_char(ch, inst);
+  destroy_instance(inst);
+
+  return TRUE;
 }
 
 void instance_update(void)

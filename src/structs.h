@@ -400,8 +400,9 @@
 #define ITEM_PEN       21		/**< Item is a pen		*/
 #define ITEM_BOAT      22		/**< Item is a boat		*/
 #define ITEM_FOUNTAIN  23		/**< Item is a fountain		*/
+#define ITEM_PORTAL    24		/**< Item is a scripted portal	*/
 /** Total number of item types.*/
-#define NUM_ITEM_TYPES    24
+#define NUM_ITEM_TYPES    25
 
 /* Take/Wear flags: used by obj_data.obj_flags.wear_flags */
 #define ITEM_WEAR_TAKE      0   /**< Item can be taken */
@@ -1035,6 +1036,8 @@ struct char_data
   room_rnum was_in_room; /**< Previous location for linkdead people  */
   int instance_id;        /**< Runtime dungeon instance id, or 0. */
   room_rnum instance_return_room; /**< Room to return to when leaving instance. */
+  int last_instance_id;   /**< Most recent runtime dungeon instance id. */
+  zone_rnum last_instance_zone; /**< Most recent dungeon template zone. */
   int wait;              /**< wait for how many loops before taking action. */
 
   struct char_player_data player;       /**< General PC/NPC data */

@@ -756,6 +756,52 @@ ACMD(do_mexitinstance)
   look_at_room(vict, 0);
 }
 
+ACMD(do_mcleaninstance)
+{
+  char arg1[MAX_INPUT_LENGTH], arg2[MAX_INPUT_LENGTH];
+  zone_rnum zone;
+  char_data *vict;
+  int owner_instance, cleaned_id = 0;
+
+  if (!MOB_OR_IMPL(ch)) {
+    send_to_char(ch, "%s", CONFIG_HUH);
+    return;
+  }
+
+  if (AFF_FLAGGED(ch, AFF_CHARM))
+    return;
+
+  two_arguments(argument, arg1, arg2);
+  if (!*arg1 || !*arg2 || !is_number(arg2)) {
+    mob_log(ch, "mcleaninstance: bad syntax");
+    return;
+  }
+
+  zone = real_zone(atoi(arg2));
+  if (zone == NOWHERE || !ZONE_FLAGGED(zone, ZONE_DUNGEON)) {
+    mob_log(ch, "mcleaninstance target is not a valid dungeon zone");
+    return;
+  }
+
+  if (*arg1 == UID_CHAR) {
+    if (!(vict = get_char(arg1))) {
+      mob_log(ch, "mcleaninstance: victim (%s) does not exist", arg1);
+      return;
+    }
+  } else if (!(vict = get_char_vis(ch, arg1, NULL, FIND_CHAR_WORLD))) {
+    mob_log(ch, "mcleaninstance: victim (%s) does not exist", arg1);
+    return;
+  }
+
+  if (!valid_dg_target(vict, DG_ALLOW_GODS))
+    return;
+
+  owner_instance = GET_INSTANCE_ID(ch);
+  if (instance_clean_for_char(vict, zone, &cleaned_id) &&
+      owner_instance > 0 && owner_instance == cleaned_id)
+    dg_owner_purged = 1;
+}
+
 ACMD(do_mdamage) {
   char name[MAX_INPUT_LENGTH], amount[MAX_INPUT_LENGTH];
   int dam = 0;

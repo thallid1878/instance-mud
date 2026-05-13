@@ -418,6 +418,7 @@ const char *item_types[] = {
   "PEN",
   "BOAT",
   "FOUNTAIN",
+  "PORTAL",
   "\n"
 };
 
