@@ -999,6 +999,10 @@ ACMD(do_score)
     send_to_char(ch, " Invisible\r\n");
     found_affect = TRUE;
   }
+  if (AFF_FLAGGED(ch, AFF_HASTE)) {
+    send_to_char(ch, " Haste\r\n");
+    found_affect = TRUE;
+  }
   if (AFF_FLAGGED(ch, AFF_POISON)) {
     send_to_char(ch, " Poison\r\n");
     found_affect = TRUE;

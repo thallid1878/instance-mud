@@ -300,7 +300,7 @@
 #define AFF_SCUBA          18   /**< Room for future expansion */
 #define AFF_SNEAK          19   /**< Char can move quietly */
 #define AFF_HIDE           20   /**< Char is hidden */
-#define AFF_FREE           21   /**< Room for future expansion */
+#define AFF_HASTE          21   /**< Char is magically hastened */
 #define AFF_CHARM          22   /**< Char is charmed */
 /** Total number of affect flags */
 #define NUM_AFF_FLAGS   23
@@ -905,12 +905,12 @@ struct char_ability_data
 /** Character 'points', or health statistics. */
 struct char_point_data
 {
-  sh_int mana;     /**< Current mana level  */
-  sh_int max_mana; /**< Max mana level */
+  int mana;        /**< Current mana level  */
+  int max_mana;    /**< Max mana level */
   int hit;         /**< Curent hit point, or health, level */
   int max_hit;     /**< Max hit point, or health, level */
-  sh_int move;     /**< Current move point, or stamina, level */
-  sh_int max_move; /**< Max move point, or stamina, level */
+  int move;        /**< Current move point, or stamina, level */
+  int max_move;    /**< Max move point, or stamina, level */
 
   /** Legacy armor accumulator. Lower values mean more armor; damage reduction
    * converts this to a positive armor value with 100 - armor. */

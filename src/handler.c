@@ -207,7 +207,7 @@ static void aff_apply_modify(struct char_data *ch, byte loc, sbyte mod, char *ms
   } /* switch */
 }
 
-static int applied_hit_modifier(struct char_data *ch)
+static int applied_point_modifier(struct char_data *ch, int location)
 {
   struct affected_type *af;
   int i, j, mod = 0;
@@ -218,17 +218,22 @@ static int applied_hit_modifier(struct char_data *ch)
   for (i = 0; i < NUM_WEARS; i++) {
     if (GET_EQ(ch, i)) {
       for (j = 0; j < MAX_OBJ_AFFECT; j++) {
-        if (GET_EQ(ch, i)->affected[j].location == APPLY_HIT)
+        if (GET_EQ(ch, i)->affected[j].location == location)
           mod += GET_EQ(ch, i)->affected[j].modifier;
       }
     }
   }
 
   for (af = ch->affected; af; af = af->next)
-    if (af->location == APPLY_HIT)
+    if (af->location == location)
       mod += af->modifier;
 
   return mod;
+}
+
+static int applied_hit_modifier(struct char_data *ch)
+{
+  return applied_point_modifier(ch, APPLY_HIT);
 }
 
 void update_max_hit_from_con(struct char_data *ch)
@@ -258,6 +263,44 @@ void update_max_hit_from_con(struct char_data *ch)
 
   if (old_max <= 0 || was_full || GET_HIT(ch) > new_max)
     GET_HIT(ch) = new_max;
+}
+
+void update_max_mana_move_from_stats(struct char_data *ch)
+{
+  int old_mana_max, old_move_max, mana_was_full, move_was_full;
+  long long calculated_mana, calculated_move, stat_sum;
+
+  if (!ch)
+    return;
+
+  old_mana_max = GET_MAX_MANA(ch);
+  old_move_max = GET_MAX_MOVE(ch);
+  mana_was_full = (old_mana_max > 0 && GET_MANA(ch) >= old_mana_max);
+  move_was_full = (old_move_max > 0 && GET_MOVE(ch) >= old_move_max);
+
+  stat_sum = (long long)GET_INT(ch) + GET_WIS(ch);
+  calculated_mana = (stat_sum * 5 + (stat_sum > 0 ? 1 : 0)) / 2;
+  calculated_mana += applied_point_modifier(ch, APPLY_MANA);
+
+  calculated_move = ((long long)GET_DEX(ch) * 5) +
+    applied_point_modifier(ch, APPLY_MOVE);
+
+  if (calculated_mana < 1)
+    calculated_mana = 1;
+  if (calculated_move < 1)
+    calculated_move = 1;
+  if (calculated_mana > INT_MAX)
+    calculated_mana = INT_MAX;
+  if (calculated_move > INT_MAX)
+    calculated_move = INT_MAX;
+
+  GET_MAX_MANA(ch) = (int)calculated_mana;
+  GET_MAX_MOVE(ch) = (int)calculated_move;
+
+  if (old_mana_max <= 0 || mana_was_full || GET_MANA(ch) > GET_MAX_MANA(ch))
+    GET_MANA(ch) = GET_MAX_MANA(ch);
+  if (old_move_max <= 0 || move_was_full || GET_MOVE(ch) > GET_MAX_MOVE(ch))
+    GET_MOVE(ch) = GET_MAX_MOVE(ch);
 }
 
 static void affect_modify_ar(struct char_data * ch, byte loc, sbyte mod, int bitv[], bool add)
@@ -318,6 +361,7 @@ void affect_total(struct char_data *ch)
   GET_CHA(ch) = MAX(MIN_AFFECTED_STAT_VALUE, MIN(GET_CHA(ch), MAX_AFFECTED_STAT_VALUE));
   GET_STR(ch) = MAX(MIN_AFFECTED_STAT_VALUE, MIN(GET_STR(ch), MAX_AFFECTED_STAT_VALUE));
   update_max_hit_from_con(ch);
+  update_max_mana_move_from_stats(ch);
 }
 
 /* Insert an affect_type in a char_data structure. Automatically sets

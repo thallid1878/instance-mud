@@ -217,6 +217,19 @@ static int mag_materials(struct char_data *ch, IDXTYPE item0,
 /* Every spell that does damage comes through here.  This calculates the amount
  * of damage, adds in any modifiers, determines what the saves are, tests for
  * save and calls damage(). -1 = dead, otherwise the amount of damage done. */
+static long long ranked_percent_hitpoints(struct char_data *victim, int rank,
+    int percent_per_rank)
+{
+  long long amount;
+
+  if (victim == NULL || rank <= 0 || percent_per_rank <= 0 ||
+      GET_MAX_HIT(victim) <= 0)
+    return 0;
+
+  amount = (long long) GET_MAX_HIT(victim) * rank * percent_per_rank;
+  return amount / 100;
+}
+
 static int ranked_spell_damage_bonus(struct char_data *ch, int rank, int power)
 {
   long long bonus;
@@ -296,6 +309,14 @@ int mag_damage(int level, struct char_data *ch, struct char_data *victim,
     break;
 
     /* Mostly clerics */
+  case SPELL_CAUSE_LIGHT:
+    dam = dice(1, 8) + 1 + (rank * 4) +
+      ranked_percent_hitpoints(victim, rank, 2);
+    break;
+  case SPELL_CAUSE_CRITIC:
+    dam = dice(3, 8) + 3 + (rank * 10) +
+      ranked_percent_hitpoints(victim, rank, 4);
+    break;
   case SPELL_DISPEL_EVIL:
     power = 11;
     dam = dice(6, 8) + 6;
@@ -513,6 +534,13 @@ void mag_affects(int level, struct char_data *ch, struct char_data *victim,
     to_vict = "You feel invulnerable!";
     break;
 
+  case SPELL_PROT_FROM_GOOD:
+    af[0].duration = 24;
+    SET_BIT_AR(af[0].bitvector, AFF_PROTECT_GOOD);
+    accum_duration = TRUE;
+    to_vict = "You feel invulnerable!";
+    break;
+
   case SPELL_SANCTUARY:
     af[0].duration = 4;
     SET_BIT_AR(af[0].bitvector, AFF_SANCTUARY);
@@ -545,6 +573,14 @@ void mag_affects(int level, struct char_data *ch, struct char_data *victim,
     accum_duration = TRUE;
     accum_affect = TRUE;
     to_vict = "You feel stronger!";
+    break;
+
+  case SPELL_HASTE:
+    af[0].duration = 1 + rank;
+    SET_BIT_AR(af[0].bitvector, AFF_HASTE);
+    accum_duration = TRUE;
+    to_vict = "Your body surges with speed!";
+    to_room = "$n begins moving with unnatural speed.";
     break;
 
   case SPELL_SENSE_LIFE:
@@ -851,13 +887,7 @@ void mag_summons(int level, struct char_data *ch, struct obj_data *obj,
 
 static long long ranked_percent_heal(struct char_data *victim, int rank, int percent_per_rank)
 {
-  long long healing;
-
-  if (victim == NULL || rank <= 0 || percent_per_rank <= 0 || GET_MAX_HIT(victim) <= 0)
-    return 0;
-
-  healing = (long long) GET_MAX_HIT(victim) * rank * percent_per_rank;
-  return healing / 100;
+  return ranked_percent_hitpoints(victim, rank, percent_per_rank);
 }
 
 void mag_points(int level, struct char_data *ch, struct char_data *victim,

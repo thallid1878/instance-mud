@@ -93,8 +93,12 @@
 #define SPELL_IDENTIFY               52 /* Reserved Skill[] DO NOT CHANGE */
 #define SPELL_FLY                    53 /* Reserved Skill[] DO NOT CHANGE */
 #define SPELL_DARKNESS               54
+#define SPELL_CAUSE_LIGHT            55
+#define SPELL_CAUSE_CRITIC           56
+#define SPELL_PROT_FROM_GOOD         57
+#define SPELL_HASTE                  58
 /** Total Number of defined spells */
-#define NUM_SPELLS                   54
+#define NUM_SPELLS                   58
 
 /* Insert new spells here, up to MAX_SPELLS */
 #define MAX_SPELLS		    130
@@ -182,6 +186,10 @@
 #define TAR_OBJ_WORLD   (1 << 9)
 #define TAR_OBJ_EQUIP	  (1 << 10)
 
+#define SPELL_CAST_NONE      0
+#define SPELL_CAST_ARCANE    1
+#define SPELL_CAST_SPIRITUAL 2
+
 struct spell_info_type {
    byte min_position;	/* Position for caster	 */
    int mana_min;	/* Min amount of mana used by a spell (highest lev) */
@@ -191,6 +199,8 @@ struct spell_info_type {
    int min_level[NUM_CLASSES];
    int routines;
    byte violent;
+   byte cast_time;      /* Seconds needed to complete spoken casts. */
+   byte cast_style;     /* SPELL_CAST_ARCANE or SPELL_CAST_SPIRITUAL. */
    int targets;         /* See below for use with TAR_XXX  */
    const char *name;	/* Input size not limited. Originates from string constants. */
    const char *wear_off_msg;	/* Input size not limited. Originates from string constants. */

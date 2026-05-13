@@ -18,6 +18,7 @@
 #include "comm.h"
 #include "db.h"
 #include "dg_scripts.h"
+#include "mud_event.h"
 #include "fight.h"  /* for hit() */
 
 #define SINFO spell_info[spellnum]
@@ -30,9 +31,16 @@ const char *unused_spellname = "!UNUSED!"; /* So we can get &unused_spellname */
 /* Local (File Scope) Function Prototypes */
 static void say_spell(struct char_data *ch, int spellnum, struct char_data *tch,
     struct obj_data *tobj);
+static int can_cast_spell_now(struct char_data *ch, struct char_data *tch,
+    struct obj_data *tobj, int spellnum);
+static int cast_spell_internal(struct char_data *ch, struct char_data *tch,
+    struct obj_data *tobj, int spellnum, int say_words);
 static void spello(int spl, const char *name, int max_mana, int min_mana,
     int mana_change, int minpos, int targets, int violent, int routines,
     const char *wearoff);
+static void spell_cast_info(int spell, int cast_time, int cast_style);
+static int start_delayed_spell(struct char_data *ch, struct char_data *tch,
+    struct obj_data *tobj, int spellnum, int mana);
 static int mag_manacost(struct char_data *ch, int spellnum);
 
 /* Local (File Scope) Variables */
@@ -40,6 +48,11 @@ struct syllable {
   const char *org;
   const char *news;
 };
+
+#define DELAYED_CAST_NONE 0
+#define DELAYED_CAST_CHAR 1
+#define DELAYED_CAST_OBJ  2
+
 static struct syllable syls[] = { { " ", " " }, { "ar", "abra" },
     { "ate", "i" }, { "cau", "kada" }, { "blind", "nose" }, { "bur", "mosa" }, {
         "cu", "judi" }, { "de", "oculo" }, { "dis", "mar" },
@@ -128,6 +141,207 @@ static void say_spell(struct char_data *ch, int spellnum, struct char_data *tch,
     GET_CLASS(ch) == GET_CLASS(tch) ? spell : obfuscated);
     act(act_buf_original, FALSE, ch, NULL, tch, TO_VICT);
   }
+}
+
+static int character_still_exists(struct char_data *victim)
+{
+  struct char_data *i;
+
+  if (victim == NULL)
+    return FALSE;
+
+  for (i = character_list; i; i = i->next)
+    if (i == victim)
+      return TRUE;
+
+  return FALSE;
+}
+
+static int object_still_exists(struct obj_data *obj)
+{
+  struct obj_data *i;
+
+  if (obj == NULL)
+    return FALSE;
+
+  for (i = object_list; i; i = i->next)
+    if (i == obj)
+      return TRUE;
+
+  return FALSE;
+}
+
+static const char *spell_casting_word(int cast_style)
+{
+  return (cast_style == SPELL_CAST_SPIRITUAL) ? "praying" : "chanting";
+}
+
+static void send_cast_countdown(struct char_data *ch, int spellnum, int stars)
+{
+  char starbuf[64] = "";
+  int i;
+
+  for (i = 0; i < stars && i < 20; i++)
+    strlcat(starbuf, " *", sizeof(starbuf));
+
+  send_to_char(ch, "Casting %s%s\r\n", skill_name(spellnum), starbuf);
+}
+
+static void send_cast_start(struct char_data *ch, int spellnum)
+{
+  if (spell_info[spellnum].cast_style == SPELL_CAST_SPIRITUAL) {
+    send_to_char(ch, "You call out to the gods!\r\n");
+    act("$n calls out to the gods!", FALSE, ch, 0, 0, TO_ROOM);
+  } else {
+    send_to_char(ch, "You start chanting!\r\n");
+    act("$n starts chanting!", FALSE, ch, 0, 0, TO_ROOM);
+  }
+}
+
+static void send_cast_finish(struct char_data *ch, struct char_data *tch,
+    struct obj_data *tobj, int spellnum)
+{
+  const char *spell = skill_name(spellnum);
+  const char *word = spell_casting_word(spell_info[spellnum].cast_style);
+  char to_char[256], to_vict[256], to_room[256];
+
+  if (tch != NULL && tch != ch && SAME_ROOM(ch, tch)) {
+    snprintf(to_char, sizeof(to_char),
+        "You stop %s then look at $N and utter '%s'.", word, spell);
+    snprintf(to_vict, sizeof(to_vict),
+        "$n stops %s then looks at you and utters '%s'.", word, spell);
+    snprintf(to_room, sizeof(to_room),
+        "$n stops %s then looks at $N and utters '%s'.", word, spell);
+    act(to_char, FALSE, ch, 0, tch, TO_CHAR);
+    act(to_vict, FALSE, ch, 0, tch, TO_VICT);
+    act(to_room, FALSE, ch, 0, tch, TO_NOTVICT);
+  } else if (tobj != NULL) {
+    snprintf(to_char, sizeof(to_char),
+        "You stop %s then look at $p and utter '%s'.", word, spell);
+    snprintf(to_room, sizeof(to_room),
+        "$n stops %s then looks at $p and utters '%s'.", word, spell);
+    act(to_char, FALSE, ch, tobj, 0, TO_CHAR);
+    act(to_room, FALSE, ch, tobj, 0, TO_ROOM);
+  } else {
+    snprintf(to_char, sizeof(to_char),
+        "You stop %s and utter '%s'.", word, spell);
+    snprintf(to_room, sizeof(to_room),
+        "$n stops %s and utters '%s'.", word, spell);
+    act(to_char, FALSE, ch, 0, 0, TO_CHAR);
+    act(to_room, FALSE, ch, 0, 0, TO_ROOM);
+  }
+}
+
+static int delayed_cast_target_type(struct char_data *tch, struct obj_data *tobj)
+{
+  if (tch != NULL)
+    return DELAYED_CAST_CHAR;
+  if (tobj != NULL)
+    return DELAYED_CAST_OBJ;
+  return DELAYED_CAST_NONE;
+}
+
+static int delayed_cast_target_valid(struct char_data *ch, int spellnum,
+    int target_type, struct char_data **tch, struct obj_data **tobj)
+{
+  if (target_type == DELAYED_CAST_CHAR) {
+    if (!character_still_exists(*tch) || GET_POS(*tch) <= POS_DEAD)
+      return FALSE;
+
+    if (IS_SET(SINFO.targets, TAR_CHAR_ROOM | TAR_FIGHT_SELF | TAR_FIGHT_VICT) &&
+        !SAME_ROOM(ch, *tch))
+      return FALSE;
+  } else if (target_type == DELAYED_CAST_OBJ) {
+    if (!object_still_exists(*tobj))
+      return FALSE;
+
+    if (IS_SET(SINFO.targets, TAR_OBJ_ROOM) &&
+        (IN_ROOM(*tobj) != IN_ROOM(ch) ||
+        GET_INSTANCE_ID(*tobj) != GET_INSTANCE_ID(ch)))
+      return FALSE;
+  } else {
+    *tch = NULL;
+    *tobj = NULL;
+  }
+
+  return TRUE;
+}
+
+static int parse_delayed_cast_vars(const char *vars, int *spellnum, int *mana,
+    int *remaining, int *start_room, int *start_instance, int *target_type,
+    struct char_data **tch, struct obj_data **tobj)
+{
+  void *tch_ptr = NULL, *tobj_ptr = NULL;
+
+  if (vars == NULL)
+    return FALSE;
+
+  if (sscanf(vars, "%d %d %d %d %d %d %p %p", spellnum, mana, remaining,
+      start_room, start_instance, target_type, &tch_ptr, &tobj_ptr) != 8)
+    return FALSE;
+
+  *tch = (struct char_data *) tch_ptr;
+  *tobj = (struct obj_data *) tobj_ptr;
+  return TRUE;
+}
+
+static void update_delayed_cast_vars(struct mud_event_data *pMudEvent,
+    int spellnum, int mana, int remaining, int start_room, int start_instance,
+    int target_type, struct char_data *tch, struct obj_data *tobj)
+{
+  char vars[MAX_INPUT_LENGTH];
+
+  snprintf(vars, sizeof(vars), "%d %d %d %d %d %d %p %p", spellnum, mana,
+      remaining, start_room, start_instance, target_type, (void *) tch,
+      (void *) tobj);
+
+  if (pMudEvent->sVariables != NULL)
+    free(pMudEvent->sVariables);
+  pMudEvent->sVariables = strdup(vars);
+}
+
+EVENTFUNC(event_spell_cast)
+{
+  struct mud_event_data *pMudEvent = (struct mud_event_data *) event_obj;
+  struct char_data *ch, *tch = NULL;
+  struct obj_data *tobj = NULL;
+  int spellnum = 0, mana = 0, remaining = 0, start_room = NOWHERE;
+  int start_instance = 0, target_type = DELAYED_CAST_NONE;
+
+  if (pMudEvent == NULL || pMudEvent->pStruct == NULL)
+    return 0;
+
+  ch = (struct char_data *) pMudEvent->pStruct;
+
+  if (!parse_delayed_cast_vars(pMudEvent->sVariables, &spellnum, &mana,
+      &remaining, &start_room, &start_instance, &target_type, &tch, &tobj))
+    return 0;
+
+  if (spellnum < 1 || spellnum > TOP_SPELL_DEFINE || GET_POS(ch) <= POS_DEAD)
+    return 0;
+
+  if (IN_ROOM(ch) != start_room || GET_INSTANCE_ID(ch) != start_instance ||
+      GET_POS(ch) < spell_info[spellnum].min_position) {
+    send_to_char(ch, "Your concentration breaks.\r\n");
+    return 0;
+  }
+
+  remaining--;
+  if (remaining > 0) {
+    send_cast_countdown(ch, spellnum, remaining);
+    update_delayed_cast_vars(pMudEvent, spellnum, mana, remaining, start_room,
+        start_instance, target_type, tch, tobj);
+    return PASSES_PER_SEC;
+  }
+
+  if (!delayed_cast_target_valid(ch, spellnum, target_type, &tch, &tobj)) {
+    send_to_char(ch, "Your spell fizzles as its target slips away.\r\n");
+    return 0;
+  }
+
+  send_cast_finish(ch, tch, tobj, spellnum);
+  cast_spell_internal(ch, tch, tobj, spellnum, FALSE);
+  return 0;
 }
 
 /* This function should be used anytime you are not 100% sure that you have
@@ -449,12 +663,11 @@ void mag_objectmagic(struct char_data *ch, struct obj_data *obj, char *argument)
   }
 }
 
-/* cast_spell is used generically to cast any spoken spell, assuming we already
- * have the target char/obj and spell number.  It checks all restrictions,
- * prints the words, etc. Entry point for NPC casts.  Recommended entry point
- * for spells cast by NPCs via specprocs. */
-int cast_spell(struct char_data *ch, struct char_data *tch,
-    struct obj_data *tobj, int spellnum) {
+static int can_cast_spell_now(struct char_data *ch, struct char_data *tch,
+    struct obj_data *tobj, int spellnum)
+{
+  (void)tobj;
+
   if (spellnum < 0 || spellnum > TOP_SPELL_DEFINE) {
     log("SYSERR: cast_spell trying to call spellnum %d/%d.", spellnum,
     TOP_SPELL_DEFINE);
@@ -497,10 +710,71 @@ int cast_spell(struct char_data *ch, struct char_data *tch,
     send_to_char(ch, "You can't cast this spell if you're not in a group!\r\n");
     return (0);
   }
-  send_to_char(ch, "%s", CONFIG_OK);
-  say_spell(ch, spellnum, tch, tobj);
+
+  return (1);
+}
+
+static int cast_spell_internal(struct char_data *ch, struct char_data *tch,
+    struct obj_data *tobj, int spellnum, int say_words)
+{
+  if (!can_cast_spell_now(ch, tch, tobj, spellnum))
+    return (0);
+
+  if (say_words) {
+    send_to_char(ch, "%s", CONFIG_OK);
+    say_spell(ch, spellnum, tch, tobj);
+  }
 
   return (call_magic(ch, tch, tobj, spellnum, GET_LEVEL(ch), CAST_SPELL));
+}
+
+/* cast_spell is used generically to cast any spoken spell, assuming we already
+ * have the target char/obj and spell number.  It checks all restrictions,
+ * prints the words, etc. Entry point for NPC casts.  Recommended entry point
+ * for spells cast by NPCs via specprocs. */
+int cast_spell(struct char_data *ch, struct char_data *tch,
+    struct obj_data *tobj, int spellnum)
+{
+  return cast_spell_internal(ch, tch, tobj, spellnum, TRUE);
+}
+
+static int start_delayed_spell(struct char_data *ch, struct char_data *tch,
+    struct obj_data *tobj, int spellnum, int mana)
+{
+  char vars[MAX_INPUT_LENGTH];
+  int cast_time = spell_info[spellnum].cast_time;
+  int target_type = delayed_cast_target_type(tch, tobj);
+
+  if (AFF_FLAGGED(ch, AFF_HASTE))
+    cast_time /= 2;
+
+  if (char_has_mud_event(ch, eSPELL_CAST)) {
+    send_to_char(ch, "You are already casting a spell.\r\n");
+    return FALSE;
+  }
+
+  if (!can_cast_spell_now(ch, tch, tobj, spellnum))
+    return FALSE;
+
+  if (cast_time <= 0) {
+    if (cast_spell(ch, tch, tobj, spellnum)) {
+      if (mana > 0)
+        GET_MANA(ch) = MAX(0, MIN(GET_MAX_MANA(ch), GET_MANA(ch) - mana));
+    }
+    return TRUE;
+  }
+
+  snprintf(vars, sizeof(vars), "%d %d %d %d %d %d %p %p", spellnum, mana,
+      cast_time, IN_ROOM(ch), GET_INSTANCE_ID(ch), target_type, (void *) tch,
+      (void *) tobj);
+
+  send_cast_start(ch, spellnum);
+  if (mana > 0)
+    GET_MANA(ch) = MAX(0, MIN(GET_MAX_MANA(ch), GET_MANA(ch) - mana));
+
+  NEW_EVENT(eSPELL_CAST, ch, vars, PASSES_PER_SEC);
+  WAIT_STATE(ch, cast_time * PASSES_PER_SEC);
+  return TRUE;
 }
 
 /* do_cast is the entry point for PC-casted spells.  It parses the arguments,
@@ -625,6 +899,11 @@ ACMD(do_cast) {
     return;
   }
 
+  if (SINFO.cast_time > 0) {
+    start_delayed_spell(ch, tch, tobj, spellnum, mana);
+    return;
+  }
+
   if (cast_spell(ch, tch, tobj, spellnum)) {
     WAIT_STATE(ch, PULSE_VIOLENCE);
     if (mana > 0)
@@ -668,8 +947,19 @@ static void spello(int spl, const char *name, int max_mana, int min_mana,
   spell_info[spl].targets = targets;
   spell_info[spl].violent = violent;
   spell_info[spl].routines = routines;
+  spell_info[spl].cast_time = 0;
+  spell_info[spl].cast_style = SPELL_CAST_ARCANE;
   spell_info[spl].name = name;
   spell_info[spl].wear_off_msg = wearoff;
+}
+
+static void spell_cast_info(int spell, int cast_time, int cast_style)
+{
+  if (spell < 1 || spell > TOP_SPELL_DEFINE)
+    return;
+
+  spell_info[spell].cast_time = MIN(255, MAX(0, cast_time));
+  spell_info[spell].cast_style = cast_style;
 }
 
 void unused_spell(int spl) {
@@ -684,6 +974,8 @@ void unused_spell(int spl) {
   spell_info[spl].targets = 0;
   spell_info[spl].violent = 0;
   spell_info[spl].routines = 0;
+  spell_info[spl].cast_time = 0;
+  spell_info[spl].cast_style = SPELL_CAST_NONE;
   spell_info[spl].name = unused_spellname;
 }
 
@@ -772,6 +1064,12 @@ void mag_assign_spells(void) {
   spello(SPELL_CURE_LIGHT, "cure light", 30, 10, 2, POS_FIGHTING,
   TAR_CHAR_ROOM, FALSE, MAG_POINTS, NULL);
 
+  spello(SPELL_CAUSE_LIGHT, "cause light", 30, 10, 2, POS_FIGHTING,
+  TAR_CHAR_ROOM | TAR_FIGHT_VICT, TRUE, MAG_DAMAGE, NULL);
+
+  spello(SPELL_CAUSE_CRITIC, "cause critic", 30, 10, 2, POS_FIGHTING,
+  TAR_CHAR_ROOM | TAR_FIGHT_VICT, TRUE, MAG_DAMAGE, NULL);
+
   spello(SPELL_CURSE, "curse", 80, 50, 2, POS_STANDING,
   TAR_CHAR_ROOM | TAR_OBJ_INV, TRUE, MAG_AFFECTS | MAG_ALTER_OBJS,
       "You feel more optimistic.");
@@ -824,6 +1122,9 @@ void mag_assign_spells(void) {
   spello(SPELL_HARM, "harm", 75, 45, 3, POS_FIGHTING,
   TAR_CHAR_ROOM | TAR_FIGHT_VICT, TRUE, MAG_DAMAGE, NULL);
 
+  spello(SPELL_HASTE, "haste", 75, 50, 3, POS_STANDING,
+  TAR_CHAR_ROOM, FALSE, MAG_AFFECTS, "You feel slower.");
+
   spello(SPELL_HEAL, "heal", 60, 40, 3, POS_FIGHTING,
   TAR_CHAR_ROOM, FALSE, MAG_POINTS | MAG_UNAFFECTS, NULL);
 
@@ -849,6 +1150,10 @@ void mag_assign_spells(void) {
   MAG_AFFECTS | MAG_ALTER_OBJS, "You feel less sick.");
 
   spello(SPELL_PROT_FROM_EVIL, "protection from evil", 40, 10, 3, POS_STANDING,
+  TAR_CHAR_ROOM | TAR_SELF_ONLY, FALSE, MAG_AFFECTS,
+      "You feel less protected.");
+
+  spello(SPELL_PROT_FROM_GOOD, "protection from good", 40, 10, 3, POS_STANDING,
   TAR_CHAR_ROOM | TAR_SELF_ONLY, FALSE, MAG_AFFECTS,
       "You feel less protected.");
 
@@ -898,6 +1203,63 @@ void mag_assign_spells(void) {
   /* you might want to name this one something more fitting to your theme -Welcor*/
   spello(SPELL_DG_AFFECT, "Script-inflicted", 0, 0, 0, POS_SITTING,
   TAR_IGNORE, TRUE, 0, NULL);
+
+  spell_cast_info(SPELL_ANIMATE_DEAD, 12, SPELL_CAST_SPIRITUAL);
+  spell_cast_info(SPELL_ARMOR, 3, SPELL_CAST_ARCANE);
+  spell_cast_info(SPELL_BLESS, 4, SPELL_CAST_SPIRITUAL);
+  spell_cast_info(SPELL_BLINDNESS, 3, SPELL_CAST_ARCANE);
+  spell_cast_info(SPELL_BURNING_HANDS, 3, SPELL_CAST_ARCANE);
+  spell_cast_info(SPELL_CALL_LIGHTNING, 6, SPELL_CAST_ARCANE);
+  spell_cast_info(SPELL_CHARM, 8, SPELL_CAST_ARCANE);
+  spell_cast_info(SPELL_CHILL_TOUCH, 3, SPELL_CAST_ARCANE);
+  spell_cast_info(SPELL_CLONE, 15, SPELL_CAST_ARCANE);
+  spell_cast_info(SPELL_COLOR_SPRAY, 2, SPELL_CAST_ARCANE);
+  spell_cast_info(SPELL_CONTROL_WEATHER, 10, SPELL_CAST_ARCANE);
+  spell_cast_info(SPELL_CREATE_FOOD, 5, SPELL_CAST_ARCANE);
+  spell_cast_info(SPELL_CREATE_WATER, 5, SPELL_CAST_ARCANE);
+  spell_cast_info(SPELL_CURE_BLIND, 4, SPELL_CAST_SPIRITUAL);
+  spell_cast_info(SPELL_CURE_CRITIC, 4, SPELL_CAST_SPIRITUAL);
+  spell_cast_info(SPELL_CURE_LIGHT, 2, SPELL_CAST_SPIRITUAL);
+  spell_cast_info(SPELL_CAUSE_CRITIC, 4, SPELL_CAST_SPIRITUAL);
+  spell_cast_info(SPELL_CAUSE_LIGHT, 2, SPELL_CAST_SPIRITUAL);
+  spell_cast_info(SPELL_CURSE, 6, SPELL_CAST_SPIRITUAL);
+  spell_cast_info(SPELL_DARKNESS, 5, SPELL_CAST_ARCANE);
+  spell_cast_info(SPELL_DETECT_ALIGN, 4, SPELL_CAST_ARCANE);
+  spell_cast_info(SPELL_DETECT_INVIS, 4, SPELL_CAST_ARCANE);
+  spell_cast_info(SPELL_DETECT_MAGIC, 4, SPELL_CAST_ARCANE);
+  spell_cast_info(SPELL_DETECT_POISON, 4, SPELL_CAST_SPIRITUAL);
+  spell_cast_info(SPELL_DISPEL_EVIL, 4, SPELL_CAST_SPIRITUAL);
+  spell_cast_info(SPELL_DISPEL_GOOD, 4, SPELL_CAST_SPIRITUAL);
+  spell_cast_info(SPELL_EARTHQUAKE, 6, SPELL_CAST_ARCANE);
+  spell_cast_info(SPELL_ENCHANT_WEAPON, 12, SPELL_CAST_ARCANE);
+  spell_cast_info(SPELL_ENERGY_DRAIN, 6, SPELL_CAST_ARCANE);
+  spell_cast_info(SPELL_GROUP_ARMOR, 6, SPELL_CAST_ARCANE);
+  spell_cast_info(SPELL_FIREBALL, 4, SPELL_CAST_ARCANE);
+  spell_cast_info(SPELL_FLY, 3, SPELL_CAST_ARCANE);
+  spell_cast_info(SPELL_GROUP_HEAL, 8, SPELL_CAST_SPIRITUAL);
+  spell_cast_info(SPELL_HARM, 6, SPELL_CAST_SPIRITUAL);
+  spell_cast_info(SPELL_HASTE, 12, SPELL_CAST_ARCANE);
+  spell_cast_info(SPELL_HEAL, 6, SPELL_CAST_SPIRITUAL);
+  spell_cast_info(SPELL_INFRAVISION, 3, SPELL_CAST_ARCANE);
+  spell_cast_info(SPELL_INVISIBLE, 5, SPELL_CAST_ARCANE);
+  spell_cast_info(SPELL_LIGHTNING_BOLT, 4, SPELL_CAST_ARCANE);
+  spell_cast_info(SPELL_LOCATE_OBJECT, 7, SPELL_CAST_ARCANE);
+  spell_cast_info(SPELL_MAGIC_MISSILE, 3, SPELL_CAST_ARCANE);
+  spell_cast_info(SPELL_POISON, 4, SPELL_CAST_SPIRITUAL);
+  spell_cast_info(SPELL_PROT_FROM_EVIL, 3, SPELL_CAST_SPIRITUAL);
+  spell_cast_info(SPELL_PROT_FROM_GOOD, 3, SPELL_CAST_SPIRITUAL);
+  spell_cast_info(SPELL_REMOVE_CURSE, 4, SPELL_CAST_SPIRITUAL);
+  spell_cast_info(SPELL_REMOVE_POISON, 4, SPELL_CAST_SPIRITUAL);
+  spell_cast_info(SPELL_SANCTUARY, 4, SPELL_CAST_SPIRITUAL);
+  spell_cast_info(SPELL_SENSE_LIFE, 3, SPELL_CAST_ARCANE);
+  spell_cast_info(SPELL_SHOCKING_GRASP, 3, SPELL_CAST_ARCANE);
+  spell_cast_info(SPELL_SLEEP, 3, SPELL_CAST_ARCANE);
+  spell_cast_info(SPELL_STRENGTH, 4, SPELL_CAST_ARCANE);
+  spell_cast_info(SPELL_SUMMON, 12, SPELL_CAST_ARCANE);
+  spell_cast_info(SPELL_TELEPORT, 12, SPELL_CAST_ARCANE);
+  spell_cast_info(SPELL_WATERWALK, 2, SPELL_CAST_ARCANE);
+  spell_cast_info(SPELL_WORD_OF_RECALL, 12, SPELL_CAST_SPIRITUAL);
+  spell_cast_info(SPELL_IDENTIFY, 4, SPELL_CAST_ARCANE);
 
   /* Declaration of skills - this actually doesn't do anything except set it up
    * so that immortals can use these skills by default.  The min level to use

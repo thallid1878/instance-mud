@@ -2497,6 +2497,7 @@ struct char_data *read_mobile(mob_vnum nr, int type) /* and mob_rnum */
   distribute_mobile_exp_to_stats(mob);
   
   update_max_hit_from_con(mob);
+  update_max_mana_move_from_stats(mob);
   mob->points.hit = mob->points.max_hit;
   mob->points.mana = mob->points.max_mana;
   mob->points.move = mob->points.max_move;
@@ -3537,8 +3538,6 @@ void clear_char(struct char_data *ch)
   ch->events = NULL;
   
   GET_AC(ch) = 100;		/* Basic Armor */
-  if (ch->points.max_mana < 100)
-    ch->points.max_mana = 100;
 }
 
 void clear_object(struct obj_data *obj)
@@ -3571,11 +3570,7 @@ void init_char(struct char_data *ch)
 
     /* The implementor never goes through do_start(). */
     GET_MAX_HIT(ch) = 1;
-    GET_MAX_MANA(ch) = 100;
-    GET_MAX_MOVE(ch) = 82;
     GET_HIT(ch) = GET_MAX_HIT(ch);
-    GET_MANA(ch) = GET_MAX_MANA(ch);
-    GET_MOVE(ch) = GET_MAX_MOVE(ch);
   }
 
   set_title(ch, NULL);
@@ -3631,6 +3626,7 @@ void init_char(struct char_data *ch)
   ch->real_abils.cha = STAT_BASE_VALUE;
   ch->aff_abils = ch->real_abils;
   update_max_hit_from_con(ch);
+  update_max_mana_move_from_stats(ch);
 
   for (i = 0; i < 3; i++)
     GET_COND(ch, i) = (GET_LEVEL(ch) == LVL_IMPL ? -1 : 24);

@@ -24,7 +24,8 @@ struct mud_event_list mud_event_index[] = {
   { "Null"         , NULL           , -1          },  /* eNULL */
   { "Protocol"     , get_protocols  , EVENT_DESC  },  /* ePROTOCOLS */
   { "Whirlwind"    , event_whirlwind, EVENT_CHAR  },  /* eWHIRLWIND */
-  { "Spell:Darkness",event_countdown, EVENT_ROOM  }   /* eSPL_DARKNESS */
+  { "Spell:Darkness",event_countdown, EVENT_ROOM  },  /* eSPL_DARKNESS */
+  { "Spell:Cast"   , event_spell_cast, EVENT_CHAR }   /* eSPELL_CAST */
 };
 
 /* init_events() is the ideal function for starting global events. This
@@ -78,6 +79,8 @@ EVENTFUNC(event_countdown)
     case ePROTOCOLS:
       break;
     case eWHIRLWIND:
+      break;
+    case eSPELL_CAST:
       break;
     case eNULL:
       break;

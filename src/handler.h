@@ -14,6 +14,7 @@
 
 /* handling the affected-structures */
 void	update_max_hit_from_con(struct char_data *ch);
+void	update_max_mana_move_from_stats(struct char_data *ch);
 void	affect_total(struct char_data *ch);
 void	affect_to_char(struct char_data *ch, struct affected_type *af);
 void	affect_remove(struct char_data *ch, struct affected_type *af);

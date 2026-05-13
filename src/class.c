@@ -1368,10 +1368,6 @@ void do_start(struct char_data *ch)
   ch->real_abils.cha = STAT_BASE_VALUE;
   ch->aff_abils = ch->real_abils;
 
-  GET_MAX_HIT(ch)  = 1;
-  GET_MAX_MANA(ch) = 100;
-  GET_MAX_MOVE(ch) = 82;
-
   advance_level(ch);
 
   GET_HIT(ch) = GET_MAX_HIT(ch);
@@ -1386,20 +1382,14 @@ void do_start(struct char_data *ch)
     SET_BIT_AR(PLR_FLAGS(ch), PLR_SITEOK);
 }
 
-/* This function controls the change to maxmove, maxmana, and maxhp for each
- * class every time they gain a level. */
+/* Recalculate derived resource pools. Legacy level-based resource gains are
+ * intentionally ignored in the classless ruleset. */
 void advance_level(struct char_data *ch)
 {
-  int add_mana = 0, add_move = 0, i;
-
-  add_mana = rand_number(1, 6);
-  add_move = rand_number(1, 3);
+  int i;
 
   update_max_hit_from_con(ch);
-  ch->points.max_move += MAX(1, add_move);
-
-  if (GET_LEVEL(ch) > 1)
-    ch->points.max_mana += add_mana;
+  update_max_mana_move_from_stats(ch);
 
   GET_PRACTICES(ch) = 0;
 

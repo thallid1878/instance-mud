@@ -1193,6 +1193,10 @@ void perform_violence(void)
     }
 
     hit(ch, FIGHTING(ch), TYPE_UNDEFINED);
+    if (AFF_FLAGGED(ch, AFF_HASTE) && FIGHTING(ch) &&
+        SAME_ROOM(ch, FIGHTING(ch)) && GET_POS(ch) >= POS_FIGHTING)
+      hit(ch, FIGHTING(ch), TYPE_UNDEFINED);
+
     if (MOB_FLAGGED(ch, MOB_SPEC) && GET_MOB_SPEC(ch) && !MOB_FLAGGED(ch, MOB_NOTDEADYET)) {
       char actbuf[MAX_INPUT_LENGTH] = "";
       (GET_MOB_SPEC(ch)) (ch, ch, 0, actbuf);

@@ -505,6 +505,7 @@ void save_char(struct char_data * ch)
   FILE *fl;
   char filename[40], buf[MAX_STRING_LENGTH], bits[127], bits2[127], bits3[127], bits4[127];
   int i, j, id, save_index = FALSE;
+  int saved_hit, saved_mana, saved_move;
   room_vnum save_loadroom;
   struct affected_type *aff, tmp_aff[MAX_AFFECT];
   struct obj_data *char_eq[NUM_WEARS];
@@ -545,6 +546,9 @@ void save_char(struct char_data * ch)
   if (GET_INSTANCE_ID(ch) > 0)
     instance_set_safe_loadroom(ch);
   save_loadroom = GET_LOADROOM(ch);
+  saved_hit = GET_HIT(ch);
+  saved_mana = GET_MANA(ch);
+  saved_move = GET_MOVE(ch);
 
   /* Unaffect everything a character can be affected by. */
   for (i = 0; i < NUM_WEARS; i++) {
@@ -731,6 +735,10 @@ void save_char(struct char_data * ch)
 #endif
   }
   /* end char_to_store code */
+
+  GET_HIT(ch) = MIN(saved_hit, GET_MAX_HIT(ch));
+  GET_MANA(ch) = MIN(saved_mana, GET_MAX_MANA(ch));
+  GET_MOVE(ch) = MIN(saved_move, GET_MAX_MOVE(ch));
 
   if ((id = get_ptable_by_name(GET_NAME(ch))) < 0)
     return;
